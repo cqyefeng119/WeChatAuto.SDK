@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using FlaUI.Core.Capturing;
 using WeAutoCommon.Enums;
 using WeChatAuto.Extentions;
+using WeChatAuto.Models;
 
 
 namespace WeChatAuto.Components
@@ -38,6 +39,8 @@ namespace WeChatAuto.Components
         public readonly int ClientProcessId;
         public readonly WeChatClientFactory Factory;
         public readonly string NickName;
+        public readonly string WxId;
+        public readonly string AvatorPath;
         public UIThreadInvoker MainThreadInvoker => _MainThreadInvoker;
         #endregion
 
@@ -50,16 +53,18 @@ namespace WeChatAuto.Components
         /// <param name="factory"></param>
         /// <param name="window"></param>
         /// <param name="uIThreadInvoker"></param>
-        /// <param name="nickName"></param>
+        /// <param name="ownerInfo">个人信息</param>
         public WeChatClient(int clientProcessId, IServiceProvider provider, WeChatClientFactory factory,
-         Window window, UIThreadInvoker uIThreadInvoker, string nickName)
+         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo)
         {
             this._MainThreadInvoker = uIThreadInvoker;
             this.MainWindow = window;
             this.serviceProvider = provider;
             this.Factory = factory;
             this.ClientProcessId = clientProcessId;
-            this.NickName = nickName;
+            this.NickName = ownerInfo.NickName;
+            this.WxId = ownerInfo.WxId;
+            this.AvatorPath = ownerInfo.AvatorPath;
             _logger = provider.GetRequiredService<AutoLogger<WeChatClient>>();
             CheckVersion();
             _Initialize();
@@ -73,7 +78,7 @@ namespace WeChatAuto.Components
         #region POM对象
         //导航栏
         public Navigation Navigation => GetNavigation();
-        
+
         #endregion
         private Navigation GetNavigation()
         {
@@ -92,10 +97,44 @@ namespace WeChatAuto.Components
             }
         }
 
+        #region 个人信息
+        /// <summary>
+        /// 获取本微信的个人信息，包括头像文件位置，wxid,昵称
+        /// </summary>
+        /// <returns>返回<see cref="OwerInfo"/></returns>
+        public OwerInfo GetOwerInfo()
+        {
+            return new OwerInfo
+            {
+                AvatorPath = this.AvatorPath,
+                WxId = this.WxId,
+                NickName = this.NickName,
+            };
+        }
+        /// <summary>
+        /// 保存头像至其他路径
+        /// </summary>
+        /// <param name="path">待保存的头像路径</param>
+        /// <returns></returns>
+        public async Task SaveOwnerAvator(string path) => await this.Navigation.SaveOwnerAvator(path);
+        #endregion
+
         #region 窗口管理
         #endregion
 
         #region Navigator管理
+        /// <summary>
+        /// 切换导航栏
+        /// </summary>
+        /// <param name="navigationType">导航栏类型,请参见枚举类型<seealso cref="NavigationType"/></param>
+        public async Task SwitchNavigation(NavigationType navigationType) => await this.Navigation.SwitchNavigation(navigationType);
+
+        /// <summary>
+        /// 关闭通过导航栏打开的窗口.
+        /// 仅支持聊天文件、朋友圈、视频号、看一看、搜一搜、小程序面板等窗口
+        /// </summary>
+        /// <param name="navigationType">导航栏类型,请参见枚举类型<seealso cref="NavigationType"/></param>
+        public async Task CloseNavWin(NavigationType navigationType) => await this.Navigation.CloseNavWin(navigationType);
         #endregion
 
         #region 会话管理

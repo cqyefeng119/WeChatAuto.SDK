@@ -18,6 +18,7 @@ using System.Drawing;
 using FlaUI.Core;
 using FlaUI.Core.Identifiers;
 using FlaUI.Core.Conditions;
+using System.IO;
 
 namespace WeChatAuto.Components
 {
@@ -54,42 +55,19 @@ namespace WeChatAuto.Components
             return item;
         }
         /// <summary>
-        /// 通过导航栏获得窗口的wxid
-        /// </summary>
-        /// <returns>个人信息<see cref="FriendInfo"/></returns>
-        public async Task<FriendInfo> GetWxId()
-        {
-            // var info = await _uiMainThreadInvoker.Run<FriendInfo>(automation =>
-            // {
-            //     var path = "/Pane/Pane/ToolBar/Button[1]";
-            //     var button = _Window.FindFirstByXPath(path).AsButton();
-            //     button.ClickEnhance(_Window);
-            //     RetryResult<FriendInfo> retryResult = Retry.WhileNull(() =>
-            //     {
-            //         FriendInfo result = new FriendInfo();
-            //         path = "/Pane/Pane/Pane/Pane/Pane/Pane/Pane/Pane[1]/Text";
-            //         var label = _Window.FindFirstByXPath(path).AsLabel();
-            //         result.NickName = label.Name;
-            //         path = "/Pane[1]/Pane/Pane/Pane/Pane/Pane/Pane/Pane/Pane/Text[2]";
-            //         label = _Window.FindFirstByXPath(path).AsLabel();
-            //         result.WxId = label.Name;
-            //         return result;
-            //     }, timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            //     return retryResult.Success ? retryResult.Result : null;
-            // });
-            // Random rand = new Random(DateTime.Now.Millisecond);
-            // await Task.Delay(rand.Next(300, 1000));
-            // SwitchNavigation(NavigationType.聊天);
-            // return info;
-            return null;
-        }
-        /// <summary>
-        /// 保存个人头像
+        /// <para>保存个人头像,大部分情况不需要调用此方法，因为系统初始化的时候已经将头像保存在.\Avator\wxid.png</para>
+        /// <para>建议用<see cref="WeChatClient.AvatorPath"/>获取个人头像</para>
         /// </summary>
         /// <param name="savePath">保存的目录与文件名，如: c:\temp\avator.jpg</param>
         /// <returns></returns>
         public async Task SaveOwnerAvator(string savePath)
         {
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "Avator", $"{_Client.WxId}.png")))
+            {
+                byte[] bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Avator", $"{_Client.WxId}.png"));
+                File.WriteAllBytes(savePath, bytes);
+                return;
+            }
             Random random = new Random((int)DateTime.Now.Ticks);
             await _uiMainThreadInvoker.Run(automation =>
             {
@@ -153,7 +131,7 @@ namespace WeChatAuto.Components
             {
                 if (button != null)
                 {
-                    button = button.FindFirstChild(cf=>cf.ByControlType(ControlType.Button).And(cf.ByName("手机"))).AsButton();
+                    button = button.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("手机"))).AsButton();
                     if (button != null)
                     {
                         button.DrawHighlightExt();

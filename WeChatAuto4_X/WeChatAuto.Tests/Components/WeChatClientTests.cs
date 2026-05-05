@@ -23,6 +23,9 @@ public class WeChatClientTests
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         Assert.NotEmpty(client.NickName);
+        Assert.Equal("Alex", client.NickName);
+        Assert.Equal("zhaoziyu1699", client.WxId);
+        Assert.True(File.Exists(client.AvatorPath));
     }
     [Fact(DisplayName = "测试保存自己的头像")]
     public async Task Test_Save_Avator()

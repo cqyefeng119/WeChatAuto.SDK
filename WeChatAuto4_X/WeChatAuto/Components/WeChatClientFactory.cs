@@ -13,8 +13,9 @@ using FlaUI.UIA3;
 using WeAutoCommon.Models;
 using WeChatAuto.Extentions;
 using FlaUI.Core.Input;
-using Microsoft.Win32;
 using System.Drawing;
+using WeChatAuto.Models;
+using System.IO;
 
 namespace WeChatAuto.Components
 {
@@ -180,6 +181,7 @@ namespace WeChatAuto.Components
                         {
                             foreach (var item in list)
                             {
+                                MoveFloatingLayer(item, desktop);
                                 var source = item.BoundingRectangle.Center();
                                 var target = statusBar.BoundingRectangle.Center();
                                 Mouse.MoveTo(source);
@@ -192,6 +194,23 @@ namespace WeChatAuto.Components
 
                 }
             }).GetAwaiter().GetResult();
+        }
+
+        private void MoveFloatingLayer(AutomationElement item, AutomationElement desktop)
+        {
+            var button = item.AsButton();
+            Mouse.MoveTo(button.GetClickablePoint());
+            //可能出现浮动层，也可能不出现
+            var root = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin"))),
+                timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+            if (!root.Success)
+                return;
+            root.Result.DrawHighlightExt();
+            var path = "//Button[@Name='暂不处理']";
+            button = root.Result.FindFirstByXPath(path).AsButton();
+            button.DrawHighlightExt();
+            button.Click();
+            RandomWait.Wait(300, 500);
         }
 
         /// <summary>
@@ -347,16 +366,17 @@ namespace WeChatAuto.Components
             var wxTempwindow = _GetTopWindow(topWindowProcessId.Result, automation);  //当前微信的automation window.
             DrawHightlightHelper.DrawHighlightExt(wxTempwindow);
 
-            string nickName = __GetCurrentWxNickName(wxTempwindow);
+            var owerInfo = __GetCurrentWxNickName(wxTempwindow);
             wxTempwindow.Focus();
-            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, wxTempwindow, ThreadInvoker, nickName);
-            _wxClientList.Add(nickName, client);
+            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, wxTempwindow, ThreadInvoker, owerInfo);
+            _wxClientList.Add(owerInfo.NickName, client);
         }
 
 
-        //得到最新窗口的nickName
-        private string __GetCurrentWxNickName(Window wxTempwindow)
+        //得到最新窗口的nickName等信息.
+        private OwerInfo __GetCurrentWxNickName(Window wxTempwindow)
         {
+            OwerInfo info = new OwerInfo();
             wxTempwindow.Focus();
             var path = @"/Group/Custom/Group/ToolBar/Button[1]";
             var button = wxTempwindow.FindFirstByXPath(path);
@@ -375,9 +395,30 @@ namespace WeChatAuto.Components
                 button = window.FindFirstDescendant(cf => cf.ByAutomationId("head_image_v_view.head_view_").And(cf.ByControlType(ControlType.Button))
                     .And(cf.ByProcessId(wxTempwindow.Properties.ProcessId)));
                 button?.DrawHighlightExt();
-                return button == null ? "" : button.Name;
+                if (button != null)
+                {
+                    var wxid = button.GetParent().GetParent().FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)));
+                    if (wxid != null)
+                    {
+                        wxid.DrawHighlightExt();
+                        wxid = wxid.GetSibling(1);
+                        if (wxid != null)
+                        {
+                            info.WxId = wxid.Name.Trim();
+                            info.NickName = button.Name.Trim();
+                            var avatorPath = Path.Combine(AppContext.BaseDirectory, "Avator");
+                            if (!Directory.Exists(avatorPath))
+                            {
+                                Directory.CreateDirectory(avatorPath);
+                            }
+                            avatorPath = Path.Combine(avatorPath, $"{info.WxId}.png");
+                            button.CaptureToFile(avatorPath);
+                            info.AvatorPath = avatorPath;                            
+                        }
+                    }
+                }
             }
-            return "";
+            return info;
         }
 
         /// <summary>
