@@ -73,11 +73,14 @@ namespace WeChatAuto.Components
         private void _Initialize()
         {
             this.Navigation.SwitchNavigationCore(NavigationType.微信);
+            this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
         }
 
         #region POM对象
         //导航栏
         public Navigation Navigation => GetNavigation();
+        //ToolBar
+        public ToolBar ToolBar;
 
         #endregion
         private Navigation GetNavigation()
@@ -120,6 +123,25 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 窗口管理
+        /// <summary>
+        /// 最大化微信窗口
+        /// </summary>
+        public async Task Max() => await ToolBar.Max();
+        /// <summary>
+        /// 还原微信窗口
+        /// </summary>
+        public async Task Restore() => await ToolBar.Restore();
+        /// <summary>
+        /// 置顶微信窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task Pinned() => await ToolBar.Top(true);
+        /// <summary>
+        /// 如此置顶微信窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task UnPinned() => await ToolBar.Top(false);
+
         #endregion
 
         #region Navigator管理
