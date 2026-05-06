@@ -18,6 +18,8 @@ using FlaUI.Core.Capturing;
 using WeAutoCommon.Enums;
 using WeChatAuto.Extentions;
 using WeChatAuto.Models;
+using System.Configuration;
+using System.Drawing;
 
 
 namespace WeChatAuto.Components
@@ -74,7 +76,7 @@ namespace WeChatAuto.Components
         {
             this.Navigation.SwitchNavigationCore(NavigationType.微信);
             this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
-            this.Conversations = new ConversationList(this,this._MainThreadInvoker,serviceProvider);
+            this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
         }
 
         #region POM对象
@@ -163,6 +165,61 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 会话管理
+        /// <summary>
+        /// 获取会话列表所有会话的标题
+        /// 考虑到效率，只返回名称列表
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<string>> GetAllConversations() => await this.Conversations.GetAllConversations();
+
+        /// <summary>
+        /// 获取会话列表可见会话标题
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<string>> GetVisibleConversationTitles() => await this.Conversations.GetVisibleConversationTitles();
+
+        /// <summary>
+        /// 获取可见会话列表
+        /// 会话信息包含：会话名称、会话未读消息数、会话头像等具体信息，请参考<see cref="SimpleConversation"/>
+        /// </summary>
+        /// <returns>返回<see cref="Conversation"/>列表</returns>
+        public async Task<List<SimpleConversation>> GetVisibleConversations() => await this.Conversations.GetVisibleConversations();
+
+        /// <summary>
+        /// 搜索好友/群聊
+        /// </summary>
+        /// <param name="who">待搜索的好友/群聊昵称,who - 微信会话列表肉眼可见的名称,如果群有备注，则这个who即为备注名</param>
+        /// <returns>如果找到，返回true,如果没有找到，则返回false.</returns>
+        public async Task<bool> Search(string who) => await this.Conversations.Search(who);
+
+        /// <summary>
+        /// 定位会话
+        /// 定位会话的用途：可以将会话列表滚动到指定会话的位置，使指定会话可见
+        /// </summary>
+        /// <param name="title">会话标题</param>
+        /// <returns>如果找到会话，则返回true，否则返回false</returns>
+        public async Task<bool> LocateConversation(string title) => await this.Conversations.LocateConversation(title);
+
+        /// <summary>
+        /// 会话列表向上滚动，并且执行需要的业务逻辑
+        /// </summary>
+        /// <param name="callBack">
+        /// <para>滚动过程中的回调，建议：如果处理业务结束，返回false,意味着不向上滚动，如果业务没有处理到，则返回true,继续滚动</para>
+        /// <para>参数中的Rectangle为会话列表容器的<see cref="Rectangle"/>,如果超出容器Rectangle范围，应该返回true继续滚动，直到可以点击为止</para>
+        /// </param>
+        /// <returns></returns>
+        public async Task Up(Func<AutomationElement[], Rectangle, bool> callBack) => await this.Conversations.Up(callBack);
+
+        /// <summary>
+        /// 会话列表滚动向下滚动，并且执行需要的业务逻辑
+        /// <param name="callBack">
+        /// <para>滚动过程中的回调，建议：如果处理业务结束，返回false,意味着不向上滚动，如果业务没有处理到，则返回true,继续滚动</para>
+        /// <para>参数中的Rectangle为会话列表容器的<see cref="Rectangle"/>,如果超出容器Rectangle范围，应该返回true继续滚动，直到可以点击为止</para>
+        /// </param>
+        /// </summary>
+        /// <returns></returns>
+        public async Task Down(Func<AutomationElement[], Rectangle, bool> callBack) => await this.Conversations.Down(callBack);
+
         #endregion
 
         #region 消息管理

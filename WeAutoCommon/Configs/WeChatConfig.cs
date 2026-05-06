@@ -60,6 +60,10 @@ namespace WeAutoCommon.Configs
         /// 监听会话列表切换时间间隔，单位：秒
         /// </summary>
         public int ConversationChangeListenerInterval { get; set; } = 5;
+        /// <summary>
+        /// 会话列表鼠标滚动行数.
+        /// </summary>
+        public int ConversationInterval { get; set; } = 3;
 
         /// <summary>
         /// 是否启用调试模式

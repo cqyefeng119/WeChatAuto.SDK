@@ -20,6 +20,8 @@ using System.Threading.Tasks;
 using WeAutoCommon.Extentions;
 using FlaUI.Core.Input;
 using System.Drawing;
+using FlaUI.Core;
+
 
 
 namespace WeChatAuto.Components
@@ -35,16 +37,6 @@ namespace WeChatAuto.Components
         private WeChatClient _Client;
         private ListBox ConversationRoot => _GetConversationRoot();   //会话列表根结点的查找方法
 
-        private readonly List<string> _TitleTypeList = new List<string> {
-            WeChatConstant.WECHAT_CONVERSATION_WX_TEAM,
-            WeChatConstant.WECHAT_CONVERSATION_SERVICE_NOTICE,
-            WeChatConstant.WECHAT_CONVERSATION_WX_PAY,
-            WeChatConstant.WECHAT_CONVERSATION_TX_NEWS,
-            WeChatConstant.WECHAT_CONVERSATION_SUBSCRIPTION,
-            WeChatConstant.WECHAT_CONVERSATION_FILE_TRANSFER,
-            WeChatConstant.WECHAT_CONVERSATION_COLLAPSED_GROUP
-        };
-        private readonly string _titleSuffix = WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP;  //已置顶前缀
         public ConversationList(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<AutoLogger<ConversationList>>();
@@ -53,40 +45,189 @@ namespace WeChatAuto.Components
             _serviceProvider = serviceProvider;
         }
         /// <summary>
+        /// 搜索好友/群聊
+        /// </summary>
+        /// <param name="who">待搜索的好友/群聊昵称,who - 微信会话列表肉眼可见的名称,如果群有备注，则这个who即为备注名</param>
+        /// <returns></returns>
+        public async Task<bool> Search(string who)
+        {
+            return await _uiThreadInvoker.Run(automation =>
+            {
+                return SearchWhoCore(who);
+            });
+        }
+
+        internal bool SearchWhoCore(string who)
+        {
+            var root = ConversationRoot;
+
+            bool result = _SearchLiveConversations(who, root);
+            if (!result)
+            {
+                result = _SearchFromEdit(who, root);
+            }
+
+            return result;
+        }
+
+        //如果会话列表存在who,则直接点击.
+        private bool _SearchLiveConversations(string who, ListBox root)
+        {
+            if (_CheckCurrentSelect(who, root))
+                return true;
+
+            AutomationElement FindTarget()
+            {
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                foreach (var item in items)
+                {
+                    var names = item.Name?.Trim().Split('\n');
+                    if (names?[0].Trim() == who)
+                        return item;
+                }
+                return null;
+            }
+
+            var target = FindTarget();
+            if (target == null)
+                return false;
+
+            // 二次确认
+            var freshTarget = FindTarget();
+            if (freshTarget == null)
+                return false;
+
+            var rect = freshTarget.BoundingRectangle;
+
+            if (rect.Width <= 0 || rect.Height <= 0)
+                return false;
+            if (freshTarget.IsOffscreen)
+                return false;
+            Point point = default;
+            if (freshTarget.BoundingRectangle.Y < root.BoundingRectangle.Y)
+            {
+                _ScrollUpStep();
+                freshTarget = FindTarget();
+                rect = freshTarget.BoundingRectangle;
+            }
+            else
+            {
+                if (freshTarget.BoundingRectangle.Y + freshTarget.BoundingRectangle.Height > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                {
+                    _ScrollDownStep();
+                    freshTarget = FindTarget();
+                    rect = freshTarget.BoundingRectangle;
+                }
+            }
+
+            point = rect.SafeRandomPoint();
+            _Client.MainWindow.Focus();
+            Mouse.Click(point);
+
+            return true;
+        }
+
+        private bool _CheckCurrentSelect(string who, ListBox root)
+        {
+            if (root.IsPatternSupported(root.Automation.PatternLibrary.SelectionPattern))
+            {
+                var s = root.Patterns.Selection.Pattern;
+                var v = s.Selection.ValueOrDefault;
+                if (v != null && v.Length > 0)
+                {
+                    var i = v[0];
+                    var names = i.Name?.Trim().Split('\n');
+                    if (names?[0].Trim() == who)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        //如果会话列表不存在who,再查询
+        private bool _SearchFromEdit(string who, ListBox root)
+        {
+            //通过搜索框搜索
+            var path = @"/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/Group/Group/Edit[@Name='搜索']";
+            var edit = _Client.MainWindow.FindFirstByXPath(path);
+            edit.DrawHighlightExt();
+
+            return true;
+        }
+
+        /// <summary>
         /// 获取会话列表可见会话
-        /// 会话信息包含：会话名称、会话类型、会话状态、会话时间、会话未读消息数、会话头像<see cref="Conversation"/>
+        /// 会话信息包含：会话名称、会话未读消息数、会话头像等具体信息，请参考<see cref="SimpleConversation"/>
         /// </summary>
         /// <returns>返回<see cref="Conversation"/>列表</returns>
-        public List<Conversation> GetVisibleConversations()
+        public async Task<List<SimpleConversation>> GetVisibleConversations()
         {
-            //var items = _GetVisibleConversatItems();
-            List<Conversation> conversations = new List<Conversation>();
-            // foreach (var item in items)
-            // {
-            //     Conversation conversation = new Conversation();
-            //     conversation.ConversationTitle = _GetConversationTitle(item, conversation);
-            //     conversation.IsTop = _GetConversationIsTop(item);
-            //     conversation.ConversationType = _GetConversationType(conversation.ConversationTitle);
-            //     conversation.ConversationContent = _GetConversationContent(item);
-            //     conversation.IsCompanyGroup = _IsCompanyGroup(item);
-            //     conversation.ImageButton = _GetConversationImageButton(item);
-            //     conversation.HasNotRead = _GetConversationHasNotRead(item);
-            //     conversation.Time = _GetConversationTime(item);
-            //     conversation.IsDoNotDisturb = _IsDoNotDisturb(item);
-            //     conversations.Add(conversation);
-            // }
-            return conversations;
+            return await _uiThreadInvoker.Run(automation =>
+            {
+                return GetVisibleConversationsCore(automation);
+            }).ConfigureAwait(false);
         }
+
+        private List<SimpleConversation> GetVisibleConversationsCore(UIA3Automation automation)
+        {
+            var list = new List<SimpleConversation>();
+            var root = ConversationRoot;
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            foreach (var item in items)
+            {
+                var cItem = GetConversationItemFromName(item.Name);
+                list.Add(cItem);
+            }
+            return list;
+        }
+        private SimpleConversation GetConversationItemFromName(string name)
+        {
+            var conversation = new SimpleConversation();
+            string[] aryName = name.Split('\n');
+            conversation.ConversationTitle = aryName[0].Trim();
+            conversation.IsDoNotDisturb = aryName.ToList().Where(u => u.Trim().Equals("消息免打扰")).FirstOrDefault() != null ? true : false;
+            conversation.IsTop = aryName.ToList().Where(u => u.Trim().Equals("已置顶")).FirstOrDefault() != null ? true : false;
+            var match = Regex.Match(name, @"\[([\d]*)条\]");
+            if (match.Success)
+            {
+                conversation.NotReadNumbr = int.TryParse(match.Groups[1].Value, out int value) ? value : 0;
+            }
+
+            return conversation;
+        }
+
         /// <summary>
-        /// 获取会话列表所有会话的名称
+        /// 获取会话列表所有会话的标题
         /// 考虑到效率，只返回名称列表
         /// </summary>
         /// <returns></returns>
-        public List<string> GetAllConversations()
+        public async Task<List<string>> GetAllConversations()
         {
-            var items = new List<string>();
-            return items;
+            return await _uiThreadInvoker.Run(automation =>
+            {
+                return GetAllConversationsCore(automation);
+            }).ConfigureAwait(false);
         }
+
+        internal List<string> GetAllConversationsCore(UIA3Automation automation)
+        {
+            HashSet<string> list = new HashSet<string>();
+            //先最到顶端，然后再往上收集所有标题
+            _ScrollListTop((items, rect) => true);
+            _ScrollListBottom((items, rect) =>
+            {
+                foreach (var item in items)
+                {
+                    var aryItems = item.Name.Trim().Split('\n');
+                    var title = aryItems[0].Trim();
+                    list.Add(title);
+                }
+                return true;
+            });
+
+            return list.ToList();
+        }
+
         /// <summary>
         /// 定位会话
         /// 定位会话的用途：可以将会话列表滚动到指定会话的位置，使指定会话可见
@@ -98,7 +239,7 @@ namespace WeChatAuto.Components
             return await _uiThreadInvoker.Run(automation =>
             {
                 return LocateConversationCore(title, automation);
-            });
+            }).ConfigureAwait(false);
         }
         /// <summary>
         /// 会话列表向上滚动，并且执行需要的业务逻辑
@@ -113,7 +254,7 @@ namespace WeChatAuto.Components
             await _uiThreadInvoker.Run(automation =>
             {
                 _ScrollListTop(callBack);
-            });
+            }).ConfigureAwait(false);
         }
 
 
@@ -130,10 +271,10 @@ namespace WeChatAuto.Components
             await _uiThreadInvoker.Run(automation =>
             {
                 _ScrollListBottom(callBack);
-            });
+            }).ConfigureAwait(false);
         }
 
-        private bool LocateConversationCore(string title, UIA3Automation automation)
+        internal bool LocateConversationCore(string title, UIA3Automation automation)
         {
             var searchFlag = false;
             _ScrollListBox((items, rect) =>
@@ -145,8 +286,19 @@ namespace WeChatAuto.Components
                     {
                         if (item.BoundingRectangle.Y < rect.Y || item.BoundingRectangle.Y + item.BoundingRectangle.Height > rect.Y + rect.Height)
                         {
+
+                            if (item.BoundingRectangle.Y + item.BoundingRectangle.Height > rect.Y + rect.Height)
+                            {
+                                _Client.MainWindow.Focus();
+                                var point = rect.SafeRandomPoint();
+                                Mouse.Position = point;
+                                Mouse.Scroll(-1 * WeAutomation.Config.ConversationInterval);
+                                searchFlag = true;
+                                return false;
+                            }
                             return true;
                         }
+
                         searchFlag = true;
                         return false;
                     }
@@ -157,62 +309,24 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 点击会话
-        /// </summary>
-        /// <param name="title">会话标题</param>
-        public void ClickConversation(string title)
-        {
-
-        }
-
-        /// <summary>
-        /// 点击第一个会话
-        /// </summary>
-        public void ClickFirstConversation()
-        {
-            var root = _GetConversationRoot();
-            var items = _uiThreadInvoker.Run(automation =>
-            {
-                return root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList();
-            }).GetAwaiter().GetResult();
-            var item = items.FirstOrDefault(u => !u.IsOffscreen);
-            var parentY = root.BoundingRectangle.Y;
-            var itemY = item.BoundingRectangle.Center().Y;
-            if (itemY <= parentY)
-            {
-                item = item.GetSibling(1);
-            }
-            if (item != null)
-            {
-                //DoConversionClick(item, root);
-            }
-            else
-            {
-                _logger.Trace($"未找到第一个会话");
-            }
-        }
-        /// <summary>
-        /// 双击会话
-        /// </summary>
-        /// <param name="title">会话标题</param>
-        public void DoubleClickConversation(string title)
-        {
-
-        }
-
-
-        /// <summary>
         /// 获取会话列表可见会话标题
         /// </summary>
         /// <returns></returns>
-        public List<string> GetVisibleConversationTitles()
+        public async Task<List<string>> GetVisibleConversationTitles()
         {
-            var root = _GetConversationRoot();
-            var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList()).GetAwaiter().GetResult();
-            return items.Select(item => item.Name.Replace(WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP, "")).ToList();
+            return await _uiThreadInvoker.Run(automation =>
+            {
+                HashSet<string> list = new HashSet<string>();
+                var root = ConversationRoot;
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                foreach (var item in items)
+                {
+                    var names = item.Name.Split('\n');
+                    list.Add(names[0].Trim());
+                }
+                return list.ToList();
+            }).ConfigureAwait(false);
         }
-
-
 
         /// <summary>
         /// 获取会话列表根节点
@@ -236,6 +350,26 @@ namespace WeChatAuto.Components
             root?.DrawHighlightExt();
             return root;
         }
+        //往上滚动
+        internal void _ScrollUpStep()
+        {
+            _Client.MainWindow.Focus();
+            var root = this.ConversationRoot;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+
+            Mouse.Position = point;
+            Mouse.Scroll(WeAutomation.Config.ConversationInterval);
+        }
+        //往下滚动
+        internal void _ScrollDownStep()
+        {
+            _Client.MainWindow.Focus();
+            var root = this.ConversationRoot;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+
+            Mouse.Position = point;
+            Mouse.Scroll(WeAutomation.Config.ConversationInterval * -1);
+        }
         internal void _ScrollListBox(Func<AutomationElement[], Rectangle, bool> func)
         {
             var root = this.ConversationRoot;
@@ -252,8 +386,9 @@ namespace WeChatAuto.Components
             var continueFlag = false;
             while (retryCount <= 1)
             {
+                _Client.MainWindow.Focus();
                 Mouse.Position = point;
-                Mouse.Scroll(3);
+                Mouse.Scroll(WeAutomation.Config.ConversationInterval);
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 continueFlag = func(items, root.BoundingRectangle);
 
@@ -278,8 +413,9 @@ namespace WeChatAuto.Components
             var oldTitle = "";
             while (retryCount <= 2)
             {
+                _Client.MainWindow.Focus();
                 Mouse.Position = point;
-                Mouse.Scroll(-1 * 3);
+                Mouse.Scroll(-1 * WeAutomation.Config.ConversationInterval);
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
 
                 continueFlag = func(items, root.BoundingRectangle);
@@ -305,7 +441,6 @@ namespace WeChatAuto.Components
         internal void _ScrollListTop(Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
-
             _Client.MainWindow.Focus();
             var children = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
             if (children.Length == 0)
@@ -317,8 +452,9 @@ namespace WeChatAuto.Components
             var retryCount = 0;
             while (retryCount <= 1)
             {
+                _Client.MainWindow.Focus();
                 Mouse.Position = point;
-                Mouse.Scroll(3);
+                Mouse.Scroll(WeAutomation.Config.ConversationInterval);
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 if (!callBack(items, root.BoundingRectangle))
                     break;
@@ -353,8 +489,9 @@ namespace WeChatAuto.Components
             var oldTitle = "";
             while (retryCount <= 2)
             {
+                _Client.MainWindow.Focus();
                 Mouse.Position = point;
-                Mouse.Scroll(-1 * 3);
+                Mouse.Scroll(-1 * WeAutomation.Config.ConversationInterval);
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 if (items == null || items.Length == 0)
                     break;
