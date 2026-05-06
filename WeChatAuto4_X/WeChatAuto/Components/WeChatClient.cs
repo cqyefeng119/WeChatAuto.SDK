@@ -74,6 +74,7 @@ namespace WeChatAuto.Components
         {
             this.Navigation.SwitchNavigationCore(NavigationType.微信);
             this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
+            this.Conversations = new ConversationList(this,this._MainThreadInvoker,serviceProvider);
         }
 
         #region POM对象
@@ -81,6 +82,8 @@ namespace WeChatAuto.Components
         public Navigation Navigation => GetNavigation();
         //ToolBar
         public ToolBar ToolBar;
+        //会话管理对象
+        public ConversationList Conversations;
 
         #endregion
         private Navigation GetNavigation()

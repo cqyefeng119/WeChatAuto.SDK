@@ -15,6 +15,8 @@ using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using WeChatAuto.Services;
 using WeAutoCommon.Simulator;
+using FlaUI.UIA3;
+using System.Threading.Tasks;
 
 namespace WeChatAuto.Components
 {
@@ -25,10 +27,12 @@ namespace WeChatAuto.Components
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly AutoLogger<ConversationList> _logger;
-        private UIThreadInvoker _uiThreadInvoker; 
-        private Window _Window;
-        
-        private List<string> _TitleTypeList = new List<string> { WeChatConstant.WECHAT_CONVERSATION_WX_TEAM,
+        private UIThreadInvoker _uiThreadInvoker;
+        private WeChatClient _Client;
+        private ListBox ConversationRoot => _GetConversationRoot();   //会话列表根结点的查找方法
+
+        private readonly List<string> _TitleTypeList = new List<string> {
+            WeChatConstant.WECHAT_CONVERSATION_WX_TEAM,
             WeChatConstant.WECHAT_CONVERSATION_SERVICE_NOTICE,
             WeChatConstant.WECHAT_CONVERSATION_WX_PAY,
             WeChatConstant.WECHAT_CONVERSATION_TX_NEWS,
@@ -36,13 +40,12 @@ namespace WeChatAuto.Components
             WeChatConstant.WECHAT_CONVERSATION_FILE_TRANSFER,
             WeChatConstant.WECHAT_CONVERSATION_COLLAPSED_GROUP
         };
-        private readonly string _titleSuffix = WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP;
-        private List<ListBoxItem> _Conversations = new List<ListBoxItem>();
-        public ConversationList(Window window, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
+        private readonly string _titleSuffix = WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP;  //已置顶前缀
+        public ConversationList(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<AutoLogger<ConversationList>>();
             _uiThreadInvoker = uiThreadInvoker;
-            _Window = window;
+            _Client = client;
             _serviceProvider = serviceProvider;
         }
         /// <summary>
@@ -52,22 +55,22 @@ namespace WeChatAuto.Components
         /// <returns>返回<see cref="Conversation"/>列表</returns>
         public List<Conversation> GetVisibleConversations()
         {
-            var items = _GetVisibleConversatItems();
+            //var items = _GetVisibleConversatItems();
             List<Conversation> conversations = new List<Conversation>();
-            foreach (var item in items)
-            {
-                Conversation conversation = new Conversation();
-                conversation.ConversationTitle = _GetConversationTitle(item, conversation);
-                conversation.IsTop = _GetConversationIsTop(item);
-                conversation.ConversationType = _GetConversationType(conversation.ConversationTitle);
-                conversation.ConversationContent = _GetConversationContent(item);
-                conversation.IsCompanyGroup = _IsCompanyGroup(item);
-                conversation.ImageButton = _GetConversationImageButton(item);
-                conversation.HasNotRead = _GetConversationHasNotRead(item);
-                conversation.Time = _GetConversationTime(item);
-                conversation.IsDoNotDisturb = _IsDoNotDisturb(item);
-                conversations.Add(conversation);
-            }
+            // foreach (var item in items)
+            // {
+            //     Conversation conversation = new Conversation();
+            //     conversation.ConversationTitle = _GetConversationTitle(item, conversation);
+            //     conversation.IsTop = _GetConversationIsTop(item);
+            //     conversation.ConversationType = _GetConversationType(conversation.ConversationTitle);
+            //     conversation.ConversationContent = _GetConversationContent(item);
+            //     conversation.IsCompanyGroup = _IsCompanyGroup(item);
+            //     conversation.ImageButton = _GetConversationImageButton(item);
+            //     conversation.HasNotRead = _GetConversationHasNotRead(item);
+            //     conversation.Time = _GetConversationTime(item);
+            //     conversation.IsDoNotDisturb = _IsDoNotDisturb(item);
+            //     conversations.Add(conversation);
+            // }
             return conversations;
         }
         /// <summary>
@@ -77,7 +80,7 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public List<string> GetAllConversations()
         {
-            var items = _GetAllConversatItems();
+            var items = new List<string>();
             return items;
         }
         /// <summary>
@@ -86,7 +89,19 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="title">会话标题</param>
         /// <returns>如果找到会话，则返回true，否则返回false</returns>
-        public bool LocateConversation(string title) => _LocateConversation(title);
+        public async Task<bool> LocateConversation(string title)
+        {
+            return await _uiThreadInvoker.Run(automation =>
+            {
+                return LocateConversationCore(title, automation);
+            });
+        }
+
+        private bool LocateConversationCore(string title, UIA3Automation automation)
+        {
+            _ScrollListBox();
+            return false;
+        }
 
         /// <summary>
         /// 点击会话
@@ -94,74 +109,25 @@ namespace WeChatAuto.Components
         /// <param name="title">会话标题</param>
         public void ClickConversation(string title)
         {
-            var root = GetConversationRoot();
-            var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList()).GetAwaiter().GetResult();
-            var item = items.FirstOrDefault(c => (c.Name.Equals(title) || c.Name.Equals(title + _titleSuffix)));
-            if (item != null)
-            {
-                DoConversionClick(item, root);
-            }
-            else
-            {
-                _logger.Trace($"未找到会话：{title}");
-            }
+            // var root = GetConversationRoot();
+            // var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList()).GetAwaiter().GetResult();
+            // var item = items.FirstOrDefault(c => (c.Name.Equals(title) || c.Name.Equals(title + _titleSuffix)));
+            // if (item != null)
+            // {
+            //     DoConversionClick(item, root);
+            // }
+            // else
+            // {
+            //     _logger.Trace($"未找到会话：{title}");
+            // }
         }
 
-        private void DoConversionClick(AutomationElement item, AutomationElement root)
-        {
-            var xPath = "/Pane/Button";
-            var buttonElement = _uiThreadInvoker.Run(automation =>
-            {
-                var buttonResult = Retry.WhileNull(() => item.FindFirstByXPath(xPath));
-                var button = buttonResult.Result;
-                if (button != null)
-                {
-                    //确保按钮可见
-                    while (button.Properties.IsOffscreen.Value)
-                    {
-                        var scrollPattern = root.Patterns.Scroll.Pattern;
-                        if (scrollPattern != null && scrollPattern.VerticallyScrollable)
-                        {
-                            double currentPercent = scrollPattern.VerticalScrollPercent;
-                            double newPercent = Math.Min(currentPercent + scrollPattern.VerticalViewSize, 1);
-                            scrollPattern.SetScrollPercent(0, newPercent);
-                            Thread.Sleep(600);
-                            buttonResult = Retry.WhileNull(() => item.FindFirstByXPath(xPath));
-                            button = buttonResult.Result;
-                        }
-                        else
-                        {
-                            _logger.Trace($"会话列表不可滚动，无法定位会话按钮元素");
-                            break;
-                        }
-                    }
-                    _IsButtonVisible(root.AsListBox(), item);
-                }
-                else
-                {
-                    _logger.Trace($"未找到会话按钮元素");
-                }
-                return button;
-            }).GetAwaiter().GetResult();
-            if (buttonElement != null)
-            {
-                var button = buttonElement.AsButton();
-                DrawHightlightHelper.DrawHightlight(button, _uiThreadInvoker);
-
-                _WxWindow.SilenceClickExt(button);
-
-            }
-            else
-            {
-                _logger.Trace($"未找到会话按钮元素");
-            }
-        }
         /// <summary>
         /// 点击第一个会话
         /// </summary>
         public void ClickFirstConversation()
         {
-            var root = GetConversationRoot();
+            var root = _GetConversationRoot();
             var items = _uiThreadInvoker.Run(automation =>
             {
                 return root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList();
@@ -175,7 +141,7 @@ namespace WeChatAuto.Components
             }
             if (item != null)
             {
-                DoConversionClick(item, root);
+                //DoConversionClick(item, root);
             }
             else
             {
@@ -188,89 +154,9 @@ namespace WeChatAuto.Components
         /// <param name="title">会话标题</param>
         public void DoubleClickConversation(string title)
         {
-            var root = GetConversationRoot();
-            var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList()).GetAwaiter().GetResult();
-            var item = items.FirstOrDefault(c => c.Name.Equals(title) || c.Name.Equals(title+_titleSuffix));
-            if (item != null)
-            {
-                var xPath = "/Pane/Button";
-                var retryElement = _uiThreadInvoker.Run(automation => Retry.WhileNull(() => item.FindFirstByXPath(xPath))).GetAwaiter().GetResult();
-                if (retryElement.Success)
-                {
-                    var button = retryElement.Result.AsButton();
-                    _uiThreadInvoker.Run(automation =>
-                    {
-                        //使按钮可见
-                        while (button.Properties.IsOffscreen.Value)
-                        {
-                            var scrollPattern = root.Patterns.Scroll.Pattern;
-                            if (scrollPattern != null && scrollPattern.VerticallyScrollable)
-                            {
-                                double currentPercent = scrollPattern.VerticalScrollPercent;
-                                double newPercent = Math.Min(currentPercent + scrollPattern.VerticalViewSize, 1);
-                                scrollPattern.SetScrollPercent(0, newPercent);
-                                Thread.Sleep(600);
-                                var retryElementInner = Retry.WhileNull(() => item.FindFirstByXPath(xPath));
-                                if (retryElementInner.Success)
-                                {
-                                    button = retryElementInner.Result.AsButton();
-                                }
-                                else
-                                {
-                                    _logger.Trace($"未找到会话按钮元素");
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                _logger.Trace($"会话列表不可滚动，无法定位会话按钮元素");
-                                break;
-                            }
-                        }
 
-                        button = _IsButtonVisible(root, item);
-
-                        _Window.SetForeground();
-                        button.DoubleClick();
-                    }).GetAwaiter().GetResult();
-                }
-                else
-                {
-                    _logger.Trace($"未找到会话按钮元素");
-                }
-            }
-            else
-            {
-                _logger.Trace($"未找到会话：{title}");
-            }
         }
 
-        private Button _IsButtonVisible(ListBox root, AutomationElement item)
-        {
-            Button button = item.FindFirstByXPath("//Button")?.AsButton();
-            var centerPoint = button.BoundingRectangle.Center();
-            var bottomPoint = root.BoundingRectangle.Bottom;
-            if (centerPoint.Y + 5 >= bottomPoint)
-            {
-                var scrollPattern = root.Patterns.Scroll.Pattern;
-                double currentPercent = scrollPattern.VerticalScrollPercent;
-                double newPercent = Math.Min(currentPercent + scrollPattern.VerticalViewSize, 1);
-                scrollPattern.SetScrollPercent(0, newPercent);
-                Thread.Sleep(600);
-            }
-            button = item.FindFirstByXPath("//Button")?.AsButton();
-            var topPoint = root.BoundingRectangle.Top;
-            if (centerPoint.Y - 5 <= topPoint)
-            {
-                var scrollPattern = root.Patterns.Scroll.Pattern;
-                double currentPercent = scrollPattern.VerticalScrollPercent;
-                double newPercent = Math.Max(currentPercent - scrollPattern.VerticalViewSize, 0);
-                scrollPattern.SetScrollPercent(0, newPercent);
-                Thread.Sleep(600);
-            }
-
-            return button;
-        }
 
         /// <summary>
         /// 获取会话列表可见会话标题
@@ -278,226 +164,33 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public List<string> GetVisibleConversationTitles()
         {
-            var root = GetConversationRoot();
+            var root = _GetConversationRoot();
             var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList()).GetAwaiter().GetResult();
             return items.Select(item => item.Name.Replace(WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP, "")).ToList();
         }
 
-        /// <summary>
-        /// 获取会话标题
-        /// </summary>
-        /// <param name="item"></param>
-        /// <param name="conversation">会话对象<see cref="Conversation"/></param>
-        /// <returns>会话标题</returns>
-        private string _GetConversationTitle(ListBoxItem item, Conversation conversation)
-        {
-            var xPath = "/Pane/Button";
-            var retryElement = _uiThreadInvoker.Run(automation => Retry.WhileNull(() => item.FindFirstByXPath(xPath))).GetAwaiter().GetResult();
-            if (retryElement.Success)
-            {
-                var button = retryElement.Result.AsButton();
-                var title = DoAnotherLogic(button.Name);
-                return title;
-            }
-            return string.Empty;
-        }
 
-        private bool _GetConversationIsTop(ListBoxItem item) => item.Name.Contains(_titleSuffix);
 
-        private string DoAnotherLogic(string title)
-        {
-            var result = title.Replace("SessionListItem", "订阅号");
-            return result;
-        }
         /// <summary>
         /// 获取会话列表根节点
         /// </summary>
         /// <returns></returns>
-        public ListBox GetConversationRoot()
+        internal ListBox _GetConversationRoot()
         {
-            return _uiThreadInvoker.Run(automation =>
-            {
-                string xPath = $"/Pane/Pane/Pane/Pane/Pane/Pane/Pane/List[@Name='{WeChatConstant.WECHAT_SESSION_BOX_CONVERSATION}'][@IsOffscreen='false']";
-                var root = _Window.FindFirstByXPath(xPath).AsListBox();
-                root.Focus();
-                return root;
-            }).GetAwaiter().GetResult();
+            var path = @"/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/List[@Name='会话'][@AutomationId='session_list']";
+            var root = _Client.MainWindow.FindFirstByXPath(path).AsListBox();
+            root?.DrawHighlightExt();
+            return root;
         }
-        /// <summary>
-        /// 获取会话列表可见项
-        /// </summary>
-        /// <returns></returns>
-        private List<ListBoxItem> _GetVisibleConversatItems()
+        internal void _ScrollListBox()
         {
-            var root = GetConversationRoot();
-            var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem))).GetAwaiter().GetResult();
-            return items.Select(item => item.AsListBoxItem()).ToList();
-        }
-        //获取所有会话列表核心方法
-        private List<string> _GetAllConversatItems()
-        {
-            var listBox = GetConversationRoot();
-            List<string> list = _uiThreadInvoker.Run(automation =>
-            {
-                var subList = new List<string>();
-                var scrollPattern = listBox.Patterns.Scroll.Pattern;
-                if (scrollPattern != null && scrollPattern.VerticallyScrollable)
-                {
-                    for (double p = 0; p <= 1; p += scrollPattern.VerticalViewSize)
-                    {
-                        scrollPattern.SetScrollPercent(0, p);
-                        Thread.Sleep(600);
-
-                        var items = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-                        foreach (var item in items)
-                        {
-                            if (!subList.Contains(item.Name))
-                            {
-                                subList.Add(item.Name.Replace(WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP, ""));  //去除置顶标记
-                            }
-                        }
-                    }
-                    return subList;
-                }
-                else
-                {
-                    var items = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-                    subList.AddRange(items.Select(item => item.Name.Replace(WeChatConstant.WECHAT_SESSION_BOX_HAS_TOP, "")).ToList()); //去除置顶标记
-                    return subList;
-                }
-            }).GetAwaiter().GetResult();
-
-            return list;
-        }
-        private bool _LocateConversation(string title)
-        {
-            var listBox = GetConversationRoot();
-            listBox.Focus();
-            bool result = _uiThreadInvoker.Run(automation =>
-            {
-                var existTag = false;
-                var scrollPattern = listBox.Patterns.Scroll.Pattern;
-                if (scrollPattern != null && scrollPattern.VerticallyScrollable)
-                {
-                    for (double p = 0; p <= 1; p += scrollPattern.VerticalViewSize)
-                    {
-                        scrollPattern.SetScrollPercent(0, p);
-                        Thread.Sleep(600);
-                        var items = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-                        var item = items.FirstOrDefault(c => c.Name.Equals(title) || c.Name.Equals(title+_titleSuffix));
-                        if (item != null)
-                        {
-                            existTag = true;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    var items = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-                    var item = items.FirstOrDefault(c => c.Name.Equals(title) || c.Name.Equals(title+_titleSuffix));
-                    if (item != null)
-                    {
-                        existTag = true;
-                    }
-                }
-                return existTag;
-            }).GetAwaiter().GetResult();
-
-            return result;
-        }
-        /// <summary>
-        /// 获取会话类型
-        /// </summary>
-        /// <param name="title"></param>
-        /// <returns></returns>
-        private ConversationType _GetConversationType(string title)
-        {
-            if (!_TitleTypeList.Any(t => title.Contains(t)))
-            {
-                return ConversationType.好友或群聊;
-            }
-            else
-            {
-                return Enum.TryParse<ConversationType>(title, true, out ConversationType conversationType) ? conversationType : ConversationType.好友或群聊;
-            }
-        }
-        /// <summary>
-        /// 是否是企业群
-        /// </summary>
-        /// <param name="item">会话列表项<see cref="ListBoxItem"/></param>
-        /// <returns>是否是企业群</returns>
-        private bool _IsCompanyGroup(ListBoxItem item)
-        {
-            var xPath = "/Pane/Pane/Pane[1]/Pane[2]";
-            var retryElement = _uiThreadInvoker.Run(automation => Retry.WhileNull(() => item.FindFirstByXPath(xPath))).GetAwaiter().GetResult();
-            return retryElement.Success;
-        }
-        /// <summary>
-        /// 获取会话内容
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
-        private string _GetConversationContent(ListBoxItem item)
-        {
-            var xPath = "/Pane/Pane[1]/Pane[2]/Text";
-            var retryElement = _uiThreadInvoker.Run(automation => Retry.WhileNull(() => item.FindFirstByXPath(xPath))).GetAwaiter().GetResult();
-            if (retryElement.Success)
-            {
-                var lable = retryElement.Result.AsLabel();
-                return lable.Name;
-            }
-            return string.Empty;
-        }
-        /// <summary>
-        /// 获取会话头像按钮
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
-        private Button _GetConversationImageButton(ListBoxItem item)
-        {
-            return _uiThreadInvoker.Run(automation => item.FindFirstByXPath("/Pane/Button").AsButton()).GetAwaiter().GetResult();
-        }
-        /// <summary>
-        /// 获取会话是否有未读消息
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
-        private bool _GetConversationHasNotRead(ListBoxItem item)
-        {
-            var xPath = "/Pane/Pane[2] | /Pane/Text";
-            var retryElement = _uiThreadInvoker.Run(automation => Retry.WhileNull(() => item.FindFirstByXPath(xPath))).GetAwaiter().GetResult();
-            return retryElement.Success;
-        }
-        /// <summary>
-        /// 获取会话时间
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
-        private string _GetConversationTime(ListBoxItem item)
-        {
-            var xPath = "/Pane/Pane[1]/Pane[1]/Text";
-            var retryElement = _uiThreadInvoker.Run(automation => Retry.WhileNull(() => item.FindAllByXPath(xPath))).GetAwaiter().GetResult();
-            if (retryElement.Success)
-            {
-                AutomationElement[] elements = retryElement.Result;
-                return elements[elements.Length - 1].Name;
-            }
-            return string.Empty;
-        }
-        /// <summary>
-        /// 是否是免打扰
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
-        private bool _IsDoNotDisturb(ListBoxItem item)
-        {
-            return _uiThreadInvoker.Run(automation =>
-            {
-                var xPath = "/Pane/Pane/Pane[2]/Pane";
-                var retryElement = Retry.WhileNull(() => item.FindFirstByXPath(xPath));
-                return retryElement.Success;
-            }).GetAwaiter().GetResult();
+            var root = this.ConversationRoot;
+            //先回到顶端，从顶端开始.
+            _Client.MainWindow.Focus();
+            var bound = root.BoundingRectangle;
+            
+            var retryCount = 0;
+            
         }
     }
 }
