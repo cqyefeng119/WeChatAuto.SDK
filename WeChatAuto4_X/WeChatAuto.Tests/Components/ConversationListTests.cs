@@ -22,7 +22,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.Conversations.LocateConversation("test");
-        Assert.True(false);
+        var flag = await client.Conversations.LocateConversation("师父");
+        Assert.True(flag);
     }
 }

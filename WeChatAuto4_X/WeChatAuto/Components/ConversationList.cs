@@ -17,6 +17,10 @@ using WeChatAuto.Services;
 using WeAutoCommon.Simulator;
 using FlaUI.UIA3;
 using System.Threading.Tasks;
+using WeAutoCommon.Extentions;
+using FlaUI.Core.Input;
+using System.Drawing;
+
 
 namespace WeChatAuto.Components
 {
@@ -96,11 +100,60 @@ namespace WeChatAuto.Components
                 return LocateConversationCore(title, automation);
             });
         }
+        /// <summary>
+        /// 会话列表向上滚动，并且执行需要的业务逻辑
+        /// </summary>
+        /// <param name="callBack">
+        /// <para>滚动过程中的回调，建议：如果处理业务结束，返回false,意味着不向上滚动，如果业务没有处理到，则返回true,继续滚动</para>
+        /// <para>参数中的Rectangle为会话列表容器的<see cref="Rectangle"/>,如果超出容器Rectangle范围，应该返回true继续滚动，直到可以点击为止</para>
+        /// </param>
+        /// <returns></returns>
+        public async Task Up(Func<AutomationElement[], Rectangle, bool> callBack)
+        {
+            await _uiThreadInvoker.Run(automation =>
+            {
+                _ScrollListTop(callBack);
+            });
+        }
+
+
+        /// <summary>
+        /// 会话列表滚动向下滚动，并且执行需要的业务逻辑
+        /// <param name="callBack">
+        /// <para>滚动过程中的回调，建议：如果处理业务结束，返回false,意味着不向上滚动，如果业务没有处理到，则返回true,继续滚动</para>
+        /// <para>参数中的Rectangle为会话列表容器的<see cref="Rectangle"/>,如果超出容器Rectangle范围，应该返回true继续滚动，直到可以点击为止</para>
+        /// </param>
+        /// </summary>
+        /// <returns></returns>
+        public async Task Down(Func<AutomationElement[], Rectangle, bool> callBack)
+        {
+            await _uiThreadInvoker.Run(automation =>
+            {
+                _ScrollListBottom(callBack);
+            });
+        }
 
         private bool LocateConversationCore(string title, UIA3Automation automation)
         {
-            _ScrollListBox();
-            return false;
+            var searchFlag = false;
+            _ScrollListBox((items, rect) =>
+            {
+                foreach (var item in items)
+                {
+                    string[] splitNames = item.Name.Split('\n');
+                    if (splitNames[0].Trim().Equals(title))
+                    {
+                        if (item.BoundingRectangle.Y < rect.Y || item.BoundingRectangle.Y + item.BoundingRectangle.Height > rect.Y + rect.Height)
+                        {
+                            return true;
+                        }
+                        searchFlag = true;
+                        return false;
+                    }
+                }
+                return true;
+            });
+            return searchFlag;
         }
 
         /// <summary>
@@ -109,17 +162,7 @@ namespace WeChatAuto.Components
         /// <param name="title">会话标题</param>
         public void ClickConversation(string title)
         {
-            // var root = GetConversationRoot();
-            // var items = _uiThreadInvoker.Run(automation => root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList()).GetAwaiter().GetResult();
-            // var item = items.FirstOrDefault(c => (c.Name.Equals(title) || c.Name.Equals(title + _titleSuffix)));
-            // if (item != null)
-            // {
-            //     DoConversionClick(item, root);
-            // }
-            // else
-            // {
-            //     _logger.Trace($"未找到会话：{title}");
-            // }
+
         }
 
         /// <summary>
@@ -177,20 +220,158 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         internal ListBox _GetConversationRoot()
         {
-            var path = @"/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/List[@Name='会话'][@AutomationId='session_list']";
-            var root = _Client.MainWindow.FindFirstByXPath(path).AsListBox();
+            var find = false;
+            ListBox root = null;
+            while (!find)
+            {
+                var path = @"/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/List[@Name='会话'][@AutomationId='session_list']";
+                root = _Client.MainWindow.FindFirstByXPath(path).AsListBox();
+                find = root != null;
+                if (!find)
+                {
+                    _Client.Navigation.SwitchNavigationCore(NavigationType.微信);
+                    RandomWait.Wait(300, 1000);
+                }
+            }
             root?.DrawHighlightExt();
             return root;
         }
-        internal void _ScrollListBox()
+        internal void _ScrollListBox(Func<AutomationElement[], Rectangle, bool> func)
         {
             var root = this.ConversationRoot;
-            //先回到顶端，从顶端开始.
+
             _Client.MainWindow.Focus();
-            var bound = root.BoundingRectangle;
-            
+            var children = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            if (children.Length == 0)
+                return;
+            if (!func(children, root.BoundingRectangle))
+                return;
+            //先回到顶端，从顶端开始.
+            var point = root.BoundingRectangle.SafeRandomPoint();
             var retryCount = 0;
-            
+            var continueFlag = false;
+            while (retryCount <= 1)
+            {
+                Mouse.Position = point;
+                Mouse.Scroll(3);
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                continueFlag = func(items, root.BoundingRectangle);
+
+                if (!continueFlag)
+                    break;
+                var item = root.FindFirstChild(cf => cf.ByControlType(ControlType.ListItem));
+                if (item.BoundingRectangle.Y == root.BoundingRectangle.Y)
+                {
+                    retryCount++;
+                }
+                else
+                {
+                    retryCount = 0;
+                }
+                RandomWait.Wait(200, 1000);
+            }
+            if (!continueFlag)
+                return;
+            //从头往下.
+            retryCount = 0;
+            RandomWait.Wait(100, 500);
+            var oldTitle = "";
+            while (retryCount <= 2)
+            {
+                Mouse.Position = point;
+                Mouse.Scroll(-1 * 3);
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+
+                continueFlag = func(items, root.BoundingRectangle);
+
+                if (!continueFlag)
+                    break;
+                RandomWait.Wait(100, 500);
+                if (items == null || items.Length == 0)
+                    break;
+                var lastItem = items[items.Length - 1];
+                if (lastItem.Name.Trim() != oldTitle)
+                {
+                    oldTitle = lastItem.Name.Trim();
+                    retryCount = 0;
+                }
+                else
+                {
+                    retryCount++;
+                }
+            }
+        }
+
+        internal void _ScrollListTop(Func<AutomationElement[], Rectangle, bool> callBack)
+        {
+            var root = this.ConversationRoot;
+
+            _Client.MainWindow.Focus();
+            var children = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            if (children.Length == 0)
+                return;
+            //先回到顶端，从顶端开始.
+            if (!callBack(children, root.BoundingRectangle))
+                return;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            var retryCount = 0;
+            while (retryCount <= 1)
+            {
+                Mouse.Position = point;
+                Mouse.Scroll(3);
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                if (!callBack(items, root.BoundingRectangle))
+                    break;
+                var item = root.FindFirstChild(cf => cf.ByControlType(ControlType.ListItem));
+                if (item.BoundingRectangle.Y == root.BoundingRectangle.Y)
+                {
+                    retryCount++;
+                }
+                else
+                {
+                    retryCount = 0;
+                }
+                RandomWait.Wait(200, 1000);
+            }
+        }
+
+        internal void _ScrollListBottom(Func<AutomationElement[], Rectangle, bool> callBack)
+        {
+            var root = this.ConversationRoot;
+
+            _Client.MainWindow.Focus();
+            var children = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            if (children.Length == 0)
+                return;
+            if (!callBack(children, root.BoundingRectangle))
+                return;
+
+            //从当前位置往下.
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            var retryCount = 0;
+            RandomWait.Wait(100, 500);
+            var oldTitle = "";
+            while (retryCount <= 2)
+            {
+                Mouse.Position = point;
+                Mouse.Scroll(-1 * 3);
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                if (items == null || items.Length == 0)
+                    break;
+                if (!callBack(items, root.BoundingRectangle))
+                    break;
+                var lastItem = items[items.Length - 1];
+                if (lastItem.Name.Trim() != oldTitle)
+                {
+                    oldTitle = lastItem.Name.Trim();
+                    retryCount = 0;
+                }
+                else
+                {
+                    retryCount++;
+                }
+                RandomWait.Wait(100, 500);
+            }
         }
     }
 }

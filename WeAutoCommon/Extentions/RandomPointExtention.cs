@@ -13,7 +13,7 @@ namespace WeAutoCommon.Extentions
         /// </summary>
         /// <param name="rectangle"></param>
         /// <returns></returns>
-        public static Point SafeRandomPointExtention(this Rectangle rectangle)
+        public static Point SafeRandomPoint(this Rectangle rectangle)
         {
             var width = (int)(rectangle.Width * 0.33);  //取1/3的安全位置
             var height = (int)(rectangle.Height * 0.33);
