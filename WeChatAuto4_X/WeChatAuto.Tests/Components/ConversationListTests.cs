@@ -131,4 +131,17 @@ public class ConversationList
         var result = await client.Search(who);
         Assert.False(result);
     }
+
+    [Theory(DisplayName = "测试搜索(群聊)")]
+    [InlineData("测试他人群")]
+    [InlineData("AI软件开发交流群")]
+    [InlineData("RapidOCR3群")]
+    [InlineData("猫哥上架互助群")]
+    public async Task Test_Search_Group(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.Search(who);
+        Assert.True(result);
+    }
 }
