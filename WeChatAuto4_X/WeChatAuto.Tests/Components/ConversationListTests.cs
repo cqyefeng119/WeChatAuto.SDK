@@ -137,11 +137,26 @@ public class ConversationList
     [InlineData("AI软件开发交流群")]
     [InlineData("RapidOCR3群")]
     [InlineData("猫哥上架互助群")]
+    [InlineData("Admin.net官方")]
     public async Task Test_Search_Group(string who)
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.Search(who);
         Assert.True(result);
+    }
+
+    [Theory(DisplayName = "测试搜索(群聊) - 错误")]
+    [InlineData("测试他人群2")]
+    [InlineData("AI软件开发交流群2")]
+    [InlineData("RapidOCR3群2")]
+    [InlineData("猫哥上架互助群2")]
+    [InlineData("Admin.net官方2")]
+    public async Task Test_Search_Group_error(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.Search(who);
+        Assert.False(result);
     }
 }

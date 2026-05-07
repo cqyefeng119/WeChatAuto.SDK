@@ -77,15 +77,26 @@ namespace WeChatAuto.Components
             this.Navigation.SwitchNavigationCore(NavigationType.微信);
             this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
+            this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
         }
 
         #region POM对象
-        //导航栏
+        /// <summary>
+        /// 导航栏, 参考: <see cref="Navigation"/>
+        /// </summary>
         public Navigation Navigation => GetNavigation();
-        //ToolBar
+        /// <summary>
+        /// 微信ToolBar,参考:<see cref="ToolBar"/>
+        /// </summary>
         public ToolBar ToolBar;
-        //会话管理对象
+        /// <summary>
+        /// 会话管理对象,参考:<see cref="ConversationList"/>
+        /// </summary>
         public ConversationList Conversations;
+        /// <summary>
+        /// ChatContent对象,参考:<see cref="ChatContent"/>
+        /// </summary>
+        public ChatContent ChatContent;
 
         #endregion
         private Navigation GetNavigation()
@@ -223,6 +234,7 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 消息管理
+
         #endregion
 
         #region  监听管理
