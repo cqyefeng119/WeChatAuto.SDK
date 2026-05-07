@@ -15,7 +15,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 微信窗口工具栏封装,可以进行最大化/还原，置顶/反置顶操作
     /// </summary>
-    public class ToolBar
+    internal class ToolBar
     {
         private readonly IServiceProvider _serviceProvider;
         private UIThreadInvoker _uiMainThreadInvoker;

@@ -22,6 +22,7 @@ using System.Text.RegularExpressions;
 
 namespace WeChatAuto.Components
 {
+    [Obsolete("废弃,层次太深了")]
     public class ChatBody : IDisposable
     {
         private readonly AutoLogger<ChatBody> _logger;
@@ -36,11 +37,11 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="callBack">回调函数,参数：消息上下文<see cref="MessageContext"/></param>
         /// <param name="firstMessageAction">适用于当开始消息监听时,发送一些信息（如：发送文字、表情、文件等）给好友的场景,参数：发送者<see cref="Sender"/></param>
-        public void AddListener(Action<MessageContext> callBack, Action<Sender> firstMessageAction = null)
-        {
-            //StartMessagePolling(callBack); //启动消息轮询检测
-            //firstMessageAction?.Invoke(Sender); //执行第一次消息发送
-        }
+        // public void AddListener(Action<MessageContext> callBack, Action<Sender> firstMessageAction = null)
+        // {
+        //     //StartMessagePolling(callBack); //启动消息轮询检测
+        //     //firstMessageAction?.Invoke(Sender); //执行第一次消息发送
+        // }
 
 
         /// <summary>
@@ -52,15 +53,15 @@ namespace WeChatAuto.Components
         /// 获取聊天内容区可见气泡列表
         /// </summary>
         /// <returns>聊天内容区可见气泡列表对象<see cref="Components.MessageBubbleList"/></returns>
-        public MessageBubbleList GetBubbleListObject()
-        {
-            // var xPath = $"/Pane/Pane/List[@Name='{WeChatConstant.WECHAT_CHAT_BOX_MESSAGE}']";
-            // _ChatBodyRoot = _GetChatBodyRoot_();
-            // var bubbleListRoot = _uiMainThreadInvoker.Run(automation => _ChatBodyRoot.FindFirstByXPath(xPath)).GetAwaiter().GetResult();
-            // MessageBubbleList bubbleListObject = new MessageBubbleList(_Window, bubbleListRoot, _WxWindow, _FullTitle, _uiMainThreadInvoker, this, _serviceProvider);
-            // return bubbleListObject;
-            return null;
-        }
+        // public MessageBubbleList GetBubbleListObject()
+        // {
+        //     // var xPath = $"/Pane/Pane/List[@Name='{WeChatConstant.WECHAT_CHAT_BOX_MESSAGE}']";
+        //     // _ChatBodyRoot = _GetChatBodyRoot_();
+        //     // var bubbleListRoot = _uiMainThreadInvoker.Run(automation => _ChatBodyRoot.FindFirstByXPath(xPath)).GetAwaiter().GetResult();
+        //     // MessageBubbleList bubbleListObject = new MessageBubbleList(_Window, bubbleListRoot, _WxWindow, _FullTitle, _uiMainThreadInvoker, this, _serviceProvider);
+        //     // return bubbleListObject;
+        //     return null;
+        // }
         /// <summary>
         /// 获取聊天内容区所有气泡列表,如果消息没有显示全，则会滚动消息至最顶部，然后获取所有气泡标题
         /// 速度会比较快
@@ -75,20 +76,20 @@ namespace WeChatAuto.Components
         /// 获取聊天内容区发送者
         /// </summary>
         /// <returns>聊天内容区发送者<see cref="Sender"/></returns>
-        public Sender GetSender()
-        {
-            // var xPath = "/Pane[2]";
-            // _ChatBodyRoot = _GetChatBodyRoot_();
-            // var senderRoot = _uiMainThreadInvoker.Run(automation =>
-            // {
-            //     var result = Retry.WhileNull(() => _ChatBodyRoot.FindFirstByXPath(xPath), timeout: TimeSpan.FromSeconds(5), interval: TimeSpan.FromMilliseconds(200));
-            //     return result.Success ? result.Result : null;
-            // }).GetAwaiter().GetResult();
-            // DrawHightlightHelper.DrawHightlight(senderRoot, _uiMainThreadInvoker);
-            // var sender = new Sender(_Window, senderRoot, _WxWindow, _FullTitle, _uiMainThreadInvoker, _serviceProvider);
-            // return sender;
-            return null;
-        }
+        // public Sender GetSender()
+        // {
+        //     // var xPath = "/Pane[2]";
+        //     // _ChatBodyRoot = _GetChatBodyRoot_();
+        //     // var senderRoot = _uiMainThreadInvoker.Run(automation =>
+        //     // {
+        //     //     var result = Retry.WhileNull(() => _ChatBodyRoot.FindFirstByXPath(xPath), timeout: TimeSpan.FromSeconds(5), interval: TimeSpan.FromMilliseconds(200));
+        //     //     return result.Success ? result.Result : null;
+        //     // }).GetAwaiter().GetResult();
+        //     // DrawHightlightHelper.DrawHightlight(senderRoot, _uiMainThreadInvoker);
+        //     // var sender = new Sender(_Window, senderRoot, _WxWindow, _FullTitle, _uiMainThreadInvoker, _serviceProvider);
+        //     // return sender;
+        //     return null;
+        // }
 
         public void Dispose(bool disposing)
         {

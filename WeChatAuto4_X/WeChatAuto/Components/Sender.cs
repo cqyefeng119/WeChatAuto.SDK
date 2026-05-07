@@ -27,7 +27,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 聊天内容区发送者
     /// </summary>
-    public class Sender
+    internal class Sender
     {
         private readonly AutoLogger<Sender> _logger;
         private UIThreadInvoker _uiThreadInvoker;
@@ -36,15 +36,17 @@ namespace WeChatAuto.Components
         public List<(ChatBoxToolBarType type, Button button)> ToolBarButtons => GetToolBarButtons();
         public Button SendButton => GetSendButton();
         private WeChatClient _Client;
+        private ChatContent content;
         /// <summary>
         /// 聊天内容区发送者构造函数
         /// </summary>
-        public Sender(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
+        public Sender(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider, ChatContent content)
         {
             _uiThreadInvoker = uiThreadInvoker;
             _serviceProvider = serviceProvider;
             _logger = serviceProvider.GetRequiredService<AutoLogger<Sender>>();
             this._Client = client;
+            this.content = content;
         }
 
         public string FullTitle => "";
@@ -182,6 +184,8 @@ namespace WeChatAuto.Components
         /// <param name="atUserList">被@的好友列表</param>
         private void SendMessage(string message, List<string> atUserList = null)
         {
+            var root = this.content.Root;
+            root.DrawHighlightExt();
             // if (atUserList == null || atUserList.Count == 0)
             // {
             //     _WxWindow.SilenceEnterText(ContentArea, message);

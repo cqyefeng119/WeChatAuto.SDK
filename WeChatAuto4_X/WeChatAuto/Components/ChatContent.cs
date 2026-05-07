@@ -16,15 +16,27 @@ using WeChatAuto.Extentions;
 
 namespace WeChatAuto.Components
 {
-    public class ChatContent
+    internal class ChatContent
     {
         private readonly AutoLogger<ChatContent> _logger;
         private UIThreadInvoker _uiMainThreadInvoker;
         private readonly IServiceProvider _serviceProvider;
-        private volatile bool _disposed = false;
         private WeChatClient _Client;
+        private ChatHeader _Header;
+        private MessageBubbleList _MessageList;
+        private Sender _Sender;
 
+        internal Sender Sender => _Sender;
+        internal MessageBubbleList MessageBubbleList => _MessageList;
+        internal ChatHeader ChatHeader => _Header;
 
+        internal AutomationElement Root
+        {
+            get
+            {
+                return this._Client.Conversations.ConversationRoot.GetParent().GetParent().GetParent().GetParent().GetParent().GetParent();
+            }
+        }
 
         /// <summary>
         /// 聊天标题
@@ -36,6 +48,9 @@ namespace WeChatAuto.Components
             _logger = serviceProvider.GetRequiredService<AutoLogger<ChatContent>>();
             _uiMainThreadInvoker = uiThreadInvoker;
             _serviceProvider = serviceProvider;
+            _Sender = new Sender(this._Client, _uiMainThreadInvoker, serviceProvider, this);
+            _Header = new ChatHeader(this._Client, serviceProvider, _uiMainThreadInvoker, this);
+            _MessageList = new MessageBubbleList(this._Client, _uiMainThreadInvoker, this, serviceProvider);
         }
     }
 }

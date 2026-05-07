@@ -38,7 +38,7 @@ public class WeChatClientTests
             Directory.CreateDirectory(path);
         }
         path = Path.Combine(path, Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + ".png");
-        await client.Navigation.SaveOwnerAvator(path);
+        await client.SaveOwnerAvator(path);
         Assert.True(File.Exists(path));
     }
 
@@ -48,39 +48,39 @@ public class WeChatClientTests
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
 
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.通讯录);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.通讯录);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.收藏);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.收藏);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.朋友圈);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.朋友圈);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.朋友圈);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.朋友圈);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.视频号);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.视频号);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.视频号);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.视频号);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.搜一搜);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.搜一搜);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.搜一搜);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.搜一搜);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.游戏中心);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.游戏中心);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.游戏中心);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.游戏中心);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.小程序面板);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.小程序面板);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.小程序面板);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.小程序面板);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.手机);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.手机);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.手机);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.手机);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.更多);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.更多);
         await Task.Delay(1000);
-        await client.Navigation.CloseNavWin(WeAutoCommon.Enums.NavigationType.更多);
+        await client.CloseNavWin(WeAutoCommon.Enums.NavigationType.更多);
         await Task.Delay(1000);
-        await client.Navigation.SwitchNavigation(WeAutoCommon.Enums.NavigationType.微信);
+        await client.SwitchNavigation(WeAutoCommon.Enums.NavigationType.微信);
         Assert.True(true);
     }
 }

@@ -31,13 +31,13 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 会话列表
     /// </summary>
-    public class ConversationList
+    internal class ConversationList
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly AutoLogger<ConversationList> _logger;
         private UIThreadInvoker _uiThreadInvoker;
         private WeChatClient _Client;
-        private ListBox ConversationRoot => _GetConversationRoot();   //会话列表根结点的查找方法
+        internal ListBox ConversationRoot => _GetConversationRoot();   //会话列表根结点的查找方法
 
         public ConversationList(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
         {

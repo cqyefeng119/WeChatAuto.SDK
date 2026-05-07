@@ -10,16 +10,16 @@ namespace WeChatAuto.Models
 {
     public sealed class MessageContext
     {
-        public MessageContext(List<MessageBubble> newMessages, List<MessageBubble> allMessages, Sender sender, WeChatClient ownerClient, WeChatClientFactory systemClientFactory, IServiceProvider serviceProvider, string ownerNickName)
-        {
-            NewMessages = newMessages;
-            AllMessages = allMessages;
-            Sender = sender;
-            OwnerClient = ownerClient;
-            SystemClientFactory = systemClientFactory;
-            ServiceProvider = serviceProvider;
-            OwnerNickName = ownerNickName;
-        }
+        // public MessageContext(List<MessageBubble> newMessages, List<MessageBubble> allMessages, Sender sender, WeChatClient ownerClient, WeChatClientFactory systemClientFactory, IServiceProvider serviceProvider, string ownerNickName)
+        // {
+        //     NewMessages = newMessages;
+        //     AllMessages = allMessages;
+        //     Sender = sender;
+        //     OwnerClient = ownerClient;
+        //     SystemClientFactory = systemClientFactory;
+        //     ServiceProvider = serviceProvider;
+        //     OwnerNickName = ownerNickName;
+        // }
         /// <summary>
         /// 当前我的微信昵称
         /// </summary>
@@ -38,7 +38,7 @@ namespace WeChatAuto.Models
         /// 发送者,调用此类可以发送消息、发送文件、发送表情等
         /// 参考<see cref="Sender"/>
         /// </summary>
-        public Sender Sender { get; set; }
+        // public Sender Sender { get; set; }
         /// <summary>
         /// 当前微信客户端
         /// 参考<see cref="WeChatClient"/>
@@ -187,7 +187,7 @@ namespace WeChatAuto.Models
         /// <param name="atUserList">被@的好友列表</param>
         public void SendMessage(string message, List<string> atUserList = null)
         {
-            Sender.SendMessage(message, atUserList);
+            // Sender.SendMessage(message, atUserList);
         }
         /// <summary>
         /// 发送文件
@@ -195,7 +195,7 @@ namespace WeChatAuto.Models
         /// <param name="files">文件路径列表</param>
         public void SendFile(string[] files)
         {
-            Sender.SendFile(files);
+            // Sender.SendFile(files);
         }
         /// <summary>
         /// 发送表情
@@ -204,7 +204,7 @@ namespace WeChatAuto.Models
         /// <param name="atUserList">被@的好友列表</param>
         public void SendEmoji(OneOf<int, string> emoji, List<string> atUserList = null)
         {
-            Sender.SendEmoji(emoji, atUserList);
+            // Sender.SendEmoji(emoji, atUserList);
         }
         #endregion
         #region 向聊天好友外的好友发送消息、发送文件、发送表情等

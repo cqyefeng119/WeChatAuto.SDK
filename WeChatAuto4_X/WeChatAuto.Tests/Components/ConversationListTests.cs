@@ -23,7 +23,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var flag = await client.Conversations.LocateConversation(who);
+        var flag = await client.LocateConversation(who);
         Assert.True(flag);
     }
 
@@ -32,7 +32,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.Conversations.Up((items, rect) =>
+        await client.Up((items, rect) =>
         {
             return true;
         });
@@ -43,7 +43,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.Conversations.Down((items, rect) =>
+        await client.Down((items, rect) =>
         {
             return true;
         });
@@ -55,11 +55,11 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.Conversations.Down((items, rect) =>
+        await client.Down((items, rect) =>
         {
             return true;
         });
-        await client.Conversations.Up((items, rect) =>
+        await client.Up((items, rect) =>
         {
             return true;
         });

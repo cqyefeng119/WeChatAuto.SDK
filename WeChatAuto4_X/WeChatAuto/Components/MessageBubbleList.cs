@@ -25,21 +25,22 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 聊天内容区气泡列表
     /// </summary>
-    public class MessageBubbleList
+    internal class MessageBubbleList
     {
         private IServiceProvider _serviceProvider;
         private AutoLogger<MessageBubbleList> _logger;
         private UIThreadInvoker _uiThreadInvoker;
-        private ChatBody _ChatBody;
+        private ChatContent _ChatContent;
         private WeChatClient _Client;
-        public MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatBody chatBody, IServiceProvider serviceProvider)
+
+        public MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
             _logger = serviceProvider.GetRequiredService<AutoLogger<MessageBubbleList>>();
 
             this._Client = client;
             _uiThreadInvoker = uiThreadInvoker;
-            _ChatBody = chatBody;
+            _ChatContent = content;
         }
 
         /// <summary>
@@ -76,7 +77,9 @@ namespace WeChatAuto.Components
         /// <param name="pageCount">获取的气泡数量，默认是10页,可以指定获取的页数，如果指定为-1，则获取所有气泡</param>
         /// <returns>所有气泡标题列表<see cref="ChatSimpleMessage"/></returns>
         public List<ChatSimpleMessage> GetAllChatHistory(int pageCount = 10)
-          => _ChatBody.GetAllChatHistory(pageCount);
+        {
+            return null;
+        }
 
 
 
@@ -127,7 +130,7 @@ namespace WeChatAuto.Components
         /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
         public void CollectMessage(ChatSimpleMessage chatSimpleMessage, int prevPageCount = 3)
         {
-            
+
         }
         /// <summary>
         /// 收藏指定的消息
@@ -161,7 +164,7 @@ namespace WeChatAuto.Components
         /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
         public void CollectMessage(string who, string message, int prevPageCount = 3)
         {
-            
+
         }
 
         /// <summary>
@@ -180,7 +183,7 @@ namespace WeChatAuto.Components
         /// <param name="lastRowIndex">最后一条消息的索引</param>
         public void ReferencedMessage(int lastRowIndex)
         {
-            
+
         }
         /// <summary>
         /// 引用消息
@@ -190,9 +193,9 @@ namespace WeChatAuto.Components
         /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
         public void ReferencedMessage(string who, string message, int prevPageCount = 3)
         {
-            
+
         }
-        
+
         /// <summary>
         /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
         /// 注意：

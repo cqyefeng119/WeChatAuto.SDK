@@ -84,19 +84,19 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 导航栏, 参考: <see cref="Navigation"/>
         /// </summary>
-        public Navigation Navigation => GetNavigation();
+        internal Navigation Navigation => GetNavigation();
         /// <summary>
         /// 微信ToolBar,参考:<see cref="ToolBar"/>
         /// </summary>
-        public ToolBar ToolBar;
+        internal ToolBar ToolBar;
         /// <summary>
         /// 会话管理对象,参考:<see cref="ConversationList"/>
         /// </summary>
-        public ConversationList Conversations;
+        internal ConversationList Conversations;
         /// <summary>
         /// ChatContent对象,参考:<see cref="ChatContent"/>
         /// </summary>
-        public ChatContent ChatContent;
+        internal ChatContent ChatContent;
 
         #endregion
         private Navigation GetNavigation()
