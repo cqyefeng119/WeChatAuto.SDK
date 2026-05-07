@@ -105,12 +105,30 @@ public class ConversationList
     }
 
     [Theory(DisplayName = "测试搜索")]
+    [InlineData("秋歌")]
     [InlineData("师父")]
+    [InlineData("女女")]
+    [InlineData("AI.Net")]
+    [InlineData("梁世京")]
     public async Task Test_Search_Who(string who)
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.Search(who);
         Assert.True(result);
+    }
+
+    [Theory(DisplayName = "测试搜索（错误情况）")]
+    [InlineData("秋歌2")]
+    [InlineData("师父2")]
+    [InlineData("女女2")]
+    [InlineData("AI.Net2")]
+    [InlineData("梁世京2")]
+    public async Task Test_Search_Who_error(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.Search(who);
+        Assert.False(result);
     }
 }

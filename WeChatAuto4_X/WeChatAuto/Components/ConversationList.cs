@@ -21,6 +21,8 @@ using WeAutoCommon.Extentions;
 using FlaUI.Core.Input;
 using System.Drawing;
 using FlaUI.Core;
+using FlaUI.Core.WindowsAPI;
+using System.Windows;
 
 
 
@@ -103,7 +105,7 @@ namespace WeChatAuto.Components
                 return false;
             if (freshTarget.IsOffscreen)
                 return false;
-            Point point = default;
+            System.Drawing.Point point = default;
             if (freshTarget.BoundingRectangle.Y < root.BoundingRectangle.Y)
             {
                 _ScrollUpStep();
@@ -150,9 +152,77 @@ namespace WeChatAuto.Components
             //通过搜索框搜索
             var path = @"/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/Group/Group/Edit[@Name='搜索']";
             var edit = _Client.MainWindow.FindFirstByXPath(path);
+            edit.Focus();
             edit.DrawHighlightExt();
+            Clipboard.SetText(who);
+            edit.Click();
+            Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, FlaUI.Core.WindowsAPI.VirtualKeyShort.KEY_A);
+            RandomWait.Wait(100, 400);
+            Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
+            Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, VirtualKeyShort.KEY_V);
+            //等候浮动菜单出来
+            var popWinResult = Retry.WhileNull(() =>
+            {
+                path = @"/Window[@Name='Weixin']/Group/List[@AutomationId='search_list']";
+                return _Client.MainWindow.FindFirstByXPath(path).AsWindow();
+            }, timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
 
-            return true;
+            if (popWinResult.Success)
+            {
+                var popupList = popWinResult.Result;
+                popupList.DrawHighlightExt();
+                var firstItem = popupList.FindFirstChild();
+                if (firstItem.Name.Equals("群聊") ||
+                    firstItem.Name.Equals("联系人") ||
+                    firstItem.Name.Equals("最常使用"))
+                {
+                    AutomationElement item = null;
+                    while (item == null || !item.Name.Equals(who))
+                    {
+                        item = firstItem.GetSibling(1);
+                        if (item == null)
+                            break;
+                        if (item.Name.Equals(who))
+                        {
+                            System.Drawing.Point point = item.BoundingRectangle.SafeRandomPoint();
+                            Mouse.Position = point;
+                            Mouse.Click(point);
+                            RandomWait.Wait(300, 1200);
+                            return true;
+                        }
+                        if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
+                            break;
+                    }
+                }
+                else
+                {
+                    firstItem = popupList.FindFirstChild(cf => cf.ByName("群聊"));
+                    if (firstItem == null)
+                    {
+                        Keyboard.Type(VirtualKeyShort.ESC);
+                        return false;
+                    }
+                    AutomationElement item = null;
+                    while (item == null || !item.Name.Equals(who))
+                    {
+                        item = firstItem.GetSibling(1);
+                        if (item == null)
+                            break;
+                        if (item.Name.Equals(who))
+                        {
+                            System.Drawing.Point point = item.BoundingRectangle.SafeRandomPoint();
+                            Mouse.Position = point;
+                            Mouse.Click(point);
+                            RandomWait.Wait(300, 1200);
+                            return true;
+                        }
+                        if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
+                            break;
+                    }
+                }
+            }
+            Keyboard.Type(VirtualKeyShort.ESC);
+            return false;
         }
 
         /// <summary>
