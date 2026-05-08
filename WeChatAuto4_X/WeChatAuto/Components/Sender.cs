@@ -50,13 +50,6 @@ namespace WeChatAuto.Components
             this.content = content;
         }
 
-        public string FullTitle => "";
-
-        public void Focuse()
-        {
-
-        }
-
         /// <summary>
         /// 获取工具栏按钮
         /// </summary>
@@ -70,7 +63,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 发起单个语音聊天
         /// </summary>
-        public void SendVoiceChat()
+        internal void SendVoiceChat()
         {
             // var voiceChatButton = GetToolBarButton(ChatBoxToolBarType.语音聊天);
             // if (voiceChatButton == null)
@@ -86,7 +79,7 @@ namespace WeChatAuto.Components
         /// 发起多个语音聊天
         /// </summary>
         /// <param name="whos">好友昵称列表</param>
-        public void SendVoiceChats(string[] whos)
+        internal void SendVoiceChats(string[] whos)
         {
             // var voiceChatButton = GetToolBarButton(ChatBoxToolBarType.语音聊天);
             // if (voiceChatButton == null)
@@ -104,7 +97,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 发起直播,适用于群聊中发起直播，单个好友没有直播功能
         /// </summary>
-        public void SendLiveStreaming()
+        internal void SendLiveStreaming()
         {
             // var liveStreamingButton = GetToolBarButton(ChatBoxToolBarType.直播);
             // liveStreamingButton.DrawHighlightExt(_uiThreadInvoker);
@@ -120,7 +113,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 发起视频聊天
         /// </summary>
-        public void SendVideoChat()
+        internal void SendVideoChat()
         {
             // var videoChatButton = GetToolBarButton(ChatBoxToolBarType.视频聊天);
             // if (videoChatButton == null)
@@ -138,7 +131,7 @@ namespace WeChatAuto.Components
         /// 获取工具栏按钮
         /// </summary>
         /// <returns>工具栏按钮</returns>
-        public List<(ChatBoxToolBarType type, Button button)> GetToolBarButtons()
+        internal List<(ChatBoxToolBarType type, Button button)> GetToolBarButtons()
         {
             // var toolBarRoot = _uiThreadInvoker.Run(automation => _SenderRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.ToolBar))).GetAwaiter().GetResult();
             // DrawHightlightHelper.DrawHightlight(toolBarRoot, _uiThreadInvoker);
@@ -195,6 +188,24 @@ namespace WeChatAuto.Components
                 }
                 RandomWait.Wait(100, 600);
                 SendMessageCore(message, atUser);
+            });
+        }
+        internal async Task SendFile(string who, string[] files)
+        {
+            await _uiThreadInvoker.Run(automation =>
+            {
+                if (string.IsNullOrWhiteSpace(who))
+                {
+                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                    if (unSelectChatItem())
+                        return;
+                }
+                else
+                {
+                    _Client.Conversations.SearchWhoCore(who);
+                }
+                RandomWait.Wait(100, 600);
+                SendFileCore(files);
             });
         }
         /// <summary>
@@ -321,6 +332,10 @@ namespace WeChatAuto.Components
                         RandomWait.Wait(50, 500);
                     }
                 }
+                else
+                {
+                    Keyboard.Type(virtualKeys: VirtualKeyShort.BACK);
+                }
                 RandomWait.Wait(500, 1200);
             }
         }
@@ -343,54 +358,60 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 粘贴图片等文件到输入框
-        /// </summary>
-        public void PasteImageFiles()
-        {
-            // _Window.Focus();
-            // TextBox textBox = ContentArea;
-            // textBox.Focus();
-            // textBox.ClickEnhance(_WxWindow.SelfWindow);
-            // Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
-            // RandomWait.Wait(300, 1500);
-            // var button = GetSendButton();
-            // button.ClickEnhance(_WxWindow.SelfWindow);
-        }
-
-        /// <summary>
         /// 发送文件
         /// </summary>
         /// <param name="files">文件路径列表</param>
-        public void SendFile(string[] files)
+        internal async Task SendFile(string[] files)
         {
-            // _WxWindow.SilencePasteSimple(files, ContentArea);
-
-            // var button = SendButton;
-            // _WxWindow.SilenceClickExt(button);
+            await _uiThreadInvoker.Run(automation =>
+            {
+                SendFileCore(files);
+            }).ConfigureAwait(false);
         }
+
+        internal void SendFileCore(string[] files)
+        {
+            var root = this.content.Root;
+            if (root == null)
+                return;
+            var textBox = _GetContentArea(root);
+            if (textBox == null)
+                return;
+
+            textBox.Focus();
+            var point = textBox.BoundingRectangle.SafeRandomPoint();
+            Mouse.Position = point;
+            Mouse.Click();
+
+            _Client.MainWindow.SilencePasteSimple(files, textBox);
+            RandomWait.Wait(300, 1200);
+            Keyboard.Type(VirtualKeyShort.ENTER);
+        }
+
         /// <summary>
         /// 发送表情
         /// </summary>
+        /// <param name="who">被发送消息的好友名称/群聊名称</param>
         /// <param name="emoji">表情名称或者描述或者索引</param>
         /// <param name="atUserList">被@的好友列表</param>
-        public void SendEmoji(OneOf<int, string> emoji, List<string> atUserList = null)
+        internal async Task SendEmoji(string who, OneOf<int, string> emoji, List<string> atUserList = null)
         {
-            // var message = "";
-            // emoji.Switch(
-            //     (int emojiId) =>
-            //     {
-            //         message = EmojiListHelper.Items.FirstOrDefault(item => item.Index == emojiId)?.Value ?? EmojiListHelper.Items[0].Value;
-            //     },
-            //     (string emojiName) =>
-            //     {
-            //         message = emojiName;
-            //         if (!(message.StartsWith("[") && message.EndsWith("]")))
-            //         {
-            //             message = EmojiListHelper.Items.FirstOrDefault(item => item.Description == emojiName)?.Value ?? message;
-            //         }
-            //     }
-            // );
-            // this.SendMessage(message, atUserList);
+            var message = "";
+            emoji.Switch(
+                (int emojiId) =>
+                {
+                    message = EmojiListHelper.Items.FirstOrDefault(item => item.Index == emojiId)?.Value ?? EmojiListHelper.Items[0].Value;
+                },
+                (string emojiName) =>
+                {
+                    message = emojiName;
+                    if (!(message.StartsWith("[") && message.EndsWith("]")))
+                    {
+                        message = EmojiListHelper.Items.FirstOrDefault(item => item.Description == emojiName)?.Value ?? message;
+                    }
+                }
+            );
+            await this.SendMessage(who,message, atUserList);
         }
     }
 }

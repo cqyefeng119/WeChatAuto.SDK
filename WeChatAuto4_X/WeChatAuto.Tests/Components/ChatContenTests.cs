@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.VisualBasic.ApplicationServices;
 using OneOf;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendMessage(who,"""
+        await client.SendMessage(who, """
 群公告
 • 本群为严谨的技术讨论群，核心主题为：
 人工智能在自动化领域中的应用、实践与原理。
@@ -41,12 +42,15 @@ public class ChatContenTests
 """);
     }
 
-    [Fact(DisplayName = "测试发送文本消息并@好友")]
-    public async Task Test_Send_Message_at_friend()
+    [Theory(DisplayName = "测试发送文本消息并@好友")]
+    [InlineData("测试04")]
+    [InlineData("测试01")]
+    [InlineData("AI.Net")]
+    public async Task Test_Send_Message_at_friend(string who)
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendMessage("","""
+        await client.SendMessage(who, """
 群公告
 • 本群为严谨的技术讨论群，核心主题为：
 人工智能在自动化领域中的应用、实践与原理。
@@ -58,7 +62,48 @@ public class ChatContenTests
 旅游、美食、日常琐事、个人动态等。
 
 请将公共讨论资源留给技术话题，踩红线必T
-""", new List<string> {"所有人", "AI.Net","","秋歌" });
+""", new List<string> { "所有人", "AI.Net", "", "秋歌" });
+    }
+
+    [Theory(DisplayName = "测试发送图片")]
+    [InlineData("测试04")]
+    [InlineData("")]
+    [InlineData("测试01")]
+    [InlineData("AI.Net")]
+    public async Task Test_Send_Files_image(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var list = new List<string>();
+        list.Add(Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"));
+        await client.SendFile(who, list.ToArray());
+    }
+
+    [Theory(DisplayName = "测试发送多文件")]
+    [InlineData("测试04")]
+    [InlineData("")]
+    [InlineData("测试01")]
+    [InlineData("AI.Net")]
+    public async Task Test_Send_Files_image_mutx(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var list = new List<string>();
+        list.Add(Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"));
+        list.Add(Path.Combine(AppContext.BaseDirectory, "Assets", "用AI开发的12条要素.pdf"));
+        await client.SendFile(who, list.ToArray());
+    }
+
+    [Theory(DisplayName = "测试发送emoji")]
+    [InlineData("测试04")]
+    [InlineData("")]
+    [InlineData("测试01")]
+    [InlineData("AI.Net")]
+    public async Task Test_Send_Files_emoji(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendEmoji(who, 1, new List<string> { "所有人", "AI.Net", "", "秋歌" });
     }
 
 }

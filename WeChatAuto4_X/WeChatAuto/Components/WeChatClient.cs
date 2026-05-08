@@ -240,7 +240,22 @@ namespace WeChatAuto.Components
         /// <param name="who">好名/群聊的名称,也就是肉眼所见的标题</param>
         /// <param name="message">消息内容，文本消息内容</param>
         /// <param name="atUser">被@的好友,可以多个</param>
-        public async Task SendMessage(string who,string message, OneOf<string, string[], List<string>> atUser = default) => await ChatContent.SendMessage(who,message, atUser);
+        public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default) => await ChatContent.SendMessage(who, message, atUser);
+
+        /// <summary>
+        /// 发送文件
+        /// </summary>
+        /// <param name="who">好友/群聊，可以为空,如果为空，则发送到当前聊天窗口</param>
+        /// <param name="files">文件路径列表</param>
+        public async Task SendFile(string who, string[] files) => await ChatContent.SendFile(who, files);
+
+        /// <summary>
+        /// 发送表情    
+        /// </summary>  
+        /// <param name="who">被发送消息的好友名称/群聊名称</param>
+        /// <param name="emoji">表情名称或者描述或者索引,具体请参见<see cref="EmojiListHelper"/></param>
+        /// <param name="atUserList">被@的好友列表</param>
+        public async Task SendEmoji(string who, OneOf<int, string> emoji, List<string> atUserList = null) => await ChatContent.SendEmoji(who, emoji, atUserList);
 
         #endregion
 

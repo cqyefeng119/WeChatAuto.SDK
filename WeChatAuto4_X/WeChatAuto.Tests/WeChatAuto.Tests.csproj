@@ -29,5 +29,14 @@
   <ItemGroup>
     <ProjectReference Include="..\WeChatAuto\WeChatAuto.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="Assets\1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\用AI开发的12条要素.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
