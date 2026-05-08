@@ -145,6 +145,24 @@ namespace WeChatAuto.Components
             }
             return false;
         }
+        /// <summary>
+        /// 检查是否是选中状态.
+        /// </summary>
+        /// <returns></returns>
+        internal bool CheckSelectState()
+        {
+            var root = ConversationRoot;
+            if (root.IsPatternSupported(root.Automation.PatternLibrary.SelectionPattern))
+            {
+                var s = root.Patterns.Selection.Pattern;
+                var v = s.Selection.ValueOrDefault;
+                if (v != null && v.Length > 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         //如果会话列表不存在who,再查询
         private bool _SearchFromEdit(string who, ListBox root)

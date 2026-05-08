@@ -234,6 +234,13 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 消息管理
+        /// <summary>
+        /// 发送文本消息,可以是群聊名称或者好友名称，名称可以为空，如果为空，则给当前聊天窗口发送消息
+        /// </summary>
+        /// <param name="who">好名/群聊的名称,也就是肉眼所见的标题</param>
+        /// <param name="message">消息内容，文本消息内容</param>
+        /// <param name="atUser">被@的好友,可以多个</param>
+        public async Task SendMessage(string who,string message, OneOf<string, string[], List<string>> atUser = default) => await ChatContent.SendMessage(who,message, atUser);
 
         #endregion
 

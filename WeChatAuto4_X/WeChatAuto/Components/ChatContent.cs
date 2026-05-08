@@ -13,6 +13,9 @@ using FlaUI.Core.Tools;
 using System.Drawing;
 using FlaUI.Core.Capturing;
 using WeChatAuto.Extentions;
+using OneOf;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace WeChatAuto.Components
 {
@@ -34,7 +37,9 @@ namespace WeChatAuto.Components
         {
             get
             {
-                return this._Client.Conversations.ConversationRoot.GetParent().GetParent().GetParent().GetParent().GetParent().GetParent();
+                var path = @"/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group[@AutomationId='chat_message_page']";
+                var itemResult = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath(path), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+                return itemResult.Success ? itemResult.Result : null;
             }
         }
 
@@ -51,6 +56,17 @@ namespace WeChatAuto.Components
             _Sender = new Sender(this._Client, _uiMainThreadInvoker, serviceProvider, this);
             _Header = new ChatHeader(this._Client, serviceProvider, _uiMainThreadInvoker, this);
             _MessageList = new MessageBubbleList(this._Client, _uiMainThreadInvoker, this, serviceProvider);
+        }
+
+        /// <summary>
+        /// 发送消息
+        /// </summary>
+        /// <param name="who">好友或者群聊的名称</param>
+        /// <param name="message">消息内容</param>
+        /// <param name="atUser">被@的好友</param>
+        internal async Task SendMessage(string who,string message, OneOf<string, string[], List<string>> atUser = default)
+        {
+            await Sender.SendMessage(who,message, atUser);
         }
     }
 }
