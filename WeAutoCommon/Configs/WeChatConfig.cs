@@ -121,6 +121,10 @@ namespace WeAutoCommon.Configs
         /// 2: PROCESS_PER_MONITOR_DPI_AWARE，进程根据每个显示器DPI绘制,DPI感知生效。
         /// </summary>
         public int ProcessDpiAwareness { get; set; } = 1;
+        /// <summary>
+        /// 是否启用微信语音消息发送功能
+        /// </summary>
+        public bool EnableSendVoiceMessage {get;set;} = false;
     }
 
     public static class Language

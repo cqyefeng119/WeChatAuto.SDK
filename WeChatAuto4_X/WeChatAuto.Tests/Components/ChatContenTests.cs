@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using Microsoft.VisualBasic.ApplicationServices;
+using NAudio.Wave;
 using OneOf;
 using Xunit.Abstractions;
+using NAudio.CoreAudioApi;
+
 
 namespace WeChatAuto.Tests.Components;
 
@@ -104,6 +107,55 @@ public class ChatContenTests
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         await client.SendEmoji(who, 1, new List<string> { "所有人", "AI.Net", "", "秋歌" });
+    }
+    [Fact(DisplayName = "测试发送语音消息")]
+    public async Task Test_Send_VoiceMessage()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendVoiceChat("AI.Net");
+    }
+
+    [Fact(DisplayName = "测试发送视频消息")]
+    public async Task Test_Send_VedioMessage()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendVedioChat("AI.Net");
+    }
+
+    [Fact(DisplayName = "测试发送多人语音消息")]
+    public async Task Test_Send_VideoMessage()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendVoiceChats("人工智能自动化技术讨论群", new string[] { "AI.Net", "王俊海","王优孟二","hee","kenny" });
+    }
+
+    [Fact(DisplayName = "显示WASAPI设备")]
+    public void Test_ListWasapiDevices()
+    {
+        var enumerator = new MMDeviceEnumerator();
+
+        // 播放设备
+        var renderDevices = enumerator.EnumerateAudioEndPoints(
+            DataFlow.Render,
+            DeviceState.Active);
+
+        foreach (var device in renderDevices)
+        {
+            _output.WriteLine($"Render: {device.FriendlyName}");
+        }
+
+        // 录音设备
+        var captureDevices = enumerator.EnumerateAudioEndPoints(
+            DataFlow.Capture,
+            DeviceState.Active);
+
+        foreach (var device in captureDevices)
+        {
+            _output.WriteLine($"Capture: {device.FriendlyName}");
+        }
     }
 
 }

@@ -24,6 +24,7 @@ using System.Drawing;
 using System.Threading.Tasks;
 using WeAutoCommon.Extentions;
 using System.Windows;
+using FlaUI.UIA3.Patterns;
 
 namespace WeChatAuto.Components
 {
@@ -35,7 +36,6 @@ namespace WeChatAuto.Components
         private readonly AutoLogger<Sender> _logger;
         private UIThreadInvoker _uiThreadInvoker;
         private readonly IServiceProvider _serviceProvider;
-        internal List<(ChatBoxToolBarType type, Button button)> ToolBarButtons => GetToolBarButtons();
         private WeChatClient _Client;
         private ChatContent content;
         /// <summary>
@@ -51,115 +51,209 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 获取工具栏按钮
+        /// 发起单人语音聊天
         /// </summary>
-        /// <param name="type">工具栏按钮类型</param>
-        /// <returns>工具栏按钮</returns>
-        public Button GetToolBarButton(ChatBoxToolBarType type)
+        /// <param name="who">好友昵称</param>
+        internal async Task SendVoiceChat(string who)
         {
-            var toolBarButtons = GetToolBarButtons();
-            return toolBarButtons.FirstOrDefault(btn => btn.type == type).button;
+            await _uiThreadInvoker.Run(automation =>
+            {
+                if (string.IsNullOrWhiteSpace(who))
+                {
+                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                    if (unSelectChatItem())
+                        return;
+                }
+                else
+                {
+                    _Client.Conversations.SearchWhoCore(who);
+                }
+                RandomWait.Wait(100, 600);
+                SendVoiceChatCore();
+            });
         }
-        /// <summary>
-        /// 发起单个语音聊天
-        /// </summary>
-        internal void SendVoiceChat()
+
+        internal void SendVoiceChatCore()
         {
-            // var voiceChatButton = GetToolBarButton(ChatBoxToolBarType.语音聊天);
-            // if (voiceChatButton == null)
-            // {
-            //     _logger.Error("无法找到语音聊天按钮，无法发起单个语音聊天");
-            //     return;
-            // }
-            // voiceChatButton.DrawHighlightExt(_uiThreadInvoker);
-            // RandomWait.Wait(300, 800);
-            // voiceChatButton.ClickEnhance(_Window);
-        }
-        /// <summary>
-        /// 发起多个语音聊天
-        /// </summary>
-        /// <param name="whos">好友昵称列表</param>
-        internal void SendVoiceChats(string[] whos)
-        {
-            // var voiceChatButton = GetToolBarButton(ChatBoxToolBarType.语音聊天);
-            // if (voiceChatButton == null)
-            // {
-            //     _logger.Error("无法找到语音聊天按钮，无法发起多个语音聊天");
-            //     return;
-            // }
-            // voiceChatButton.DrawHighlightExt(_uiThreadInvoker);
-            // RandomWait.Wait(300, 800);
-            // _Window.Focus();
-            // voiceChatButton.ClickEnhance(_Window);
-            // _AddChatGroupMember(whos);
+            var root = this.content.Root;
+            if (root == null)
+                return;
+            var button = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("语音通话").And(cf.ByAutomationId("voip_button"))))?.AsButton();
+            if (button == null)
+                return;
+            button.DrawHighlightExt();
+            // var point = button.BoundingRectangle.SafeRandomPoint();
+            button.ClickEnhance(_Client.MainWindow);
+            //等候语音通话窗口出现，最多等候2秒钟
+            var windowResult = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath("/Window[@Name='Weixin']/MenuItem[@Name='语音通话']"), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (windowResult.Success)
+            {
+                var menuItem = windowResult.Result.AsMenuItem();
+                menuItem.DrawHighlightExt();
+                menuItem.ClickEnhance(_Client.MainWindow);
+            }
         }
 
         /// <summary>
-        /// 发起直播,适用于群聊中发起直播，单个好友没有直播功能
+        /// 发起单人视频聊天
         /// </summary>
-        internal void SendLiveStreaming()
+        /// <param name="who">好友昵称,可以为空，如果为空，则发送到当前聊天窗口</param>
+        internal async Task SendVedioChat(string who)
         {
-            // var liveStreamingButton = GetToolBarButton(ChatBoxToolBarType.直播);
-            // liveStreamingButton.DrawHighlightExt(_uiThreadInvoker);
-            // if (liveStreamingButton == null)
-            // {
-            //     _logger.Error("无法找到直播按钮，无法发起直播");
-            //     return;
-            // }
-            // _Window.Focus();
-            // RandomWait.Wait(300, 800);
-            // liveStreamingButton.ClickEnhance(_Window);
+            await _uiThreadInvoker.Run(automation =>
+            {
+                if (string.IsNullOrWhiteSpace(who))
+                {
+                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                    if (unSelectChatItem())
+                        return;
+                }
+                else
+                {
+                    _Client.Conversations.SearchWhoCore(who);
+                }
+                RandomWait.Wait(100, 600);
+                SendVedioChatCore();
+            });
         }
-        /// <summary>
-        /// 发起视频聊天
-        /// </summary>
-        internal void SendVideoChat()
+
+        internal void SendVedioChatCore()
         {
-            // var videoChatButton = GetToolBarButton(ChatBoxToolBarType.视频聊天);
-            // if (videoChatButton == null)
-            // {
-            //     _logger.Error("无法找到视频聊天按钮，无法发起视频聊天");
-            //     return;
-            // }
-            // videoChatButton.DrawHighlightExt(_uiThreadInvoker);
-            // RandomWait.Wait(300, 800);
-            // _Window.Focus();
-            // RandomWait.Wait(300, 1500);
-            // videoChatButton.ClickEnhance(_Window);
-        }
-        /// <summary>
-        /// 获取工具栏按钮
-        /// </summary>
-        /// <returns>工具栏按钮</returns>
-        internal List<(ChatBoxToolBarType type, Button button)> GetToolBarButtons()
-        {
-            // var toolBarRoot = _uiThreadInvoker.Run(automation => _SenderRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.ToolBar))).GetAwaiter().GetResult();
-            // DrawHightlightHelper.DrawHightlight(toolBarRoot, _uiThreadInvoker);
-            // var buttons = _uiThreadInvoker.Run(automation => toolBarRoot.FindAllChildren(cf => cf.ByControlType(ControlType.Button))).GetAwaiter().GetResult();
-            // List<Button> buttonList = buttons.Select(btn => btn.AsButton()).ToList();
-            // List<(ChatBoxToolBarType type, Button button)> toolBarButtons = new List<(ChatBoxToolBarType type, Button button)>
-            // {
-            //     (ChatBoxToolBarType.表情, buttonList.FirstOrDefault(btn => btn.Name.Contains(WeChatConstant.WECHAT_CHAT_BOX_EMOTION))),
-            //     (ChatBoxToolBarType.发送文件, buttonList.FirstOrDefault(btn => btn.Name.Contains(WeChatConstant.WECHAT_CHAT_BOX_SEND_FILE))),
-            //     (ChatBoxToolBarType.截图, buttonList.FirstOrDefault(btn => btn.Name.Contains(WeChatConstant.WECHAT_CHAT_BOX_SCREENSHOT))),
-            //     (ChatBoxToolBarType.聊天记录, buttonList.FirstOrDefault(btn => btn.Name.Contains(WeChatConstant.WECHAT_CHAT_BOX_CHAT_RECORD))),
-            //     (ChatBoxToolBarType.直播, buttonList.FirstOrDefault(btn => btn.Name.Contains(WeChatConstant.WECHAT_CHAT_BOX_LIVE))),
-            //     (ChatBoxToolBarType.语音聊天, buttonList.FirstOrDefault(btn => btn.Name.Equals("语音聊天"))),
-            //     (ChatBoxToolBarType.视频聊天, buttonList.FirstOrDefault(btn => btn.Name.Equals("视频聊天")))
-            // };
-            // return toolBarButtons;
-            return null;
+            var root = this.content.Root;
+            if (root == null)
+                return;
+            var button = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("语音通话").And(cf.ByAutomationId("voip_button"))))?.AsButton();
+            if (button == null)
+                return;
+            button.DrawHighlightExt();
+            // var point = button.BoundingRectangle.SafeRandomPoint();
+            button.ClickEnhance(_Client.MainWindow);
+            //等候语音通话窗口出现，最多等候2秒钟
+            var windowResult = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath("/Window[@Name='Weixin']/MenuItem[@Name='视频通话']"), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (windowResult.Success)
+            {
+                var menuItem = windowResult.Result.AsMenuItem();
+                menuItem.DrawHighlightExt();
+                menuItem.ClickEnhance(_Client.MainWindow);
+            }
         }
 
         /// <summary>
-        /// 获取发送按钮
+        /// 发起多人语音聊天，适用于群聊发起语音聊天
         /// </summary>
-        /// <returns>发送按钮</returns>
-        internal Button _GetSendButton(AutomationElement root)
+        /// <param name="who">群聊名称,可以为空，如果为空，则发送到当前聊天窗口</param>
+        /// <param name="partner">参与者，好友昵称列表,必须是群聊成员</param>
+        internal async Task SendVoiceChats(string who, string[] partner)
         {
-            var button = root.FindFirstByXPath(@"/Custom/Group/Group/Group/ToolBar[@AutomationId='tool_bar_accessible']/Group/Group/Button[@Name='发送']").AsButton();
-            return button;
+            await _uiThreadInvoker.Run(automation =>
+            {
+                if (string.IsNullOrWhiteSpace(who))
+                {
+                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                    if (unSelectChatItem())
+                        return;
+                }
+                else
+                {
+                    _Client.Conversations.SearchWhoCore(who);
+                }
+                RandomWait.Wait(100, 600);
+                SendVoiceChatsCore(partner);
+            });
         }
+
+        private void SendVoiceChatsCore(string[] partner)
+        {
+            var root = this.content.Root;
+            if (root == null)
+                return;
+            var button = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("语音通话").And(cf.ByAutomationId("voip_button"))))?.AsButton();
+            if (button == null)
+                return;
+            button.DrawHighlightExt();
+            // var point = button.BoundingRectangle.SafeRandomPoint();
+            button.ClickEnhance(_Client.MainWindow);
+            //等候语音通话窗口出现，最多等候2秒钟
+            var windowResult = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath("/Window[@Name='微信选择成员']"), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (windowResult.Success)
+            {
+                var selectWindow = windowResult.Result;
+                selectWindow.DrawHighlightExt();
+                var list = selectWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByAutomationId("sp_to_select_contact_list")).And(cf.ByName("请勾选需要添加的联系人")))?.AsListBox();
+                list?.DrawHighlightExt();
+                if (list != null)
+                {
+                    var lastItemName = string.Empty;
+                    var point = list.BoundingRectangle.SafeRandomPoint();
+                    Mouse.Position = point;
+                    while (true)
+                    {
+                        var items = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                        foreach (var item in items)
+                        {
+                            var name = item.Name;
+                            if (partner.Contains(name))
+                            {
+                                var checkBox = item.AsCheckBox();
+                                if (checkBox.IsPatternSupported(checkBox.Automation.PatternLibrary.TogglePattern))
+                                {
+                                    var pattern = checkBox.Patterns.Toggle.Pattern;
+                                    if (pattern.ToggleState != ToggleState.On)
+                                    {
+                                        //可能有些项目超出底部可视范围了，需要滚动才能看到，滚动到该项目位置
+                                        if (item.BoundingRectangle.Y + item.BoundingRectangle.Height > list.BoundingRectangle.Y + list.BoundingRectangle.Height)
+                                        {
+                                            Mouse.Scroll(-1);
+                                        }
+                                        item.DrawHighlightExt();
+                                        var itemPoint = item.BoundingRectangle.SafeRandomPoint();
+                                        Mouse.Position = itemPoint;
+                                        Mouse.Click();
+                                        RandomWait.Wait(200, 500);
+                                    }
+                                }
+                            }
+                        }
+                        if (items.LastOrDefault() != null)
+                        {
+                            if (lastItemName.Equals(items.LastOrDefault().Name))
+                            {
+                                break;
+                            }
+                            lastItemName = items.LastOrDefault().Name;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                        Mouse.Scroll(-2);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 发送语音消息
+        /// </summary>
+        /// <param name="who">好友昵称或群聊名称</param>
+        /// <param name="filePath">语音文件路径</param>
+        internal async Task SendVoiceMessage(string who, string filePath)
+        {
+
+        }
+        /// <summary>
+        /// 通过文本发送语音消息，需要下载whisper模型并配置好环境，文本转语音后发送
+        /// </summary>
+        /// <param name="who">好友昵称或群聊名称</param>
+        /// <param name="message">要转换为语音的文本消息</param>
+        /// <param name="textToVoiceFunc">文本转语音的函数，参数为要转换的文本，返回值为生成的语音文件路径,如果不提供，则使用默认的文本转语音功能(默认使用whisper)，当然你也可以提供自己的实现（如连接到外部平台的API）</param>
+        /// <returns></returns>
+        internal async Task SendVoiceMessage(string who, string message, Func<string, Task<string>> textToVoiceFunc = default)
+        {
+
+        }
+
+
         internal TextBox _GetContentArea(AutomationElement root)
         {
             var text = root.FindFirstByXPath(@"/Custom/Group/Group/Group/Group/Edit[@AutomationId='chat_input_field']").AsTextBox();
@@ -411,7 +505,7 @@ namespace WeChatAuto.Components
                     }
                 }
             );
-            await this.SendMessage(who,message, atUserList);
+            await this.SendMessage(who, message, atUserList);
         }
     }
 }
