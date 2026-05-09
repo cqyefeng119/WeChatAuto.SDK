@@ -164,6 +164,7 @@ namespace WeChatAuto.Components
 
         private void SendVoiceChatsCore(string[] partner)
         {
+            var filter = partner.Where(u=>u != _Client.NickName).ToList().ToArray();
             var root = this.content.Root;
             if (root == null)
                 return;
@@ -179,20 +180,31 @@ namespace WeChatAuto.Components
             {
                 var selectWindow = windowResult.Result;
                 selectWindow.DrawHighlightExt();
-                var list = selectWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByAutomationId("sp_to_select_contact_list")).And(cf.ByName("请勾选需要添加的联系人")))?.AsListBox();
-                list?.DrawHighlightExt();
-                if (list != null)
+                var listBox = selectWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByAutomationId("sp_to_select_contact_list")).And(cf.ByName("请勾选需要添加的联系人")))?.AsListBox();
+                listBox?.DrawHighlightExt();
+                if (listBox != null)
                 {
                     var lastItemName = string.Empty;
-                    var point = list.BoundingRectangle.SafeRandomPoint();
+                    var point = listBox.BoundingRectangle.SafeRandomPoint();
                     Mouse.Position = point;
-                    while (true)
+                    var index = 0;
+                    var oldItems = new AutomationElement[] { };
+                    var compare = new AutomationElementComparer();
+                    while (index < 2)
                     {
-                        var items = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                        var items = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                        var exceptItems = items.Except(oldItems,new AutomationElementComparer()).ToArray();
+                        if (exceptItems.Length > 0)
+                        {
+                            oldItems = items;
+                        }else
+                        {
+                            break;
+                        }
                         foreach (var item in items)
                         {
                             var name = item.Name;
-                            if (partner.Contains(name))
+                            if (filter.Contains(name))
                             {
                                 var checkBox = item.AsCheckBox();
                                 if (checkBox.IsPatternSupported(checkBox.Automation.PatternLibrary.TogglePattern))
@@ -201,9 +213,17 @@ namespace WeChatAuto.Components
                                     if (pattern.ToggleState != ToggleState.On)
                                     {
                                         //可能有些项目超出底部可视范围了，需要滚动才能看到，滚动到该项目位置
-                                        if (item.BoundingRectangle.Y + item.BoundingRectangle.Height > list.BoundingRectangle.Y + list.BoundingRectangle.Height)
+                                        if (item.BoundingRectangle.Y + item.BoundingRectangle.Height > listBox.BoundingRectangle.Y + listBox.BoundingRectangle.Height)
                                         {
+                                            Mouse.Position = point;
                                             Mouse.Scroll(-1);
+                                            RandomWait.Wait(200, 500);
+                                        }
+                                        if (item.BoundingRectangle.Y < listBox.BoundingRectangle.Y)
+                                        {
+                                            Mouse.Position = point;
+                                            Mouse.Scroll(1);
+                                            RandomWait.Wait(200, 500);
                                         }
                                         item.DrawHighlightExt();
                                         var itemPoint = item.BoundingRectangle.SafeRandomPoint();
@@ -218,7 +238,11 @@ namespace WeChatAuto.Components
                         {
                             if (lastItemName.Equals(items.LastOrDefault().Name))
                             {
+                                index++;
                                 break;
+                            }else
+                            {
+                                index = 0;
                             }
                             lastItemName = items.LastOrDefault().Name;
                         }
@@ -226,7 +250,19 @@ namespace WeChatAuto.Components
                         {
                             break;
                         }
-                        Mouse.Scroll(-2);
+                        Mouse.Position = point;
+                        Mouse.Scroll(-3);
+                        RandomWait.Wait(50, 500);
+                    }
+
+                    //点击确定按钮
+                    var path = @"/Window/Group/Group/Button[@AutomationId='confirm_btn'][@Name='完成']";
+                    var confirmButtonResult = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath(path)?.AsButton(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+                    if (confirmButtonResult.Success)
+                    {
+                        var confirmButton = confirmButtonResult.Result;
+                        confirmButton.DrawHighlightExt();
+                        confirmButton.ClickEnhance(_Client.MainWindow);
                     }
                 }
             }
