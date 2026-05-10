@@ -431,7 +431,7 @@ namespace WeChatAuto.Components
                 find = root != null;
                 if (!find)
                 {
-                    _Client.Navigation.SwitchNavigationCore(NavigationType.微信);
+                    _Client.Navigation.SwitchNavigationCore(null,NavigationType.微信);
                     RandomWait.Wait(300, 1000);
                 }
             }

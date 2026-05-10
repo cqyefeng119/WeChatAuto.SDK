@@ -34,6 +34,8 @@ namespace WeChatAuto.Components
         private bool _disposed = false;
         private readonly WeChatRecordVideo _recordVideo;
 
+        public readonly static string MainThreadName = "wechatauto.sdk";
+
         /// <summary>
         /// 微信自动化客户端工厂
         /// </summary>
@@ -56,7 +58,7 @@ namespace WeChatAuto.Components
                 _logger.Trace($"开始录制视频,保存路径: {videoPath}");
             }
             _logger.Trace("微信客户端工厂初始化完成");
-            ThreadInvoker = new UIThreadInvoker("wechatauto.sdk");
+            ThreadInvoker = new UIThreadInvoker(WeChatClientFactory.MainThreadName);
         }
         /// <summary>
         /// 微信客户端列表

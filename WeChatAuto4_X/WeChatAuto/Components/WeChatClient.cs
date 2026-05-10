@@ -20,6 +20,7 @@ using WeChatAuto.Extentions;
 using WeChatAuto.Models;
 using System.Configuration;
 using System.Drawing;
+using System.Linq;
 
 
 namespace WeChatAuto.Components
@@ -74,10 +75,11 @@ namespace WeChatAuto.Components
 
         private void _Initialize()
         {
-            this.Navigation.SwitchNavigationCore(NavigationType.微信);
+            this.Navigation.SwitchNavigationCore(null, NavigationType.微信);
             this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
+            this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
         }
 
         #region POM对象
@@ -97,6 +99,8 @@ namespace WeChatAuto.Components
         /// ChatContent对象,参考:<see cref="ChatContent"/>
         /// </summary>
         internal ChatContent ChatContent;
+
+        internal AddressBookList AddressBookList;
 
         #endregion
         private Navigation GetNavigation()
@@ -286,6 +290,22 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 通讯录管理
+        /// <summary>
+        /// 获取所有好友的信息列表,具体请考<see cref="FriendInfo"/>类说明.
+        /// 注意：只会获取通讯录中的联系人、企业微信联系人和群聊的记录,公众号，服务号，我的企业等特殊账号不会获取.
+        /// 1.如果是企业微信，会剔除@xxxx后缀，以保持一致性.
+        /// 2.如果好友/群聊/企业微信联系人等有备注，则备注会覆盖昵称显示.
+        /// 3.注意：如果微信联系人有重名，此方法会自动将重复的联系人改成一个临时的不同名称，建议好友/群聊/企业微信联系人有重名时，通过手工的方式添加备注，以保持区分.
+        /// 4.好友与企业微信可以获取wxid,群聊无法获取wxid.
+        /// </summary>
+        /// <returns>好友列表</returns>
+        public async Task<List<FriendInfo>> GetAllFriends() => await AddressBookList.GetAllFriends();
+        /// <summary>
+        /// 获取所有好友昵称列表.（通过通讯录）
+        /// 注意：如果是企业微信，会剔除@xxxx后缀，以保持一致性.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<string>> GetAllFriendNames() => await AddressBookList.GetAllFriendNames();
 
         #endregion
 

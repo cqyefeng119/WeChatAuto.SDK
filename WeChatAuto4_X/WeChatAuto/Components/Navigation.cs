@@ -19,6 +19,7 @@ using FlaUI.Core;
 using FlaUI.Core.Identifiers;
 using FlaUI.Core.Conditions;
 using System.IO;
+using FlaUI.UIA3;
 
 namespace WeChatAuto.Components
 {
@@ -109,13 +110,20 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型</param>
         public async Task SwitchNavigation(NavigationType navigationType)
         {
-            await _uiMainThreadInvoker.Run(automation =>
+            if (System.Threading.Thread.CurrentThread.Name == WeChatClientFactory.MainThreadName)
             {
-                SwitchNavigationCore(navigationType);
-            }).ConfigureAwait(false);
+                SwitchNavigationCore(null, navigationType);
+            }
+            else
+            {
+                await _uiMainThreadInvoker.Run(automation =>
+                {
+                    SwitchNavigationCore(automation, navigationType);
+                }).ConfigureAwait(false);
+            }
         }
 
-        internal void SwitchNavigationCore(NavigationType navigationType)
+        internal void SwitchNavigationCore(UIA3Automation automation, NavigationType navigationType)
         {
             var name = navigationType.ToString();
             var button = rootElement.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(name))).AsButton();

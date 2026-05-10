@@ -16,19 +16,19 @@ namespace WeAutoCommon.Models
         /// <summary>
         /// 昵称
         /// </summary>
-        public string NickName { get; set; }
+        public string NickName { get; set; } = "";
         /// <summary>
         /// 备注名
         /// </summary>
-        public string MemoName { get; set; }
+        public string MemoName { get; set; } = "";
         /// <summary>
         /// 地区,建议仅供参考
         /// </summary>
-        public string Area { get; set; }
+        public string Area { get; set; } = "";
         /// <summary>
         /// 标签
         /// </summary>
-        public List<string> Lable { get; set; }
+        public List<string> Lable { get; set; } = new List<string>();
         /// <summary>
         /// 共同群数量
         /// </summary>
@@ -36,20 +36,20 @@ namespace WeAutoCommon.Models
         /// <summary>
         /// 个性签名
         /// </summary>
-        public string Signature { get; set; }
+        public string Signature { get; set; } = "";
         /// <summary>
         /// 来源
         /// </summary>
-        public string Source { get; set; }
+        public string Source { get; set; } = "";
 
         /// <summary>
         /// 微信ID
         /// </summary>
-        public string WxId { get; set; }
+        public string WxId { get; set; } = "";
         /// <summary>
         /// 头像路径
         /// </summary>
-        public string AvatarPath { get; set; }
+        public string AvatarPath { get; set; } = "";
         /// <summary>
         /// 头像Image
         /// <code>
@@ -58,12 +58,35 @@ namespace WeAutoCommon.Models
         /// image.Save(xxxxx)
         /// </code>
         /// </summary>
-        public Image AvatarImage { get; set; }
+        public Image AvatarImage { get; set; } = null;
         /// <summary>
         /// 查询结果，三种查询结果：已是好友、未查询到或不支持手机号查询、能查询到，但不是好友.
         /// 具体结果请参见:<seealso cref="FriendSearchResultEnums"/>
         /// </summary>
         public FriendSearchResultEnums FriendSearchResult { get; set; }
+        /// <summary>
+        /// 好友类型，具体参见<see cref="ChatType"/>
+        /// </summary>
+        public ChatType ChatType { get; set; }
+        /// <summary>
+        /// 添加好友时间，>4.x版本才有此属性
+        /// </summary>
+        public string AddDateTime {get;set;}
+        /// <summary>
+        /// 微信中使用的名称
+        /// 本质是: 如果昵称不等于备注名，则以备注名不为主.
+        /// </summary>
+        public string Name
+        {
+            get
+            {
+                if (!NickName.Equals(MemoName))
+                {
+                    return MemoName;
+                }
+                return NickName;
+            }
+        }
 
         public override string ToString()
         {
