@@ -20,6 +20,7 @@ using FlaUI.Core.Identifiers;
 using FlaUI.Core.Conditions;
 using System.IO;
 using FlaUI.UIA3;
+using WeAutoCommon.Extentions;
 
 namespace WeChatAuto.Components
 {
@@ -110,7 +111,7 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型</param>
         public async Task SwitchNavigation(NavigationType navigationType)
         {
-            if (System.Threading.Thread.CurrentThread.Name == WeChatClientFactory.MainThreadName)
+            if (System.Threading.Thread.CurrentThread.ManagedThreadId == WeChatClientFactory.MainActionThreadInvoker.ActionThreadId)
             {
                 SwitchNavigationCore(null, navigationType);
             }
@@ -127,27 +128,23 @@ namespace WeChatAuto.Components
         {
             var name = navigationType.ToString();
             var button = rootElement.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(name))).AsButton();
-            if (navigationType != NavigationType.手机)
+
+            if (button != null)
             {
-                if (button != null)
+                var subButton = button.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button)).AsButton();
+                if (subButton != null)
                 {
-                    button.DrawHighlightExt();
-                    button.Click();
+                    button = subButton;
                 }
-            }
-            else
-            {
-                if (button != null)
-                {
-                    button = button.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("手机"))).AsButton();
-                    if (button != null)
-                    {
-                        button.DrawHighlightExt();
-                        button.Click();
-                    }
-                }
+                button.HightLight();
+                var point = button.BoundingRectangle.SafeRandomPoint();
+                _Client.MainWindow.Focus();
+                Mouse.Position = point;
+                Mouse.Click();
+                RandomWait.Wait(600,1500);
             }
         }
+
         /// <summary>
         /// 关闭通过导航栏打开的窗口.
         /// 仅支持聊天文件、朋友圈、视频号、看一看、搜一搜、小程序面板等窗口

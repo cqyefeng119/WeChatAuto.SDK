@@ -45,35 +45,19 @@ namespace WeChatAuto.Components
         /// 1.如果是企业微信，会剔除@xxxx后缀，以保持一致性.
         /// 2.如果好友/群聊/企业微信联系人等有备注，则备注会覆盖昵称显示.
         /// 3.注意：如果微信联系人有重名，此方法会自动将重复的联系人改成一个临时的不同名称，建议好友/群聊/企业微信联系人有重名时，通过手工的方式添加备注，以保持区分.
-        /// 4.好友与企业微信可以获取wxid,群聊无法获取wxid.
+        /// 4.普通联系人可以获取wxid,其他的如：群聊/企业微信联系人无法获取wxid.
         /// </summary>
         /// <returns>好友列表</returns>
-        internal async Task<List<FriendInfo>> GetAllFriends()
+        public async Task<List<FriendInfo>> GetAllFriends()
         {
-            if (System.Threading.Thread.CurrentThread.Name == WeChatClientFactory.MainThreadName)
-            {
-                return GetAllFriendsCore(null);
-            }
-            return await _uiMainThreadInvoker.Run(automation =>
-            {
-                try
-                {
-                    var list = GetAllFriendsCore(automation);
-                    return list;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"获取好友列表失败，异常信息：{ex}");
-                    return new List<FriendInfo>();
-                }
-            }).ConfigureAwait(false);
+            return await WeChatInvoker.Call(GetAllFriendsCore);
         }
 
         internal List<FriendInfo> GetAllFriendsCore(UIA3Automation automation)
         {
-            this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.通讯录);
             try
             {
+                this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.通讯录);
                 var list = new List<FriendInfo>();
                 var root = Root;
                 if (root == null)

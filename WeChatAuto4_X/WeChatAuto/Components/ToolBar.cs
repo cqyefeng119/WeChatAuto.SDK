@@ -51,40 +51,39 @@ namespace WeChatAuto.Components
         /// <param name="isTop">如果为true:则置顶，如果为false,则反置顶</param>
         public async Task Top(bool isTop = true)
         {
-            await _uiMainThreadInvoker.Run(automation =>
-            {
-                try
-                {
-                    TopCore(automation, isTop);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"{nameof(ToolBar)} - {nameof(Top)}:{ex.ToString()}");
-                }
-            });
+            await WeChatInvoker.Call(TopCore, isTop);
         }
 
         private void TopCore(UIA3Automation automation, bool isTop)
         {
-            if (isTop)
+            try
             {
-                var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("置顶")));
-                if (button != null)
+                if (isTop)
                 {
-                    Mouse.MoveTo(button.GetClickablePoint());
-                    button.DrawHighlightExt();
-                    button.Click();
+                    var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("置顶")));
+                    if (button != null)
+                    {
+                        Mouse.MoveTo(button.GetClickablePoint());
+                        button.DrawHighlightExt();
+                        button.Click();
+                        RandomWait.Wait(600, 1500);
+                    }
+                }
+                else
+                {
+                    var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("取消置顶")));
+                    if (button != null)
+                    {
+                        Mouse.MoveTo(button.GetClickablePoint());
+                        button.DrawHighlightExt();
+                        button.Click();
+                        RandomWait.Wait(600, 1500);
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("取消置顶")));
-                if (button != null)
-                {
-                    Mouse.MoveTo(button.GetClickablePoint());
-                    button.DrawHighlightExt();
-                    button.Click();
-                }
+                _logger.Error($"{nameof(ToolBar)} - {nameof(Top)}:{ex.ToString()}");
             }
         }
 
@@ -95,26 +94,25 @@ namespace WeChatAuto.Components
         /// </summary>
         public async Task Max()
         {
-            await _uiMainThreadInvoker.Run(automation =>
-            {
-                try
-                {
-                    MaxCore(automation);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"{nameof(ToolBar)} - {nameof(Max)}:{ex.ToString()}");
-                }
-            });
+            await WeChatInvoker.Call(MaxCore);
         }
 
         private void MaxCore(UIA3Automation automation)
         {
-            var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("最大化")));
-            if (button != null)
+            try
             {
-                button.DrawHighlightExt();
-                button.Click();
+                var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("最大化")));
+                if (button != null)
+                {
+                    button.DrawHighlightExt();
+                    Mouse.Position = button.GetClickablePoint();
+                    button.Click();
+                    RandomWait.Wait(500, 1500);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"{nameof(ToolBar)} - {nameof(Max)}:{ex.ToString()}");
             }
         }
 
@@ -124,26 +122,25 @@ namespace WeChatAuto.Components
         /// </summary>
         public async Task Restore()
         {
-            await _uiMainThreadInvoker.Run(automation =>
-            {
-                try
-                {
-                    RestoreCore(automation);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"{nameof(ToolBar)} - {nameof(Restore)}:{ex.ToString()}");
-                }
-            });
+            await WeChatInvoker.Call(RestoreCore);
         }
 
         private void RestoreCore(UIA3Automation automation)
         {
-            var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("还原")));
-            if (button != null)
+            try
             {
-                button.DrawHighlightExt();
-                button.Click();
+                var button = _ToolBarRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("还原")));
+                if (button != null)
+                {
+                    button.HightLight();
+                    Mouse.Position = button.GetClickablePoint();
+                    button.Click();
+                    RandomWait.Wait(500, 1500);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"{nameof(ToolBar)} - {nameof(Restore)}:{ex.ToString()}");
             }
         }
     }

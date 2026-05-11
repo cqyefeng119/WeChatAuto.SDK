@@ -3,6 +3,7 @@ using FlaUI.Core.AutomationElements;
 using WeAutoCommon.Configs;
 using WeAutoCommon.Models;
 using WeAutoCommon.Utils;
+using WeChatAuto.Components;
 using WeChatAuto.Services;
 
 namespace WeChatAuto.Utils
@@ -26,7 +27,7 @@ namespace WeChatAuto.Utils
         /// </summary>
         /// <param name="element"></param>
         /// <param name="uiThreadInvoker">线程执行器</param>
-        public static void  DrawHighlightExt(this AutomationElement element, UIThreadInvoker uiThreadInvoker = null)
+        public static void DrawHighlightExt(this AutomationElement element, UIThreadInvoker uiThreadInvoker = null)
         {
             if (WeAutomation.Config.DebugMode && element != null)
             {
@@ -37,6 +38,23 @@ namespace WeChatAuto.Utils
                 else
                 {
                     element.DrawHighlight();
+                }
+            }
+        }
+        /// <summary>
+        /// 高亮元素
+        /// </summary>
+        /// <param name="element"></param>
+        public static void HightLight(this AutomationElement element)
+        {
+            if (WeAutomation.Config.DebugMode && element != null)
+            {
+                if (System.Threading.Thread.CurrentThread.ManagedThreadId == WeChatClientFactory.MainActionThreadInvoker.ActionThreadId)
+                {
+                    element.DrawHighlight();
+                }else
+                {
+                    WeChatClientFactory.MainActionThreadInvoker.Run(automation=>element.DrawHighlight());
                 }
             }
         }

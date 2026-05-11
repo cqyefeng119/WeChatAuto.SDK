@@ -27,14 +27,14 @@ namespace WeChatAuto.Components
         // TODO: 每次微信版本变化应该检查这里是否需要修改.
         private const string CURRENT_WEIXIN_CLASSNAME = "Qt51514QWindowIcon";
         private bool _IsInit = false;
-        public static UIThreadInvoker ThreadInvoker;   //就是多微信的情况下，也是启用一个线程.
         private readonly AutoLogger<WeChatClientFactory> _logger;
         private IServiceProvider _serviceProvider;
         private readonly Dictionary<string, WeChatClient> _wxClientList = new Dictionary<string, WeChatClient>();
         private bool _disposed = false;
         private readonly WeChatRecordVideo _recordVideo;
 
-        public readonly static string MainThreadName = "wechatauto.sdk";
+        public readonly static string MainActionThreadName = "wechatauto.sdk";
+        public static UIThreadInvoker MainActionThreadInvoker;   //就是多微信的情况下，也是启用一个线程.
 
         /// <summary>
         /// 微信自动化客户端工厂
@@ -58,7 +58,7 @@ namespace WeChatAuto.Components
                 _logger.Trace($"开始录制视频,保存路径: {videoPath}");
             }
             _logger.Trace("微信客户端工厂初始化完成");
-            ThreadInvoker = new UIThreadInvoker(WeChatClientFactory.MainThreadName);
+            MainActionThreadInvoker = new UIThreadInvoker(WeChatClientFactory.MainActionThreadName);
         }
         /// <summary>
         /// 微信客户端列表
@@ -135,8 +135,8 @@ namespace WeChatAuto.Components
             _logger.Trace("开始重新获取微信窗口");
             try
             {
-                DragVisibleIfWechatHidden(ThreadInvoker);
-                ThreadInvoker.Run(automation => _GetTaskBarRoot(automation)
+                DragVisibleIfWechatHidden(MainActionThreadInvoker);
+                MainActionThreadInvoker.Run(automation => _GetTaskBarRoot(automation)
                     .Bind(taskBarRoot => _GetToolBar(taskBarRoot))
                     .BindOrElse(toolBar => _GetNotifyButtons(toolBar), () => _GetNotifyButtonsVersion2(automation))
                     .Bind(buttons => _ProcessNotifyButtons(automation, buttons))
@@ -362,6 +362,7 @@ namespace WeChatAuto.Components
         private void _InitWechatAutomationFramework(UIA3Automation automation, AutomationElement wxNotifyButton)
         {
             DrawHightlightHelper.DrawHighlightExt(wxNotifyButton);
+            RandomWait.Wait(300, 1200);
             wxNotifyButton.AsButton().Click();
             RandomWait.Wait(100, 800);
             var topWindowProcessId = _GetTopWindowProcessIdResult();  //当前微信的processid
@@ -370,7 +371,7 @@ namespace WeChatAuto.Components
 
             var owerInfo = __GetCurrentWxNickName(wxTempwindow);
             wxTempwindow.Focus();
-            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, wxTempwindow, ThreadInvoker, owerInfo);
+            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, wxTempwindow, MainActionThreadInvoker, owerInfo);
             _wxClientList.Add(owerInfo.NickName, client);
         }
 
@@ -386,7 +387,7 @@ namespace WeChatAuto.Components
             var point2 = new Point(point1.X, point1.Y - 55);
             Mouse.Position = point2;
             Mouse.LeftClick();
-            RandomWait.Wait(300, 800);
+            RandomWait.Wait(600, 2000);
             var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
                 And(cf.ByProcessId(wxTempwindow.Properties.ProcessId))),
                 timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
@@ -415,9 +416,10 @@ namespace WeChatAuto.Components
                             }
                             avatorPath = Path.Combine(avatorPath, $"{info.WxId}.png");
                             button.CaptureToFile(avatorPath);
-                            info.AvatorPath = avatorPath;                            
+                            info.AvatorPath = avatorPath;
                         }
                     }
+                    RandomWait.Wait(600,1200);
                 }
             }
             return info;
@@ -481,7 +483,7 @@ namespace WeChatAuto.Components
                     client.Value?.Dispose();
                 }
             }
-            ThreadInvoker.Dispose();   //将微信自动化的线程释放.
+            MainActionThreadInvoker.Dispose();   //将微信自动化的线程释放.
         }
     }
 }
