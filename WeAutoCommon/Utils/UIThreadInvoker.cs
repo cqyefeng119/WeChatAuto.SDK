@@ -24,6 +24,8 @@ namespace WeAutoCommon.Utils
 
         public UIA3Automation Automation => _automation;
 
+        public readonly int ActionThreadId;
+
         public UIThreadInvoker(string threadName)
         {
             _ThreadName = threadName;
@@ -34,6 +36,7 @@ namespace WeAutoCommon.Utils
             _uiThread.IsBackground = false;
             _uiThread.Start();
             _started.Task.GetAwaiter().GetResult();
+            ActionThreadId =  _uiThread.ManagedThreadId;
         }
 
         public override string ToString()
