@@ -362,7 +362,7 @@ namespace WeChatAuto.Components
         private void _InitWechatAutomationFramework(UIA3Automation automation, AutomationElement wxNotifyButton)
         {
             DrawHightlightHelper.DrawHighlightExt(wxNotifyButton);
-            RandomWait.Wait(300, 1200);
+            RandomWait.Wait(300, 800);
             wxNotifyButton.AsButton().Click();
             RandomWait.Wait(100, 800);
             var topWindowProcessId = _GetTopWindowProcessIdResult();  //当前微信的processid
@@ -387,7 +387,7 @@ namespace WeChatAuto.Components
             var point2 = new Point(point1.X, point1.Y - 55);
             Mouse.Position = point2;
             Mouse.LeftClick();
-            RandomWait.Wait(600, 2000);
+            RandomWait.Wait(300, 1000);
             var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
                 And(cf.ByProcessId(wxTempwindow.Properties.ProcessId))),
                 timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
@@ -419,7 +419,7 @@ namespace WeChatAuto.Components
                             info.AvatorPath = avatorPath;
                         }
                     }
-                    RandomWait.Wait(600,1200);
+                    RandomWait.Wait(50,600);
                 }
             }
             return info;

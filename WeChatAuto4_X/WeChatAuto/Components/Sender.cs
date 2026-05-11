@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using WeAutoCommon.Extentions;
 using System.Windows;
 using FlaUI.UIA3.Patterns;
+using FlaUI.UIA3;
 
 namespace WeChatAuto.Components
 {
@@ -41,7 +42,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 聊天内容区发送者构造函数
         /// </summary>
-        public Sender(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider, ChatContent content)
+        internal Sender(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider, ChatContent content)
         {
             _uiThreadInvoker = uiThreadInvoker;
             _serviceProvider = serviceProvider;
@@ -54,27 +55,24 @@ namespace WeChatAuto.Components
         /// 发起单人语音聊天
         /// </summary>
         /// <param name="who">好友昵称</param>
-        internal async Task SendVoiceChat(string who)
+        public async Task SendVoiceChat(string who)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                if (string.IsNullOrWhiteSpace(who))
-                {
-                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                    if (unSelectChatItem())
-                        return;
-                }
-                else
-                {
-                    _Client.Conversations.SearchWhoCore(who);
-                }
-                RandomWait.Wait(100, 600);
-                SendVoiceChatCore();
-            });
+            await WeChatInvoker.Call(SendVoiceChatCore, who);
         }
 
-        internal void SendVoiceChatCore()
+        internal void SendVoiceChatCore(UIA3Automation automation, string who)
         {
+            if (string.IsNullOrWhiteSpace(who))
+            {
+                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                if (unSelectChatItem())
+                    return;
+            }
+            else
+            {
+                _Client.Conversations.SearchWhoCore(automation,who);
+            }
+            RandomWait.Wait(300, 1200);
             var root = this.content.Root;
             if (root == null)
                 return;
@@ -98,27 +96,24 @@ namespace WeChatAuto.Components
         /// 发起单人视频聊天
         /// </summary>
         /// <param name="who">好友昵称,可以为空，如果为空，则发送到当前聊天窗口</param>
-        internal async Task SendVedioChat(string who)
+        public async Task SendVedioChat(string who)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                if (string.IsNullOrWhiteSpace(who))
-                {
-                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                    if (unSelectChatItem())
-                        return;
-                }
-                else
-                {
-                    _Client.Conversations.SearchWhoCore(who);
-                }
-                RandomWait.Wait(100, 600);
-                SendVedioChatCore();
-            });
+            await WeChatInvoker.Call(SendVedioChatCore, who);
         }
 
-        internal void SendVedioChatCore()
+        internal void SendVedioChatCore(UIA3Automation automation, string who)
         {
+            if (string.IsNullOrWhiteSpace(who))
+            {
+                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                if (unSelectChatItem())
+                    return;
+            }
+            else
+            {
+                _Client.Conversations.SearchWhoCore(automation,who);
+            }
+            RandomWait.Wait(300, 1200);
             var root = this.content.Root;
             if (root == null)
                 return;
@@ -143,28 +138,25 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who">群聊名称,可以为空，如果为空，则发送到当前聊天窗口</param>
         /// <param name="partner">参与者，好友昵称列表,必须是群聊成员</param>
-        internal async Task SendVoiceChats(string who, string[] partner)
+        public async Task SendVoiceChats(string who, string[] partner)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                if (string.IsNullOrWhiteSpace(who))
-                {
-                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                    if (unSelectChatItem())
-                        return;
-                }
-                else
-                {
-                    _Client.Conversations.SearchWhoCore(who);
-                }
-                RandomWait.Wait(100, 600);
-                SendVoiceChatsCore(partner);
-            });
+            await WeChatInvoker.Call(SendVoiceChatsCore, who, partner);
         }
 
-        private void SendVoiceChatsCore(string[] partner)
+        private void SendVoiceChatsCore(UIA3Automation automation, string who, string[] partner)
         {
-            var filter = partner.Where(u=>u != _Client.NickName).ToList().ToArray();
+            if (string.IsNullOrWhiteSpace(who))
+            {
+                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                if (unSelectChatItem())
+                    return;
+            }
+            else
+            {
+                _Client.Conversations.SearchWhoCore(automation,who);
+            }
+            RandomWait.Wait(300, 1200);
+            var filter = partner.Where(u => u != _Client.NickName).ToList().ToArray();
             var root = this.content.Root;
             if (root == null)
                 return;
@@ -193,11 +185,12 @@ namespace WeChatAuto.Components
                     while (index < 2)
                     {
                         var items = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
-                        var exceptItems = items.Except(oldItems,new AutomationElementComparer()).ToArray();
+                        var exceptItems = items.Except(oldItems, new AutomationElementComparer()).ToArray();
                         if (exceptItems.Length > 0)
                         {
                             oldItems = items;
-                        }else
+                        }
+                        else
                         {
                             break;
                         }
@@ -240,7 +233,8 @@ namespace WeChatAuto.Components
                             {
                                 index++;
                                 break;
-                            }else
+                            }
+                            else
                             {
                                 index = 0;
                             }
@@ -302,41 +296,43 @@ namespace WeChatAuto.Components
         /// <param name="message">文本消息内容</param>
         /// <param name="atUser">@的好友，可以多个，在群聊中使用</param>
         /// <returns></returns>
-        internal async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default)
+        public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                if (string.IsNullOrWhiteSpace(who))
-                {
-                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                    if (unSelectChatItem())
-                        return;
-                }
-                else
-                {
-                    _Client.Conversations.SearchWhoCore(who);
-                }
-                RandomWait.Wait(100, 600);
-                SendMessageCore(message, atUser);
-            });
+            await WeChatInvoker.Call(SendMessageExt, who, message, atUser);
         }
-        internal async Task SendFile(string who, string[] files)
+        private void SendMessageExt(UIA3Automation automation, string who, string message, OneOf<string, string[], List<string>> atUser = default)
         {
-            await _uiThreadInvoker.Run(automation =>
+            if (string.IsNullOrWhiteSpace(who))
             {
-                if (string.IsNullOrWhiteSpace(who))
-                {
-                    //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                    if (unSelectChatItem())
-                        return;
-                }
-                else
-                {
-                    _Client.Conversations.SearchWhoCore(who);
-                }
-                RandomWait.Wait(100, 600);
-                SendFileCore(files);
-            });
+                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                if (unSelectChatItem())
+                    return;
+            }
+            else
+            {
+                _Client.Conversations.SearchWhoCore(automation,who);
+            }
+            RandomWait.Wait(100, 600);
+            SendMessageCore(automation, message, atUser);
+        }
+        public async Task SendFile(string who, string[] files)
+        {
+            await WeChatInvoker.Call(SendFileExt, who, files);
+        }
+        private void SendFileExt(UIA3Automation automation, string who, string[] files)
+        {
+            if (string.IsNullOrWhiteSpace(who))
+            {
+                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                if (unSelectChatItem())
+                    return;
+            }
+            else
+            {
+                _Client.Conversations.SearchWhoCore(automation,who);
+            }
+            RandomWait.Wait(100, 600);
+            SendFileCore(automation,files);
         }
         /// <summary>
         /// 检查是否是选中状态.
@@ -345,19 +341,16 @@ namespace WeChatAuto.Components
         private bool unSelectChatItem() => !this._Client.Conversations.CheckSelectState();
 
         /// <summary>
-        /// 发送消息
+        /// 发送消息,给当前窗口发送消息
         /// </summary>
         /// <param name="message">消息内容</param>
         /// <param name="atUser">被@的好友</param>
-        internal async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser = default)
+        public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser = default)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                SendMessageCore(message, atUser);
-            });
+            await WeChatInvoker.Call(SendMessageCore, message, atUser);
         }
 
-        internal void SendMessageCore(string message, OneOf<string, string[], List<string>> atUser)
+        internal void SendMessageCore(UIA3Automation automation, string message, OneOf<string, string[], List<string>> atUser)
         {
             if (string.IsNullOrWhiteSpace(message))
                 return;
@@ -488,18 +481,15 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 发送文件
+        /// 发送文件,给当前窗口发送
         /// </summary>
         /// <param name="files">文件路径列表</param>
-        internal async Task SendFile(string[] files)
+        public async Task SendFile(string[] files)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                SendFileCore(files);
-            }).ConfigureAwait(false);
+            await WeChatInvoker.Call(SendFileCore,files);
         }
 
-        internal void SendFileCore(string[] files)
+        internal void SendFileCore(UIA3Automation automation,string[] files)
         {
             var root = this.content.Root;
             if (root == null)
@@ -524,7 +514,7 @@ namespace WeChatAuto.Components
         /// <param name="who">被发送消息的好友名称/群聊名称</param>
         /// <param name="emoji">表情名称或者描述或者索引</param>
         /// <param name="atUserList">被@的好友列表</param>
-        internal async Task SendEmoji(string who, OneOf<int, string> emoji, List<string> atUserList = null)
+        public async Task SendEmoji(string who, OneOf<int, string> emoji, List<string> atUserList = null)
         {
             var message = "";
             emoji.Switch(

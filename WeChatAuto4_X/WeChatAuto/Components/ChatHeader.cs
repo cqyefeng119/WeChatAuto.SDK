@@ -24,7 +24,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 聊天内容区标题区构造函数
         /// </summary>
-        public ChatHeader(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, ChatContent content)
+        internal ChatHeader(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, ChatContent content)
         {
             this._uiMainThreadInvoker = _uiMainThreadInvoker;
             _logger = serviceProvider.GetRequiredService<AutoLogger<ChatContent>>();

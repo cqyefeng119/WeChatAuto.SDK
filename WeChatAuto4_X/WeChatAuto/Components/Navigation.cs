@@ -70,13 +70,6 @@ namespace WeChatAuto.Components
                 File.WriteAllBytes(savePath, bytes);
                 return;
             }
-            Random random = new Random((int)DateTime.Now.Ticks);
-            await _uiMainThreadInvoker.Run(automation =>
-            {
-                SaveOwnerAvatorCore(savePath);
-            });
-            await Task.Delay(random.Next(300, 1000));
-            await SwitchNavigation(NavigationType.聊天);
         }
 
         internal void SaveOwnerAvatorCore(string savePath)
@@ -111,17 +104,7 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型</param>
         public async Task SwitchNavigation(NavigationType navigationType)
         {
-            if (System.Threading.Thread.CurrentThread.ManagedThreadId == WeChatClientFactory.MainActionThreadInvoker.ActionThreadId)
-            {
-                SwitchNavigationCore(null, navigationType);
-            }
-            else
-            {
-                await _uiMainThreadInvoker.Run(automation =>
-                {
-                    SwitchNavigationCore(automation, navigationType);
-                }).ConfigureAwait(false);
-            }
+            await WeChatInvoker.Call(SwitchNavigationCore,navigationType);
         }
 
         internal void SwitchNavigationCore(UIA3Automation automation, NavigationType navigationType)
@@ -152,13 +135,10 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型</param>
         public async Task CloseNavWin(NavigationType navigationType)
         {
-            await _uiMainThreadInvoker.Run(automation =>
-            {
-                CloseNavigationCore(navigationType);
-            });
+            await WeChatInvoker.Call(CloseNavigationCore,navigationType);
         }
 
-        internal void CloseNavigationCore(NavigationType navigationType)
+        internal void CloseNavigationCore(UIA3Automation automation,NavigationType navigationType)
         {
             RetryResult<Window> retryResult = null;
             RetryResult<Button> buttonResult = null;

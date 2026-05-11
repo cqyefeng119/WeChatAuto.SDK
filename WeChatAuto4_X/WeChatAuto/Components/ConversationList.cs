@@ -23,6 +23,7 @@ using System.Drawing;
 using FlaUI.Core;
 using FlaUI.Core.WindowsAPI;
 using System.Windows;
+using System.Configuration;
 
 
 
@@ -39,7 +40,7 @@ namespace WeChatAuto.Components
         private WeChatClient _Client;
         internal ListBox ConversationRoot => _GetConversationRoot();   //会话列表根结点的查找方法
 
-        public ConversationList(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
+        internal ConversationList(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<AutoLogger<ConversationList>>();
             _uiThreadInvoker = uiThreadInvoker;
@@ -53,13 +54,10 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<bool> Search(string who)
         {
-            return await _uiThreadInvoker.Run(automation =>
-            {
-                return SearchWhoCore(who);
-            });
+            return await WeChatInvoker.Call(SearchWhoCore,who);
         }
 
-        internal bool SearchWhoCore(string who)
+        internal bool SearchWhoCore(UIA3Automation automation,string who)
         {
             var root = ConversationRoot;
 
@@ -175,9 +173,10 @@ namespace WeChatAuto.Components
             Clipboard.SetText(who);
             edit.Click();
             Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, FlaUI.Core.WindowsAPI.VirtualKeyShort.KEY_A);
-            RandomWait.Wait(100, 400);
+            RandomWait.Wait(300, 800);
             Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
             Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, VirtualKeyShort.KEY_V);
+            RandomWait.Wait(300, 800);
             //等候浮动菜单出来
             var popWinResult = Retry.WhileNull(() =>
             {
@@ -205,7 +204,7 @@ namespace WeChatAuto.Components
                             System.Drawing.Point point = item.BoundingRectangle.SafeRandomPoint();
                             Mouse.Position = point;
                             Mouse.Click(point);
-                            RandomWait.Wait(300, 1200);
+                            RandomWait.Wait(600, 1500);
                             return true;
                         }
                         if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
@@ -231,7 +230,7 @@ namespace WeChatAuto.Components
                             System.Drawing.Point point = item.BoundingRectangle.SafeRandomPoint();
                             Mouse.Position = point;
                             Mouse.Click(point);
-                            RandomWait.Wait(300, 1200);
+                            RandomWait.Wait(600, 1500);
                             return true;
                         }
                         if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
@@ -250,10 +249,7 @@ namespace WeChatAuto.Components
         /// <returns>返回<see cref="Conversation"/>列表</returns>
         public async Task<List<SimpleConversation>> GetVisibleConversations()
         {
-            return await _uiThreadInvoker.Run(automation =>
-            {
-                return GetVisibleConversationsCore(automation);
-            }).ConfigureAwait(false);
+            return await WeChatInvoker.Call(GetVisibleConversationsCore);
         }
 
         private List<SimpleConversation> GetVisibleConversationsCore(UIA3Automation automation)
@@ -291,18 +287,15 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<List<string>> GetAllConversations()
         {
-            return await _uiThreadInvoker.Run(automation =>
-            {
-                return GetAllConversationsCore(automation);
-            }).ConfigureAwait(false);
+            return await WeChatInvoker.Call(GetAllConversationsCore);
         }
 
         internal List<string> GetAllConversationsCore(UIA3Automation automation)
         {
             HashSet<string> list = new HashSet<string>();
             //先最到顶端，然后再往上收集所有标题
-            _ScrollListTop((items, rect) => true);
-            _ScrollListBottom((items, rect) =>
+            _ScrollListTop(automation,(items, rect) => true);
+            _ScrollListBottom(automation,(items, rect) =>
             {
                 foreach (var item in items)
                 {
@@ -324,10 +317,7 @@ namespace WeChatAuto.Components
         /// <returns>如果找到会话，则返回true，否则返回false</returns>
         public async Task<bool> LocateConversation(string title)
         {
-            return await _uiThreadInvoker.Run(automation =>
-            {
-                return LocateConversationCore(title, automation);
-            }).ConfigureAwait(false);
+            return await WeChatInvoker.Call(LocateConversationCore,title);
         }
         /// <summary>
         /// 会话列表向上滚动，并且执行需要的业务逻辑
@@ -339,10 +329,7 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Up(Func<AutomationElement[], Rectangle, bool> callBack)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                _ScrollListTop(callBack);
-            }).ConfigureAwait(false);
+            await WeChatInvoker.Call(_ScrollListTop,callBack);
         }
 
 
@@ -356,13 +343,10 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Down(Func<AutomationElement[], Rectangle, bool> callBack)
         {
-            await _uiThreadInvoker.Run(automation =>
-            {
-                _ScrollListBottom(callBack);
-            }).ConfigureAwait(false);
+            await WeChatInvoker.Call(_ScrollListBottom,callBack);
         }
 
-        internal bool LocateConversationCore(string title, UIA3Automation automation)
+        internal bool LocateConversationCore(UIA3Automation automation,string title)
         {
             var searchFlag = false;
             _ScrollListBox((items, rect) =>
@@ -402,18 +386,20 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<List<string>> GetVisibleConversationTitles()
         {
-            return await _uiThreadInvoker.Run(automation =>
+            return await WeChatInvoker.Call(GetVisibleConversationTitlesCore);
+        }
+
+        private List<string> GetVisibleConversationTitlesCore(UIA3Automation automation)
+        {
+            HashSet<string> list = new HashSet<string>();
+            var root = ConversationRoot;
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            foreach (var item in items)
             {
-                HashSet<string> list = new HashSet<string>();
-                var root = ConversationRoot;
-                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-                foreach (var item in items)
-                {
-                    var names = item.Name.Split('\n');
-                    list.Add(names[0].Trim());
-                }
-                return list.ToList();
-            }).ConfigureAwait(false);
+                var names = item.Name.Split('\n');
+                list.Add(names[0].Trim());
+            }
+            return list.ToList();
         }
 
         /// <summary>
@@ -526,7 +512,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        internal void _ScrollListTop(Func<AutomationElement[], Rectangle, bool> callBack)
+        internal void _ScrollListTop(UIA3Automation automation,Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
             _Client.MainWindow.Focus();
@@ -559,7 +545,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        internal void _ScrollListBottom(Func<AutomationElement[], Rectangle, bool> callBack)
+        internal void _ScrollListBottom(UIA3Automation automation,Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
 

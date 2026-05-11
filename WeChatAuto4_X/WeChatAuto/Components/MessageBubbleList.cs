@@ -33,7 +33,7 @@ namespace WeChatAuto.Components
         private ChatContent _ChatContent;
         private WeChatClient _Client;
 
-        public MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
+        internal MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
             _logger = serviceProvider.GetRequiredService<AutoLogger<MessageBubbleList>>();
