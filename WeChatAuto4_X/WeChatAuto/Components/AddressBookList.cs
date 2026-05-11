@@ -19,6 +19,7 @@ using FlaUI.UIA3;
 using WeAutoCommon.Extentions;
 using System.IO;
 using System.Windows;
+using FlaUI.Core;
 
 namespace WeChatAuto.Components
 {
@@ -67,14 +68,14 @@ namespace WeChatAuto.Components
                 __CollapseAllGroups(root);   //先折叠所有分组
                 //获取群聊的记录
                 var items = root.Items;
-                __FetchGroupChatFriends(items, list);
-                __CollapseAllGroups(root);   //折叠所有分组
+                // __FetchGroupChatFriends(items, list);
+                // __CollapseAllGroups(root);   //折叠所有分组
                 //获取企业微信联系人的记录
-                items = root.Items;
-                __FetchEntpriseWeChatFriends(items, list);
-                __CollapseAllGroups(root);   //折叠所有分组
+                // items = root.Items;
+                // __FetchEntpriseWeChatFriends(items, list);
+                // __CollapseAllGroups(root);   //折叠所有分组
                 //获取普通联系人的记录
-                items = root.Items;
+                // items = root.Items;
                 _FetchNormalFriends(items, list);
                 __CollapseAllGroups(root);   //折叠所有分组
                 return list;
@@ -101,60 +102,65 @@ namespace WeChatAuto.Components
                 rootItem.Click();   //展开群聊分组
                 RandomWait.Wait(500, 1000);
 
+
                 var count = int.TryParse(rootItem.Name.Substring(3), out var result) ? result : 0;
                 var findCount = 0;
 
-                var root = Root;
-                var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
+                var scrollPoint = Root.BoundingRectangle.SafeRandomPoint();
+                AutomationElement lastElement = Root.Items.LastOrDefault();
 
-                var subItem = rootItem.GetSibling(1);  //获取第一个子项
-                while (subItem != null && subItem.ClassName != "mmui::ContactsCellGroupView")
+                int index = 0;
+                List<string> oldSnap = new List<string>();
+                while (index < 3)
                 {
-                    if (subItem.ClassName == "mmui::ContactsCellItemView")
-                    {
-                        FriendInfo friendInfo = new FriendInfo();
-                        friendInfo.NickName = subItem.Name.Trim();  //后面纠正.
-                        friendInfo.MemoName = subItem.Name.Trim();
-                        friendInfo.ChatType = ChatType.好友;
-                        //subItem.DrawHighlightExt();
-                        __FetchWxUserInfo(list, subItem, friendInfo);
-                        list.Add(friendInfo);
-                        findCount++;
-                    }
-                    if (subItem.BoundingRectangle.Y > root.BoundingRectangle.Y + (int)(root.BoundingRectangle.Height * 0.7))
+                    var root = Root;
+                    var newItems = Root.Items.Where(u => u.ClassName.Equals("mmui::ContactsCellItemView") &&
+                        u.ControlType.Equals(ControlType.ListItem) && u.BoundingRectangle.Y >= root.BoundingRectangle.Y && u.BoundingRectangle.Y + u.BoundingRectangle.Height <= root.BoundingRectangle.Y + root.BoundingRectangle.Height).ToList();
+                    var newSnap = newItems.Select(u => u.Name.Trim()).ToList();
+                    var actionList = newSnap.Except(oldSnap).ToList();
+                    oldSnap = newSnap;  //为下一次做准备.
+                    if (actionList.Count() == 0)
                     {
                         Mouse.Position = scrollPoint;
                         Mouse.Scroll(-3);
-                        RandomWait.Wait(100, 400);
+                        RandomWait.Wait(100, 800);
+                        index++;
+                        continue;
                     }
-                    var tryNextItem = subItem.GetSibling(1);
-                    if (tryNextItem == null)
+                    index = 0;
+                    //获取用户数据
+                    foreach (var item in actionList)
                     {
-                        Mouse.Position = scrollPoint;
-                        Mouse.Scroll(-3);
-                        tryNextItem = subItem.GetSibling(1);
-                        subItem = tryNextItem;
-                        RandomWait.Wait(100, 400);
+                        var subItem = newItems.Find(u =>u.Name.Trim().Equals(item));
+                        if (subItem != null)
+                        {
+                            FriendInfo friendInfo = new FriendInfo();
+                            friendInfo.NickName = subItem.Name.Trim();  //后面纠正.
+                            friendInfo.MemoName = subItem.Name.Trim();
+                            friendInfo.ChatType = ChatType.好友;
+                            subItem.DrawHighlightExt();
+                            __FetchWxUserInfo(list, subItem, friendInfo);
+                            list.Add(friendInfo);
+                            findCount++;
+                        }
+                    }
+
+                    Mouse.Position = scrollPoint;
+                    Mouse.Scroll(-3);
+                    RandomWait.Wait(100, 800);
+                    var lastItem = Root.Items.LastOrDefault();
+                    if (lastItem == null)
+                        break;
+                    if (lastItem.Name != lastElement.Name)
+                    {
+                        lastElement = lastItem;
                     }
                     else
                     {
-                        if (tryNextItem.ClassName == "mmui::ContactsCellGroupView")
-                            break;
-                        subItem = tryNextItem;
-                        if (subItem.BoundingRectangle.Y + subItem.BoundingRectangle.Height > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
-                        {
-                            Mouse.Position = scrollPoint;
-                            Mouse.Scroll(-1);
-                            RandomWait.Wait(100, 400);
-                        }
-                        else
-                        {
-                            Mouse.Position = scrollPoint;
-                            Mouse.Scroll(-2);
-                            RandomWait.Wait(100, 400);
-                        }
+                        index++;
                     }
                 }
+
                 if (findCount != count)
                 {
                     _logger.Error($"读取好友数量与实际的值不一致: 读取到{findCount}个，实际应该有:{count}个.");
@@ -165,6 +171,7 @@ namespace WeChatAuto.Components
                 _logger.Error($"滚动点击时发生错误，错误原因:{ex.ToString()}");
             }
         }
+
         //可能为空
         //也可能重复
         private void __FetchWxUserInfo(List<FriendInfo> list, AutomationElement subItem, FriendInfo friendInfo)
@@ -172,8 +179,11 @@ namespace WeChatAuto.Components
             var clickRetry = Retry.WhileException(() => subItem.GetClickablePoint(), timeout: TimeSpan.FromSeconds(4), interval: TimeSpan.FromMilliseconds(200));
             if (clickRetry.Success)
             {
+                // var clkPoint = subItem.BoundingRectangle.SafeRandomPoint();
+                // Mouse.Position = clkPoint;
+                // Mouse.Click();
                 subItem.Click();
-                RandomWait.Wait(300, 500);
+                RandomWait.Wait(400, 900);
             }
 
             return;
