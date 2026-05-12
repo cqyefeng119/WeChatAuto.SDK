@@ -68,14 +68,14 @@ namespace WeChatAuto.Components
                 __CollapseAllGroups(root);   //先折叠所有分组
                 //获取群聊的记录
                 var items = root.Items;
-                // __FetchGroupChatFriends(items, list);
-                // __CollapseAllGroups(root);   //折叠所有分组
+                 __FetchGroupChatFriends(items, list);
+                 __CollapseAllGroups(root);   //折叠所有分组
                 //获取企业微信联系人的记录
-                // items = root.Items;
-                // __FetchEntpriseWeChatFriends(items, list);
-                // __CollapseAllGroups(root);   //折叠所有分组
+                 items = root.Items;
+                 __FetchEntpriseWeChatFriends(items, list);
+                 __CollapseAllGroups(root);   //折叠所有分组
                 //获取普通联系人的记录
-                // items = root.Items;
+                 items = root.Items;
                 _FetchNormalFriends(items, list);
                 __CollapseAllGroups(root);   //折叠所有分组
                 return list;
