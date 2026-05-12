@@ -91,6 +91,8 @@ namespace WeChatAuto.Components
             }
         }
 
+        private System.Drawing.Point scrollPoint;
+
         private void _FetchNormalFriends(ListBoxItem[] items, List<FriendInfo> list)
         {
             try
@@ -106,11 +108,13 @@ namespace WeChatAuto.Components
                 var count = int.TryParse(rootItem.Name.Substring(3), out var result) ? result : 0;
                 var findCount = 0;
 
-                var scrollPoint = Root.BoundingRectangle.SafeRandomPoint();
+                scrollPoint = Root.BoundingRectangle.SafeRandomPoint();
                 AutomationElement lastElement = Root.Items.LastOrDefault();
+                Mouse.Position = scrollPoint;
 
                 int index = 0;
                 List<string> oldSnap = new List<string>();
+                Random random = new Random((int)DateTime.Now.Ticks);
                 while (index < 3)
                 {
                     var root = Root;
@@ -131,7 +135,7 @@ namespace WeChatAuto.Components
                     //获取用户数据
                     foreach (var item in actionList)
                     {
-                        var subItem = newItems.Find(u =>u.Name.Trim().Equals(item));
+                        var subItem = newItems.Find(u => u.Name.Trim().Equals(item));
                         if (subItem != null)
                         {
                             FriendInfo friendInfo = new FriendInfo();
@@ -145,9 +149,19 @@ namespace WeChatAuto.Components
                         }
                     }
 
-                    Mouse.Position = scrollPoint;
-                    Mouse.Scroll(-5);
-                    RandomWait.Wait(100, 800);
+                    for (int i = 0; i < 2; i++)
+                    {
+                        Mouse.Position = scrollPoint;
+                        if (i == 0)
+                        {
+                            Mouse.Scroll(-1 * random.Next(1, 3));
+                        }
+                        if (i == 1)
+                        {
+                            Mouse.Scroll(-1 * random.Next(3, 5));
+                        }
+                        RandomWait.Wait(50, 300);
+                    }
                     var lastItem = Root.Items.LastOrDefault();
                     if (lastItem == null)
                         break;
@@ -176,52 +190,27 @@ namespace WeChatAuto.Components
         //也可能重复
         private void __FetchWxUserInfo(List<FriendInfo> list, AutomationElement subItem, FriendInfo friendInfo)
         {
-            var clickRetry = Retry.WhileException(() => subItem.GetClickablePoint(), timeout: TimeSpan.FromSeconds(4), interval: TimeSpan.FromMilliseconds(200));
+            var clickRetry = Retry.WhileException(() => subItem.BoundingRectangle, timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
             if (clickRetry.Success)
             {
-                // var clkPoint = subItem.BoundingRectangle.SafeRandomPoint();
-                // Mouse.Position = clkPoint;
-                // Mouse.Click();
-                subItem.Click();
-                RandomWait.Wait(400, 900);
+                var clkPoint = subItem.BoundingRectangle.SafeRandomPoint();
+                Mouse.Position = clkPoint;
+                scrollPoint = clkPoint;
+                Mouse.Click();
+                RandomWait.Wait(600, 1200);
             }
 
-            return;
-            var updateMemo = false;
-            if (list.Any(x => x.NickName.Equals(subItem.Name.Trim())))
-            {
-                var count = list.Count(x => x.NickName.Equals(subItem.Name.Trim()));
-                count++;
-                friendInfo.MemoName = $"{friendInfo.NickName}_{count}";
-                updateMemo = true;
-            }
-            if (string.IsNullOrWhiteSpace(friendInfo.MemoName))
-            {
-                friendInfo.MemoName = Path.GetFileNameWithoutExtension(Path.GetRandomFileName());
-                updateMemo = true;
-            }
-            // var point = subItem.BoundingRectangle.SafeRandomPoint();
-            // Mouse.Position = point;
-            // Mouse.Click();
-            // RandomWait.Wait(100, 300);
-            subItem.Click();
-            RandomWait.Wait(100, 300);
 
-            // var grouproot = _Client.MainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport.profile_h_view")));
-            // if (grouproot == null)
-            //     return;
-            // if (updateMemo)
-            // {
-            //     ___UpdateAddressBookMemoName(grouproot, friendInfo);
-            //     RandomWait.Wait(100, 300);
-            // }
-            // __FetchWxUserInfoCore(grouproot, friendInfo);
+            var grouproot = _Client.MainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport.profile_h_view")));
+            if (grouproot == null)
+                return;
+            __FetchWxUserInfoCore(grouproot, friendInfo);
         }
 
         private void __FetchWxUserInfoCore(AutomationElement grouproot, FriendInfo friendInfo)
         {
-            if (friendInfo.NickName == _Client.NickName)
-                return;
+            // if (friendInfo.NickName == _Client.NickName)
+            //     return;
             var nickNameRetry = Retry.WhileNull(() => grouproot.FindFirstDescendant(cf => cf.ByName("昵称：").And(cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text")))
             , timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
             if (nickNameRetry.Success)
@@ -269,7 +258,11 @@ namespace WeChatAuto.Components
                 var button = parent.FindFirstChild(cf => cf.ByControlType(ControlType.Button));
                 if (button != null)
                 {
-                    friendInfo.SameGroupNumber = button.Name;
+                    var text = button.FindFirstDescendant(cf => cf.ByControlType(ControlType.Text));
+                    if (text != null)
+                    {
+                        friendInfo.SameGroupNumber = text.Name;
+                    }
                 }
             }
             //个性签名
@@ -283,7 +276,7 @@ namespace WeChatAuto.Components
                     var text = button.FindFirstDescendant(cf => cf.ByControlType(ControlType.Text));
                     if (text != null)
                     {
-                        friendInfo.Signature = button.Name;
+                        friendInfo.Signature = text.Name;
                     }
                 }
             }
@@ -298,7 +291,7 @@ namespace WeChatAuto.Components
                     var text = button.FindFirstDescendant(cf => cf.ByControlType(ControlType.Text));
                     if (text != null)
                     {
-                        friendInfo.Source = button.Name;
+                        friendInfo.Source = text.Name;
                     }
                 }
             }
@@ -313,7 +306,7 @@ namespace WeChatAuto.Components
                     var text = button.FindFirstDescendant(cf => cf.ByControlType(ControlType.Text));
                     if (text != null)
                     {
-                        friendInfo.AddDateTime = button.Name;
+                        friendInfo.AddDateTime = text.Name;
                     }
                 }
             }
