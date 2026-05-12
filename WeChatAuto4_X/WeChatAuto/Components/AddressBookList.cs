@@ -146,7 +146,7 @@ namespace WeChatAuto.Components
                     }
 
                     Mouse.Position = scrollPoint;
-                    Mouse.Scroll(-3);
+                    Mouse.Scroll(-5);
                     RandomWait.Wait(100, 800);
                     var lastItem = Root.Items.LastOrDefault();
                     if (lastItem == null)
