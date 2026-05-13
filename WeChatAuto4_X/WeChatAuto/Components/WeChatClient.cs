@@ -21,6 +21,7 @@ using WeChatAuto.Models;
 using System.Configuration;
 using System.Drawing;
 using System.Linq;
+using System.IO;
 
 
 namespace WeChatAuto.Components
@@ -80,27 +81,39 @@ namespace WeChatAuto.Components
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
             this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
+            _RunCheckAddressBook();
+        }
+
+        private void _RunCheckAddressBook()
+        {
+            if (WeAutomation.Config.InitAdressBook)
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, this.WxId + "_cache.dat");
+                if (File.Exists(path))
+                    return;
+               this.GetAllFriends(false).GetAwaiter().GetResult();
+            }
         }
 
         #region POM对象
         /// <summary>
         /// 导航栏, 参考: <see cref="Navigation"/>
         /// </summary>
-        internal Navigation Navigation => GetNavigation();
+        public Navigation Navigation => GetNavigation();
         /// <summary>
         /// 微信ToolBar,参考:<see cref="ToolBar"/>
         /// </summary>
-        internal ToolBar ToolBar;
+        public ToolBar ToolBar;
         /// <summary>
         /// 会话管理对象,参考:<see cref="ConversationList"/>
         /// </summary>
-        internal ConversationList Conversations;
+        public ConversationList Conversations;
         /// <summary>
         /// ChatContent对象,参考:<see cref="ChatContent"/>
         /// </summary>
-        internal ChatContent ChatContent;
+        public ChatContent ChatContent;
 
-        internal AddressBookList AddressBookList;
+        public AddressBookList AddressBookList;
 
         #endregion
         private Navigation GetNavigation()
@@ -291,20 +304,25 @@ namespace WeChatAuto.Components
 
         #region 通讯录管理
         /// <summary>
-        /// 获取所有好友的信息列表,具体请考<see cref="FriendInfo"/>类说明.
-        /// 注意：只会获取通讯录中的联系人、企业微信联系人和群聊的记录,公众号，服务号，我的企业等特殊账号不会获取.
-        /// 1.如果是企业微信，会剔除@xxxx后缀，以保持一致性.
-        /// 2.如果好友/群聊/企业微信联系人等有备注，则备注会覆盖昵称显示.
-        /// 3.注意：如果微信联系人有重名，此方法会自动将重复的联系人改成一个临时的不同名称，建议好友/群聊/企业微信联系人有重名时，通过手工的方式添加备注，以保持区分.
-        /// 4.好友与企业微信可以获取wxid,群聊无法获取wxid.
+        ///<para> 获取所有好友的信息列表,具体请考<see cref="FriendInfo"/>类说明.</para>
+        ///<para> 注意：只会获取通讯录中的联系人、企业微信联系人和群聊的记录,公众号，服务号，我的企业等特殊账号不会获取.</para>
+        ///<para> 1.如果是企业微信，会剔除@xxxx后缀，以保持一致性.</para>
+        ///<para> 2.如果好友/群聊/企业微信联系人等有备注，则备注会覆盖昵称显示.</para>
+        ///<para> 3.注意：如果微信联系人有重名，此方法会仅获取/保存一个联系人，所以运行此方法前:建议好友/群聊/企业微信联系人有重名时，通过手工的方式添加备注，以保持区分.</para>
+        ///<para> 4.普通联系人可以获取wxid,其他的如：群聊/企业微信联系人无法获取wxid.</para>
+        ///<para> 5. 此方法运行结果会保存在cache中,默认为true,从cache中获取数据，如果设置为false,则重新刷新一遍通讯录,cache也会同步更新，建议实际开发过程中运行一遍从通讯录获取好友信息的操作,并且做好添加好友时的同步工作（在一些监听的场景，如果读取到此好友没有wxid,也会自动获取,并同步更新cache）</para>
+        /// <para>6. 不必太过于担心cache过期的问题，因为实际需要识别wxid的业务场景中，如果碰到新好友在cache中没有数据，会自动获取好友的信息并更新cahce，所以也不必太担心cache的过时问题</para>
         /// </summary>
+        /// <param name="fromCache">是否从cahce中获取数据</param>
         /// <returns>好友列表</returns>
-        public async Task<List<FriendInfo>> GetAllFriends() => await AddressBookList.GetAllFriends();
+        public async Task<List<FriendInfo>> GetAllFriends(bool fromCache = true) => await AddressBookList.GetAllFriends(fromCache);
         /// <summary>
-        /// 获取所有好友昵称列表.（通过通讯录）
+        /// 获取所有好友名称列表.（通过通讯录）
+        /// 如果好友有昵称与备注，优先选择备注名
         /// 注意：如果是企业微信，会剔除@xxxx后缀，以保持一致性.
         /// </summary>
         /// <returns></returns>
+
         public async Task<List<string>> GetAllFriendNames() => await AddressBookList.GetAllFriendNames();
 
         #endregion

@@ -32,7 +32,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 会话列表
     /// </summary>
-    internal class ConversationList
+    public class ConversationList
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly AutoLogger<ConversationList> _logger;

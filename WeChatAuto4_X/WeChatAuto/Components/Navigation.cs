@@ -27,7 +27,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 对微信导航栏的封装.
     /// </summary>
-    internal class Navigation : IDisposable
+    public class Navigation : IDisposable
     {
         private readonly IServiceProvider _serviceProvider;
         private WeChatClient _Client;

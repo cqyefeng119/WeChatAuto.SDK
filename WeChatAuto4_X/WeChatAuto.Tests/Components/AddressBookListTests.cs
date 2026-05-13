@@ -27,7 +27,7 @@ public class AddressBookListTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var list = await client.GetAllFriends();
+        var list = await client.GetAllFriends(false);
         Assert.True(list != null && list.Any());
         foreach (var friend in list)
         {

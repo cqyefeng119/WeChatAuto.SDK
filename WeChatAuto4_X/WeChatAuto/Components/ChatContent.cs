@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace WeChatAuto.Components
 {
-    internal class ChatContent
+    public class ChatContent
     {
         private readonly AutoLogger<ChatContent> _logger;
         private UIThreadInvoker _uiMainThreadInvoker;

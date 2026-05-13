@@ -192,6 +192,7 @@ namespace WeChatAuto.Utils
         /// <typeparam name="T2"></typeparam>
         /// <param name="Func"></param>
         /// <param name="t1"></param>
+        /// <param name="t2"></param>
         /// <returns></returns>
         public static async Task<T> Call<T1, T2, T>(Func<UIA3Automation, T1, T2, T> Func, T1 t1, T2 t2)
         {
