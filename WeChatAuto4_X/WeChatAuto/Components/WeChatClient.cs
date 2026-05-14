@@ -256,6 +256,12 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <returns>标题对象，请参考:<see cref="HeaderInfo"/></returns>
         public async Task<HeaderInfo> GetTitle() => await this.ChatContent.ChatHeader.GetTitle();
+
+        /// <summary>
+        /// 获取当前标窗的标题
+        /// </summary>
+        /// <returns>当前窗口的标题名称</returns>
+        public async Task<string> GetOnlyTitle() => await this.ChatContent.ChatHeader.GetOnlyTitle();
         /// <summary>
         /// 发送文本消息,可以是群聊名称或者好友名称，名称可以为空，如果为空，则给当前聊天窗口发送消息
         /// </summary>

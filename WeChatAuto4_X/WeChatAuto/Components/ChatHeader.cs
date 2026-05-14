@@ -56,6 +56,16 @@ namespace WeChatAuto.Components
 			return await WeChatInvoker.Call(GetTitleCore);
 		}
 
+		/// <summary>
+		/// 获取当前标窗的标题
+		/// </summary>
+		/// <returns>当前窗口的标题名称</returns>
+		public async Task<string> GetOnlyTitle()
+		{
+			var headerInfo = await GetTitle();
+			return headerInfo.Title;
+		}
+
 		private HeaderInfo GetTitleCore(UIA3Automation automation)
 		{
 			HeaderInfo headerInfo = new HeaderInfo();
