@@ -37,7 +37,6 @@ namespace WeChatAuto.Components
         {
             _serviceProvider = serviceProvider;
             _logger = serviceProvider.GetRequiredService<AutoLogger<MessageBubbleList>>();
-
             this._Client = client;
             _uiThreadInvoker = uiThreadInvoker;
             _ChatContent = content;

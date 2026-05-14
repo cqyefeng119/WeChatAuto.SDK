@@ -125,6 +125,11 @@ namespace WeAutoCommon.Configs
         /// 是否启用微信语音消息发送功能
         /// </summary>
         public bool EnableSendVoiceMessage {get;set;} = false;
+        /// <summary>
+        /// 是否一开始就初始化通讯录所有好友
+        /// 如果以wxid为业务核心，强烈开启此选项.
+        /// </summary>
+        public bool InitAdressBook {get;set;} = false;
     }
 
     public static class Language
