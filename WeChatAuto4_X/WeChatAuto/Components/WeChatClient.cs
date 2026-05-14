@@ -91,7 +91,7 @@ namespace WeChatAuto.Components
                 var path = Path.Combine(AppContext.BaseDirectory, this.WxId + "_cache.dat");
                 if (File.Exists(path))
                     return;
-               this.GetAllFriends(false).GetAwaiter().GetResult();
+                this.GetAllFriends(false).GetAwaiter().GetResult();
             }
         }
 
@@ -252,6 +252,11 @@ namespace WeChatAuto.Components
 
         #region 消息管理
         /// <summary>
+        /// 获取当前窗口的标题对象
+        /// </summary>
+        /// <returns>标题对象，请参考:<see cref="HeaderInfo"/></returns>
+        public async Task<HeaderInfo> GetTitle() => await this.ChatContent.ChatHeader.GetTitle();
+        /// <summary>
         /// 发送文本消息,可以是群聊名称或者好友名称，名称可以为空，如果为空，则给当前聊天窗口发送消息
         /// </summary>
         /// <param name="who">好名/群聊的名称,也就是肉眼所见的标题</param>
@@ -292,6 +297,14 @@ namespace WeChatAuto.Components
         /// <param name="who">群聊名称,可以为空，如果为空，则发送到当前聊天窗口</param>
         /// <param name="partner">参与者，好友昵称列表,必须是群聊成员</param>
         public async Task SendVoiceChats(string who, string[] partner) => await ChatContent.SendVoiceChats(who, partner);
+
+        /// <summary>
+        /// 根据日期获取聊天历史
+        /// </summary>
+        /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
+        /// <param name="date">查询日期,如果不传，则是当天日期</param>
+        /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
+        public async Task<List<ChatSimpleMessage>> GetAllChatHistory(string who, DateTime date = default) => await ChatContent.MessageBubbleList.GetAllChatHistory(who, date);
 
         #endregion
 

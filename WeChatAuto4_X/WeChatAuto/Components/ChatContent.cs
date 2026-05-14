@@ -16,6 +16,7 @@ using WeChatAuto.Extentions;
 using OneOf;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using WeChatAuto.Models;
 
 namespace WeChatAuto.Components
 {
@@ -102,5 +103,13 @@ namespace WeChatAuto.Components
         /// <param name="who">群聊名称,可以为空，如果为空，则发送到当前聊天窗口</param>
         /// <param name="partner">参与者，好友昵称列表,必须是群聊成员</param>
         public async Task SendVoiceChats(string who, string[] partner) => await Sender.SendVoiceChats(who, partner);
+
+        /// <summary>
+        /// 根据日期获取聊天历史
+        /// </summary>
+        /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
+        /// <param name="date">查询日期,如果不传，则是当天日期</param>
+        /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
+        public async Task<List<ChatSimpleMessage>> GetAllChatHistory(string who, DateTime date = default) => await _MessageList.GetAllChatHistory(who, date);
     }
 }

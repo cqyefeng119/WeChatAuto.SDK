@@ -19,6 +19,10 @@ using FlaUI.Core.Input;
 using FlaUI.Core.WindowsAPI;
 using FlaUI.Core.Capturing;
 using WeAutoCommon.Models;
+using FlaUI.UIA3;
+using System.Threading.Tasks;
+using System.Net.Http;
+using WeAutoCommon.Extentions;
 
 namespace WeChatAuto.Components
 {
@@ -33,6 +37,8 @@ namespace WeChatAuto.Components
         private ChatContent _ChatContent;
         private WeChatClient _Client;
 
+        private Button HistoryButton => _GetHistoryButton();   //实时获取聊天记录按钮
+
         internal MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -42,31 +48,23 @@ namespace WeChatAuto.Components
             _ChatContent = content;
         }
 
-        /// <summary>
-        /// 获取聊天类型
-        /// </summary>
-        /// <returns>聊天类型<see cref="ChatType"/></returns>
-        public ChatType GetChatType()
+        internal Button _GetHistoryButton()
         {
-            // if (Regex.IsMatch(_FullTitle, @"\s\([\d]+\)$"))
-            // {
-            //     return ChatType.群聊;
-            // }
-            // else
-            // {
-            //     return ChatType.好友;
-            // }
-            return default;
-
+            var buttonRetry = Retry.WhileNull(() =>
+            {
+                var button = _Client.MainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("聊天记录")).And(cf.ByClassName("mmui::XButton")));
+                return button == null ? null : button.AsButton();
+            }, timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            return buttonRetry.Success ? buttonRetry.Result : null;
         }
+
         /// <summary>
         /// 获取最后一个气泡
         /// </summary>
         /// <returns>最后一个气泡</returns>
         public MessageBubble GetLastBubble()
         {
-            MessageBubble[] bubbles = GetVisibleBubbles().ToArray();
-            return bubbles.Count() > 0 ? bubbles.Last() : null;
+            return null;
         }
 
         /// <summary>
@@ -80,6 +78,72 @@ namespace WeChatAuto.Components
             return null;
         }
 
+        /// <summary>
+        /// 根据日期获取聊天历史
+        /// </summary>
+        /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
+        /// <param name="date">查询日期,如果不传，则是当天日期</param>
+        /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
+        public async Task<List<ChatSimpleMessage>> GetAllChatHistory(string who, DateTime date = default)
+        {
+            if (date == default)
+            {
+                date = DateTime.Now;
+            }
+            if (string.IsNullOrWhiteSpace(who))
+            {
+                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
+                if (_Client.ChatContent.Sender.unSelectChatItem())
+                    return new List<ChatSimpleMessage>();
+            }
+            else
+            {
+                _Client.Conversations.SearchWhoCore(_Client.MainThreadInvoker.Automation, who);
+            }
+            RandomWait.Wait(300, 1200);
+            return await GetAllChatHistory(date);
+        }
+        /// <summary>
+        /// 根据日期获取当前聊天窗口的聊天历史
+        /// </summary>
+        /// <param name="date">查询日期</param>
+        /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
+        public async Task<List<ChatSimpleMessage>> GetAllChatHistory(DateTime date = default)
+        {
+            if (date == default)
+            {
+                date = DateTime.Now;
+            }
+            return await WeChatInvoker.Call(GetAllChatHistoryCore, date);
+        }
+
+        internal List<ChatSimpleMessage> GetAllChatHistoryCore(UIA3Automation automation, DateTime date)
+        {
+            var invokeButton = HistoryButton;
+            if (invokeButton == null)
+                return new List<ChatSimpleMessage>();
+            string title = __GetTitle();
+            __ClickChatHistoryButton(invokeButton);
+
+            return null;
+        }
+
+        //获取标题.
+        private string __GetTitle()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void __ClickChatHistoryButton(Button invokeButton)
+        {
+            RandomWait.Wait(100, 800);
+            Mouse.Position = invokeButton.BoundingRectangle.SafeRandomPoint();
+            RandomWait.Wait(100, 400);
+            _Client.MainWindow.Focus();
+            Mouse.Click();
+            RandomWait.Wait(300, 900);
+        }
+
 
 
 
@@ -89,15 +153,11 @@ namespace WeChatAuto.Components
         /// </summary>
         public List<MessageBubble> GetVisibleBubbles()
         {
-            var bubbles = GetVisibleNativeBubbles();
-            return bubbles.Where(item => item.MessageSource != MessageSourceType.系统消息 &&
-                                       item.MessageSource != MessageSourceType.其他消息).ToList();
+            return null;
         }
         public List<MessageBubble> GetVisibleBubblesByPolling(UIThreadInvoker privateThreadInvoker)
         {
-            var bubbles = GetVisibleNativeBubblesByPolling(privateThreadInvoker);
-            return bubbles.Where(item => (item.MessageSource != MessageSourceType.系统消息) &&
-                                         (item.MessageSource != MessageSourceType.其他消息)).ToList();
+            return null;
         }
         /// <summary>
         /// 获取可见气泡列表,仅返回气泡标题
@@ -105,12 +165,10 @@ namespace WeChatAuto.Components
         /// <returns>可见气泡列表,仅返回气泡标题</returns>
         public List<ChatSimpleMessage> GetVisibleChatSimpleMessages()
         {
-            var bubbles = GetVisibleBubbles();
-            return bubbles.Select(item => item.ToChatSimpleMessage()).ToList();
+            return null;
         }
         /// <summary>
-        /// 获取气泡列表,包括系统消息
-        /// 注意：速度比较慢，但是信息比较全
+        /// 获取气泡列表
         /// </summary>
         /// <returns>气泡列表<see cref="MessageBubble"/></returns>
         public List<MessageBubble> GetVisibleNativeBubbles()

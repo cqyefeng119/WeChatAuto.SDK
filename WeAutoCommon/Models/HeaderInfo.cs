@@ -16,7 +16,7 @@ namespace WeAutoCommon.Models
         /// <summary>
         /// 标题类型,<seealso cref="ChatType"/>
         /// </summary>
-        public ChatType HeaderType { get; set; }
+        public ChatType HeaderType { get; set; } = ChatType.其他;
         /// <summary>
         /// 如果HeaderType是ChatType.群聊,则显示群聊人数数量，如果不是群聊，这里的数量恒为1
         /// </summary>

@@ -338,7 +338,7 @@ namespace WeChatAuto.Components
         /// 检查是否是选中状态.
         /// </summary>
         /// <returns></returns>
-        private bool unSelectChatItem() => !this._Client.Conversations.CheckSelectState();
+        internal bool unSelectChatItem() => !this._Client.Conversations.CheckSelectState();
 
         /// <summary>
         /// 发送消息,给当前窗口发送消息
