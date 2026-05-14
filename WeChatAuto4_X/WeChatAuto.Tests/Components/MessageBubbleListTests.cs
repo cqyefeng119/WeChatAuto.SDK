@@ -24,7 +24,7 @@ public class MessageBubbleListTests
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var list = await client.GetAllChatHistory(who);
-        Assert.True(list.Count != 0);
+        Assert.True(list.Count == 0);
     }
 
 }

@@ -66,7 +66,7 @@ namespace WeChatAuto.Components
 			return headerInfo.Title;
 		}
 
-		private HeaderInfo GetTitleCore(UIA3Automation automation)
+		internal HeaderInfo GetTitleCore(UIA3Automation automation)
 		{
 			HeaderInfo headerInfo = new HeaderInfo();
 			var root = HeaderRoot;

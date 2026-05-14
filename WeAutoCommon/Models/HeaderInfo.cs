@@ -22,6 +22,12 @@ namespace WeAutoCommon.Models
         /// </summary>
         public int ChatNumber { get; set; } = 1;
 
+        /// <summary>
+        /// 是否可以聊天类型
+        /// </summary>
+        /// <returns></returns>
+        public bool CanTalk() => this.HeaderType == ChatType.好友 || this.HeaderType == ChatType.企业微信 || this.HeaderType == ChatType.群聊;
+
         public override string ToString()
         {
             return $"Title={this.Title} - HeaderType={this.HeaderType.ToString()} - ChatNumber={this.ChatNumber.ToString()}";

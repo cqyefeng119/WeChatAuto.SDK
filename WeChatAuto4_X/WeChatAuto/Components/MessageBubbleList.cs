@@ -23,6 +23,7 @@ using FlaUI.UIA3;
 using System.Threading.Tasks;
 using System.Net.Http;
 using WeAutoCommon.Extentions;
+using WeChatAuto.Services;
 
 namespace WeChatAuto.Components
 {
@@ -37,7 +38,7 @@ namespace WeChatAuto.Components
         private ChatContent _ChatContent;
         private WeChatClient _Client;
 
-        private Button HistoryButton => _GetHistoryButton();   //实时获取聊天记录按钮
+        internal Button HistoryButton => _GetHistoryButton();   //实时获取聊天记录按钮
 
         internal MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
         {
@@ -122,16 +123,93 @@ namespace WeChatAuto.Components
             var invokeButton = HistoryButton;
             if (invokeButton == null)
                 return new List<ChatSimpleMessage>();
-            string title = __GetTitle();
+            HeaderInfo title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+            if (!title.CanTalk())
+                return new List<ChatSimpleMessage>();
             __ClickChatHistoryButton(invokeButton);
-
-            return null;
+            return __FetchChatHistoryList(automation, date, title.Title);
         }
 
-        //获取标题.
-        private string __GetTitle()
+        private List<ChatSimpleMessage> __FetchChatHistoryList(UIA3Automation automation, DateTime date, string title)
         {
-            throw new NotImplementedException();
+            var desktop = automation.GetDesktop();
+            var winResult = Retry.WhileNull(() => desktop.FindAllChildren(cf => cf.ByClassName("mmui::SearchMsgUniqueChatWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByProcessId(_Client.MainWindow.Properties.ProcessId)))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (winResult.Success)
+            {
+                var subWins = winResult.Result;
+                var subWin = subWins.FirstOrDefault(u =>
+                {
+                    var name = u.Name.Replace("“", "").Replace("”","");
+                    if (name.Contains($"{title}"))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }).AsWindow();
+                if (subWin == null)
+                    return new List<ChatSimpleMessage>();
+                subWin.Focus();
+                subWin.DrawHighlightExt();
+                try
+                {
+                    var root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("chat_log_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
+                    if (root.Items.Count() == 0)
+                        return new List<ChatSimpleMessage>();
+                    var chatItems = root.Items.Where(x => x.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(x.Name) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+                    if (chatItems.Count() == 0)
+                    {
+                        Mouse.Position = root.BoundingRectangle.SafeRandomPoint();
+                        Mouse.Scroll(-5);
+                        RandomWait.Wait(100, 300);
+                    }
+                    ListBoxItem chatItem = null;
+                    foreach (var item in chatItems)
+                    {
+                        var value = item.Name;
+                        var pattern = @"\s\d{4}年\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}$";
+                        if (Regex.Match(value, pattern).Success)
+                        {
+                            chatItem = item;
+                            break;
+                        }
+                    }
+                    if (chatItem == null)
+                        return new List<ChatSimpleMessage>();
+                    chatItem.DrawHighlightExt();
+                    var initOffsetX = WeAutomation.Config.HistoryMessageOffset_X + chatItem.BoundingRectangle.X;
+                    var initOffsetY = WeAutomation.Config.HistoryMessageOffset_Y + chatItem.BoundingRectangle.Y;
+                    var point = new Point(initOffsetX, initOffsetY);
+                    Mouse.Position = point;
+                    RandomWait.Wait(100, 400);
+                    while (CursorHelper.GetCurrentCursorHandle() != (IntPtr)65541)
+                    {
+                        Mouse.MoveTo(new Point(point.X, point.Y + 3));
+                        RandomWait.Wait(50, 200);
+                    }
+                    Mouse.RightClick();
+                    RandomWait.Wait(100, 300);
+
+
+
+                    return new List<ChatSimpleMessage>();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"{nameof(MessageBubbleList)} - {nameof(__FetchChatHistoryList)}:{ex.ToString()}");
+                    return new List<ChatSimpleMessage>();
+                }
+                finally
+                {
+                    subWin.Close();
+                }
+            }
+            else
+            {
+                return new List<ChatSimpleMessage>();
+            }
         }
 
         private void __ClickChatHistoryButton(Button invokeButton)

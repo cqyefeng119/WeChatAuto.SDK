@@ -1,14 +1,12 @@
 using System.Diagnostics;
-using FlaUI.Core.Capturing;
-using WeChatAuto.Services;
 using System.IO;
 using System;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using NAudio.Wave;
+using System.Configuration;
+using FlaUI.Core;
 using FlaUI.UIA3;
 using WeChatAuto.Components;
-using System.Configuration;
 
 namespace WeChatAuto.Utils
 {
