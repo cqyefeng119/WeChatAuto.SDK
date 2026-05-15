@@ -124,28 +124,6 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 获取开始日期到结束日期之间的所有日期（包含首尾）
-        /// </summary>
-        private List<DateTime> GetDates(DateTime startDate, DateTime endDate)
-        {
-            var result = new List<DateTime>();
-
-            // 只保留日期部分
-            startDate = startDate.Date;
-            endDate = endDate.Date;
-
-            // 防止开始日期大于结束日期
-            if (startDate > endDate)
-                return result;
-
-            for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
-            {
-                result.Add(date);
-            }
-
-            return result;
-        }
-        /// <summary>
         /// 获取多个指定日期的聊天历史记录
         /// </summary>
         /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
@@ -315,9 +293,31 @@ namespace WeChatAuto.Components
                 oldSnap = newSnap;
                 if (exceptList.Count() == 0)
                 {
-                    MouseScrollHelper.DownStep(scollPoint, 2);
-                    index++;
-                    continue;
+                    //处理长文本.
+                    items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                    if (items.Count() == 1)
+                    {
+                        var longIndex = 0;
+                        while(longIndex < 20)
+                        {
+                            MouseScrollHelper.DownStep(scollPoint, 2);
+                            longIndex++;
+                            items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                            if (items.Count() == 1)
+                            {
+                                continue;
+                            }else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        MouseScrollHelper.DownStep(scollPoint, 2);
+                        index++;
+                        continue;
+                    }
                 }
 
                 index = 0;
@@ -617,7 +617,28 @@ namespace WeChatAuto.Components
           => ForwardSingleMessage(new ChatSimpleMessage { Who = who, Message = message }, to, prevPageCount);
 
 
+        /// <summary>
+        /// 获取开始日期到结束日期之间的所有日期（包含首尾）
+        /// </summary>
+        private List<DateTime> GetDates(DateTime startDate, DateTime endDate)
+        {
+            var result = new List<DateTime>();
 
+            // 只保留日期部分
+            startDate = startDate.Date;
+            endDate = endDate.Date;
+
+            // 防止开始日期大于结束日期
+            if (startDate > endDate)
+                return result;
+
+            for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
+            {
+                result.Add(date);
+            }
+
+            return result;
+        }
 
     }
 }

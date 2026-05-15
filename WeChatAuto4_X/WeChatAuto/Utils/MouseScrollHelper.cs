@@ -23,7 +23,7 @@ namespace WeChatAuto.Utils
             for (int i = 0; i < maxStep; i++)
             {
                 Mouse.Position = scrollPoint;
-                RandomWait.Wait(50, 200);
+                RandomWait.Wait(30, 150);
                 if (i == 0)
                 {
                     Mouse.Scroll(-1 * random.Next(1, 3));
@@ -32,7 +32,7 @@ namespace WeChatAuto.Utils
                 {
                     Mouse.Scroll(-1 * random.Next(3, 5));
                 }
-                RandomWait.Wait(50, 300);
+                RandomWait.Wait(30, 200);
             }
         }
         /// <summary>
@@ -46,7 +46,7 @@ namespace WeChatAuto.Utils
             for (int i = 0; i < maxStep; i++)
             {
                 Mouse.Position = scrollPoint;
-                RandomWait.Wait(50, 200);
+                RandomWait.Wait(30, 150);
                 if (i == 0)
                 {
                     Mouse.Scroll(random.Next(1, 3));
@@ -55,7 +55,7 @@ namespace WeChatAuto.Utils
                 {
                     Mouse.Scroll(random.Next(3, 5));
                 }
-                RandomWait.Wait(50, 300);
+                RandomWait.Wait(30, 150);
             }
         }
 
