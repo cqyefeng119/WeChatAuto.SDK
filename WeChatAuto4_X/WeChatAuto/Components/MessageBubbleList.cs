@@ -87,7 +87,7 @@ namespace WeChatAuto.Components
             }
             else
             {
-                await _Client.Conversations.Search(who);
+                await _Client.Search(who);
             }
             RandomWait.Wait(300, 1000);
             return await GetChatHistory((new List<DateTime>() { date }).Select(x => x.Date).ToList());
@@ -325,7 +325,7 @@ namespace WeChatAuto.Components
                 foreach (var name in exceptList)
                 {
                     var item = items.FirstOrDefault(x => x.Name.Equals(name));
-                    RandomWait.Wait(50, 300);
+                    RandomWait.Wait(30, 150);
                     item.DrawHighlightExt();
 
 

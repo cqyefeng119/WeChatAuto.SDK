@@ -32,14 +32,15 @@ public class MessageBubbleListTests
     }
 
     [Theory(DisplayName = "测试按日期获取历史消息")]
-    [InlineData("")]
     [InlineData("WeChatAuto.SDK官方技术支持")]
-    [InlineData("前端攻城狮")]
+    // [InlineData("前端攻城狮")]
+    [InlineData("李金龙_vip")]
+    [InlineData("[9]Senparc微信视频课程学员群")]
     public async Task Test_Get_ChatHistory(string who)
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var list = await client.GetChatHistory(who, DateTime.Parse("2026-05-12"));
+        var list = await client.GetChatHistory(who, DateTime.Parse("2026-05-15"));
         Assert.True(list.Count != 0);
         list.ForEach(item =>
         {
