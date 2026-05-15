@@ -32,7 +32,7 @@ namespace WeChatAuto.Components
     /// </summary>
     public class WeChatClient : IDisposable
     {
-        private const string version = "4.1.9.30";
+        private const string version = "4.1.9.54";
         private readonly AutoLogger<WeChatClient> _logger;
         private IServiceProvider serviceProvider;
         private volatile bool _disposed = false;

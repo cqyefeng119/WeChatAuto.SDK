@@ -87,7 +87,7 @@ namespace WeChatAuto.Components
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(_Client.MainThreadInvoker.Automation, who);
+                await _Client.Conversations.Search(who);
             }
             RandomWait.Wait(300, 1000);
             return await GetChatHistory((new List<DateTime>() { date }).Select(x => x.Date).ToList());
@@ -117,7 +117,7 @@ namespace WeChatAuto.Components
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(_Client.MainThreadInvoker.Automation, who);
+                await _Client.Conversations.Search(who);
             }
             RandomWait.Wait(300, 1200);
             return await GetChatHistory(result.Select(x => x.Date).ToList());
@@ -167,7 +167,7 @@ namespace WeChatAuto.Components
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(_Client.MainThreadInvoker.Automation, who);
+                await _Client.Conversations.Search(who);
             }
             RandomWait.Wait(300, 1200);
             return await GetChatHistory(range.Select(x => x.Date).ToList());
