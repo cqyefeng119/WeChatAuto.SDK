@@ -65,12 +65,17 @@ namespace WeChatAuto.Components
             if (string.IsNullOrWhiteSpace(who))
             {
                 //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                if (unSelectChatItem())
+                // if (unSelectChatItem())
+                //     return;
+                var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
+                if (!chatInfo.CanTalk())
+                {
                     return;
+                }
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(automation,who);
+                _Client.Conversations.SearchWhoCore(automation, who);
             }
             RandomWait.Wait(300, 1200);
             var root = this.content.Root;
@@ -106,12 +111,17 @@ namespace WeChatAuto.Components
             if (string.IsNullOrWhiteSpace(who))
             {
                 //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                if (unSelectChatItem())
+                // if (unSelectChatItem())
+                //     return;
+                var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
+                if (!chatInfo.CanTalk())
+                {
                     return;
+                }
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(automation,who);
+                _Client.Conversations.SearchWhoCore(automation, who);
             }
             RandomWait.Wait(300, 1200);
             var root = this.content.Root;
@@ -148,12 +158,17 @@ namespace WeChatAuto.Components
             if (string.IsNullOrWhiteSpace(who))
             {
                 //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                if (unSelectChatItem())
+                // if (unSelectChatItem())
+                //     return;
+                var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
+                if (!chatInfo.CanTalk())
+                {
                     return;
+                }
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(automation,who);
+                _Client.Conversations.SearchWhoCore(automation, who);
             }
             RandomWait.Wait(300, 1200);
             var filter = partner.Where(u => u != _Client.NickName).ToList().ToArray();
@@ -305,12 +320,17 @@ namespace WeChatAuto.Components
             if (string.IsNullOrWhiteSpace(who))
             {
                 //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                if (unSelectChatItem())
+                // if (unSelectChatItem())
+                //     return;
+                var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
+                if (!chatInfo.CanTalk())
+                {
                     return;
+                }
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(automation,who);
+                _Client.Conversations.SearchWhoCore(automation, who);
             }
             RandomWait.Wait(100, 600);
             SendMessageCore(automation, message, atUser);
@@ -324,15 +344,20 @@ namespace WeChatAuto.Components
             if (string.IsNullOrWhiteSpace(who))
             {
                 //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                if (unSelectChatItem())
+                // if (unSelectChatItem())
+                //     return;
+                var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
+                if (!chatInfo.CanTalk())
+                {
                     return;
+                }
             }
             else
             {
-                _Client.Conversations.SearchWhoCore(automation,who);
+                _Client.Conversations.SearchWhoCore(automation, who);
             }
             RandomWait.Wait(100, 600);
-            SendFileCore(automation,files);
+            SendFileCore(automation, files);
         }
         /// <summary>
         /// 检查是否是选中状态.
@@ -486,10 +511,10 @@ namespace WeChatAuto.Components
         /// <param name="files">文件路径列表</param>
         public async Task SendFile(string[] files)
         {
-            await WeChatInvoker.Call(SendFileCore,files);
+            await WeChatInvoker.Call(SendFileCore, files);
         }
 
-        internal void SendFileCore(UIA3Automation automation,string[] files)
+        internal void SendFileCore(UIA3Automation automation, string[] files)
         {
             var root = this.content.Root;
             if (root == null)

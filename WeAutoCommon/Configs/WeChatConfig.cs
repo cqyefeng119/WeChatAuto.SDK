@@ -138,7 +138,8 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 历史消息Y偏移距离
         /// </summary>
-        public int HistoryMessageOffset_Y = 45;
+        public int HistoryMessageOffset_Y = 50;
+        public int HistoryMaxMoveNumber = 6;
     }
 
     public static class Language

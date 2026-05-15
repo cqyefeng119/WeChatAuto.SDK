@@ -14,7 +14,7 @@ public class UiTestFixture : IDisposable
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         _serviceProvider = WeAutomation.Initialize(options =>
         {
-            options.DebugMode = true;
+            options.DebugMode = false;
             options.WxVersion = "4.1.9.30";
             options.InitAdressBook = true;
             // options.EnableMouseKeyboardSimulator = true;

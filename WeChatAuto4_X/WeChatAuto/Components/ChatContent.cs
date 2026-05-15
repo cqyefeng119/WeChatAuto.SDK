@@ -105,11 +105,33 @@ namespace WeChatAuto.Components
         public async Task SendVoiceChats(string who, string[] partner) => await Sender.SendVoiceChats(who, partner);
 
         /// <summary>
+        /// 根据日期获取当前聊天窗口的聊天历史
+        /// </summary>
+        /// <param name="dates">查询日期列表</param>
+        /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
+        public async Task<List<ChatSimpleMessage>> GetChatHistory(List<DateTime> dates = default) => await _MessageList.GetChatHistory(dates);
+
+        /// <summary>
         /// 根据日期获取聊天历史
         /// </summary>
         /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
         /// <param name="date">查询日期,如果不传，则是当天日期</param>
         /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
-        public async Task<List<ChatSimpleMessage>> GetAllChatHistory(string who, DateTime date = default) => await _MessageList.GetAllChatHistory(who, date);
+        public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime date = default) => await _MessageList.GetChatHistory(who, date);
+        /// <summary>
+        /// 获取一段时间的聊天历史记录
+        /// </summary>
+        /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
+        /// <param name="startDate">开始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <returns></returns>
+        public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime startDate, DateTime endDate) => await _MessageList.GetChatHistory(who, startDate, endDate);
+        /// <summary>
+        /// 获取多个指定日期的聊天历史记录
+        /// </summary>
+        /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
+        /// <param name="range">指定的多个日期</param>
+        /// <returns></returns>
+        public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, List<DateTime> range) => await _MessageList.GetChatHistory(who, range);
     }
 }

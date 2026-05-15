@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+
 namespace WeChatAuto.Models
 {
     public class ChatSimpleMessage
@@ -21,7 +24,7 @@ namespace WeChatAuto.Models
 
         public override string ToString()
         {
-            return $"{Who}: {Message}";
+            return JsonConvert.SerializeObject(this);
         }
     }
 }

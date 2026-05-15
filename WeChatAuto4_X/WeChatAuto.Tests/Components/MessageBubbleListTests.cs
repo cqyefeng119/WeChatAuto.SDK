@@ -19,12 +19,16 @@ public class MessageBubbleListTests
 
     [Theory(DisplayName = "测试按日期获取历史消息")]
     [InlineData("")]
-    public async Task Test_Location_Title(string who)
+    public async Task Test_GetAllChatHistory(string who)
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var list = await client.GetAllChatHistory(who);
-        Assert.True(list.Count == 0);
+        var list = await client.GetChatHistory(who,DateTime.Parse("2026-05-12"));
+        Assert.True(list.Count != 0);
+        list.ForEach(item =>
+        {
+           _output.WriteLine(item.ToString()); 
+        });
+        _output.WriteLine($"总共有:{list.Count}条消息");
     }
-
 }
