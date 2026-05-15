@@ -98,6 +98,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/obj/Debug/net10.0-windows/ref/WeAutoCommon.dll
@@ -467,6 +468,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/bin/Debug/net48/WeAutoCommon.dll
@@ -748,6 +750,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/bin/Debug/net481/WeAutoCommon.dll
@@ -1029,6 +1032,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/obj/Debug/net6.0-windows7.0/ref/WeAutoCommon.dll
@@ -1380,6 +1384,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/obj/Debug/net7.0-windows/ref/WeAutoCommon.dll
@@ -1740,6 +1745,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/obj/Debug/net8.0-windows/ref/WeAutoCommon.dll
@@ -2100,6 +2106,7 @@ Utils/
  WeChatInvoker.cs
  WeChatRecordVideo.cs
  WinApi.cs
+ WinMouse.cs
 
 [metadataReferences]
 ../../WeAutoCommon/obj/Debug/net9.0-windows/ref/WeAutoCommon.dll
