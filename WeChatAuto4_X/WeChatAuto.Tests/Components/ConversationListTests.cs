@@ -110,6 +110,7 @@ public class ConversationList
     [InlineData("女女")]
     [InlineData("AI.Net")]
     [InlineData("梁世京")]
+    [InlineData("WeChatAuto.SDK官方技术支持")]
     public async Task Test_Search_Who(string who)
     {
         var framework = _globalFixture.clientFactory;

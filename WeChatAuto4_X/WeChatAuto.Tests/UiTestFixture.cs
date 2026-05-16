@@ -15,7 +15,7 @@ public class UiTestFixture : IDisposable
         _serviceProvider = WeAutomation.Initialize(options =>
         {
             options.DebugMode = false;
-            options.WxVersion = "4.1.9.54";
+            options.WxVersion = "4.1.9.55";
             options.InitAdressBook = false;
             // options.EnableMouseKeyboardSimulator = true;
             // options.KMDeviceVID = 0x2612;

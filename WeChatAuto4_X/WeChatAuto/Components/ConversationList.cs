@@ -194,12 +194,12 @@ namespace WeChatAuto.Components
                     firstItem.Name.Equals("最常使用"))
                 {
                     AutomationElement item = null;
-                    while (item == null || !item.Name.Equals(who))
+                    while (item == null || !item.Name.Trim().Equals(who))
                     {
                         item = firstItem.GetSibling(1);
                         if (item == null)
                             break;
-                        if (item.Name.Equals(who))
+                        if (item.Name.Trim().Equals(who))
                         {
                             System.Drawing.Point point = item.BoundingRectangle.SafeRandomPoint();
                             Mouse.Position = point;
@@ -220,12 +220,12 @@ namespace WeChatAuto.Components
                         return false;
                     }
                     AutomationElement item = null;
-                    while (item == null || !item.Name.Equals(who))
+                    while (item == null || !item.Name.Trim().Equals(who))
                     {
                         item = firstItem.GetSibling(1);
                         if (item == null)
                             break;
-                        if (item.Name.Equals(who))
+                        if (item.Name.Trim().Equals(who))
                         {
                             System.Drawing.Point point = item.BoundingRectangle.SafeRandomPoint();
                             Mouse.Position = point;

@@ -477,8 +477,9 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
             var button = wxTempwindow.FindFirstByXPath(path);
             button.DrawHighlightExt();
             var point1 = button.GetClickablePoint();
-            var point2 = new Point(point1.X, point1.Y - 100);
+            var point2 = new Point(point1.X, point1.Y - 50);
             Mouse.Position = point2;
+            //Mouse.MoveTo(point2);
             Mouse.LeftClick();
             RandomWait.Wait(300, 800);
             var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
