@@ -12,6 +12,7 @@ namespace WeChatAuto.Utils
 {
     /// <summary>
     /// 多微信调度者
+    /// 如果一个微信亲了
     /// </summary>
     public class MultiWechatScheduler
     {
