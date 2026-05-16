@@ -54,10 +54,10 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<bool> Search(string who)
         {
-            return await WeChatInvoker.Call(SearchWhoCore,who);
+            return await WeChatInvoker.Call(SearchWhoCore, who);
         }
 
-        internal bool SearchWhoCore(UIA3Automation automation,string who)
+        internal bool SearchWhoCore(UIA3Automation automation, string who)
         {
             var root = ConversationRoot;
 
@@ -194,7 +194,8 @@ namespace WeChatAuto.Components
                     firstItem.Name.Equals("最常使用"))
                 {
                     AutomationElement item = null;
-                    while (item == null || !item.Name.Trim().Equals(who))
+                    var index = 0;
+                    while (item == null || !item.Name.Trim().Equals(who) || index < 30)
                     {
                         item = firstItem.GetSibling(1);
                         if (item == null)
@@ -207,6 +208,7 @@ namespace WeChatAuto.Components
                             RandomWait.Wait(600, 1500);
                             return true;
                         }
+                        index++;
                         if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
                             break;
                     }
@@ -220,7 +222,8 @@ namespace WeChatAuto.Components
                         return false;
                     }
                     AutomationElement item = null;
-                    while (item == null || !item.Name.Trim().Equals(who))
+                    var index = 0;
+                    while (item == null || !item.Name.Trim().Equals(who) || index < 30)
                     {
                         item = firstItem.GetSibling(1);
                         if (item == null)
@@ -233,6 +236,7 @@ namespace WeChatAuto.Components
                             RandomWait.Wait(600, 1500);
                             return true;
                         }
+                        index++;
                         if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
                             break;
                     }
@@ -294,8 +298,8 @@ namespace WeChatAuto.Components
         {
             HashSet<string> list = new HashSet<string>();
             //先最到顶端，然后再往上收集所有标题
-            _ScrollListTop(automation,(items, rect) => true);
-            _ScrollListBottom(automation,(items, rect) =>
+            _ScrollListTop(automation, (items, rect) => true);
+            _ScrollListBottom(automation, (items, rect) =>
             {
                 foreach (var item in items)
                 {
@@ -317,7 +321,7 @@ namespace WeChatAuto.Components
         /// <returns>如果找到会话，则返回true，否则返回false</returns>
         public async Task<bool> LocateConversation(string title)
         {
-            return await WeChatInvoker.Call(LocateConversationCore,title);
+            return await WeChatInvoker.Call(LocateConversationCore, title);
         }
         /// <summary>
         /// 会话列表向上滚动，并且执行需要的业务逻辑
@@ -329,7 +333,7 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Up(Func<AutomationElement[], Rectangle, bool> callBack)
         {
-            await WeChatInvoker.Call(_ScrollListTop,callBack);
+            await WeChatInvoker.Call(_ScrollListTop, callBack);
         }
 
 
@@ -343,10 +347,10 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Down(Func<AutomationElement[], Rectangle, bool> callBack)
         {
-            await WeChatInvoker.Call(_ScrollListBottom,callBack);
+            await WeChatInvoker.Call(_ScrollListBottom, callBack);
         }
 
-        internal bool LocateConversationCore(UIA3Automation automation,string title)
+        internal bool LocateConversationCore(UIA3Automation automation, string title)
         {
             var searchFlag = false;
             _ScrollListBox((items, rect) =>
@@ -417,7 +421,7 @@ namespace WeChatAuto.Components
                 find = root != null;
                 if (!find)
                 {
-                    _Client.Navigation.SwitchNavigationCore(null,NavigationType.微信);
+                    _Client.Navigation.SwitchNavigationCore(null, NavigationType.微信);
                     RandomWait.Wait(300, 1000);
                 }
             }
@@ -512,7 +516,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        internal void _ScrollListTop(UIA3Automation automation,Func<AutomationElement[], Rectangle, bool> callBack)
+        internal void _ScrollListTop(UIA3Automation automation, Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
             _Client.MainWindow.Focus();
@@ -545,7 +549,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        internal void _ScrollListBottom(UIA3Automation automation,Func<AutomationElement[], Rectangle, bool> callBack)
+        internal void _ScrollListBottom(UIA3Automation automation, Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
 

@@ -325,7 +325,7 @@ namespace WeChatAuto.Components
                 foreach (var name in exceptList)
                 {
                     var item = items.FirstOrDefault(x => x.Name.Equals(name));
-                    RandomWait.Wait(30, 150);
+                    RandomWait.Wait(30, 80);
                     item.DrawHighlightExt();
 
 
