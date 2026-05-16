@@ -279,7 +279,7 @@ namespace WeChatAuto.Components
             var index = 0;
             var exit = false;
             var oldSnap = new List<string>();
-            while (index < WeAutomation.Config.HistoryMaxMoveNumber && !exit)
+            while (index < WeAutomation.Config.HistoryRetryNumber && !exit)
             {
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
                 if (items.Count() == 0)

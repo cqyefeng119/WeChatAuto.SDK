@@ -110,9 +110,6 @@ namespace WeChatAuto.Components
         {
             if (string.IsNullOrWhiteSpace(who))
             {
-                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                // if (unSelectChatItem())
-                //     return;
                 var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
                 if (!chatInfo.CanTalk())
                 {

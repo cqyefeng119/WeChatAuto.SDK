@@ -139,7 +139,14 @@ namespace WeAutoCommon.Configs
         /// 历史消息Y偏移距离
         /// </summary>
         public int HistoryMessageOffset_Y = 50;
-        public int HistoryMaxMoveNumber = 6;
+        /// <summary>
+        /// 历史消息滚动时重试次数
+        /// </summary>
+        public int HistoryRetryNumber = 6;
+        /// <summary>
+        /// 头像按钮距离微信按钮的Y轴偏移量
+        /// </summary>
+        public int AvatorToWeixinButtonOffsetY = 50;
     }
 
     public static class Language

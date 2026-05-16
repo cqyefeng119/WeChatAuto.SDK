@@ -35,7 +35,7 @@ namespace WeChatAuto.Components
         private readonly WeChatRecordVideo _recordVideo;
 
         public readonly static string MainActionThreadName = "wechatauto.sdk";
-        public static UIThreadInvoker MainActionThreadInvoker;   //就是多微信的情况下，也是启用一个线程.
+        public static UIThreadInvoker MainActionThreadInvoker;   //就是多微信的情况下，也是启用一个线程,因为这样虽然慢，但能实现更强的功能.
 
         /// <summary>
         /// 微信自动化客户端工厂
@@ -477,9 +477,8 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
             var button = wxTempwindow.FindFirstByXPath(path);
             button.DrawHighlightExt();
             var point1 = button.GetClickablePoint();
-            var point2 = new Point(point1.X, point1.Y - 50);
+            var point2 = new Point(point1.X, point1.Y - WeAutomation.Config.AvatorToWeixinButtonOffsetY);
             Mouse.Position = point2;
-            //Mouse.MoveTo(point2);
             Mouse.LeftClick();
             RandomWait.Wait(300, 800);
             var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
