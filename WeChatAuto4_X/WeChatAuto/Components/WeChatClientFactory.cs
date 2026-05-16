@@ -426,7 +426,7 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
             if (taskBarRootRetry.Success)
             {
                 var taskBarRoot = taskBarRootRetry.Result;
-                var xPath = "/Pane[@ClassName='Windows.UI.Input.InputSite.WindowClass']/Button[@ClassName='SystemTray.NormalButton'][@Name='微信']";
+                var xPath = "//Button[@ClassName='SystemTray.NormalButton'][@Name='微信'] | //Button[@ClassName='SystemTray.NormalButton'][@Name=' 微信']";
                 var result = Retry.WhileNull(() => taskBarRoot.FindAllByXPath(xPath),
                           timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
                 if (result.Success)
@@ -475,8 +475,9 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
             wxTempwindow.Focus();
             var path = @"/Group/Custom/Group/ToolBar/Button[1]";
             var button = wxTempwindow.FindFirstByXPath(path);
+            button.DrawHighlightExt();
             var point1 = button.GetClickablePoint();
-            var point2 = new Point(point1.X, point1.Y - 55);
+            var point2 = new Point(point1.X, point1.Y - 100);
             Mouse.Position = point2;
             Mouse.LeftClick();
             RandomWait.Wait(300, 800);
