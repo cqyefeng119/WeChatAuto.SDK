@@ -258,6 +258,12 @@ namespace WeChatAuto.Components
         public async Task<HeaderInfo> GetTitle() => await this.ChatContent.ChatHeader.GetTitle();
 
         /// <summary>
+        /// 当前窗口的Sender输入区域点击，以获得焦点，也可以取消系统的消息提醒或者关闭右侧Pane等作用
+        /// </summary>
+        /// <returns></returns>
+        public async Task FcouseSenderInput() => await this.ChatContent.FcouseSenderInput();
+
+        /// <summary>
         /// 获取当前标窗的标题
         /// </summary>
         /// <returns>当前窗口的标题名称</returns>

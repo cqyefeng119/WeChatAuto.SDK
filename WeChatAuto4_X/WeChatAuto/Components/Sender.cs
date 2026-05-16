@@ -64,9 +64,6 @@ namespace WeChatAuto.Components
         {
             if (string.IsNullOrWhiteSpace(who))
             {
-                //可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-                // if (unSelectChatItem())
-                //     return;
                 var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
                 if (!chatInfo.CanTalk())
                 {
@@ -554,6 +551,57 @@ namespace WeChatAuto.Components
                 }
             );
             await this.SendMessage(who, message, atUserList);
+        }
+
+        /// <summary>
+        /// 当前窗口的Sender区域点击，以获得焦点，可以取消系统的消息提醒或者关闭右侧Pane
+        /// </summary>
+        /// <returns></returns>
+        public async Task FcouseSenderInput()
+        {
+            await WeChatInvoker.Call(FcouseSenderCore);
+        }
+
+        internal void FcouseSenderCore(UIA3Automation automation)
+        {
+            var root = this.content.Root;
+            if (root == null)
+                return;
+            var input = root.FindFirstDescendant(cf => cf.ByAutomationId("chat_input_field").And(cf.ByClassName("mmui::ChatInputField").And(cf.ByControlType(ControlType.Edit)))).AsTextBox();
+            if (input == null)
+                return;
+            //检查是否有右侧边Panel.
+            var clickRoot = input.GetParent().GetParent().GetParent().GetParent();
+            clickRoot.DrawHighlightExt();
+            var rightPane = root.FindFirstDescendant(cf => cf.ByClassName("mmui::ChatRoomMemberInfoView").And(cf.ByControlType(ControlType.Group)));
+            System.Drawing.Point point = System.Drawing.Point.Empty;
+            if (rightPane != null)
+            {
+                rightPane.DrawHighlightExt();
+                Rectangle rect = new Rectangle(clickRoot.BoundingRectangle.X, clickRoot.BoundingRectangle.Y,
+                clickRoot.BoundingRectangle.Width - rightPane.BoundingRectangle.Width, clickRoot.BoundingRectangle.Height);
+                point = rect.SafeRandomPoint();
+            }
+            else
+            {
+                rightPane = root.FindFirstDescendant(cf => cf.ByClassName("mmui::XView").And(cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("single_chat_info_view"))));
+                if (rightPane != null)
+                {
+                    rightPane.DrawHighlightExt();
+                    Rectangle rect = new Rectangle(clickRoot.BoundingRectangle.X, clickRoot.BoundingRectangle.Y,
+                    clickRoot.BoundingRectangle.Width - rightPane.BoundingRectangle.Width, clickRoot.BoundingRectangle.Height);
+                    point = rect.SafeRandomPoint();
+                }
+                else
+                {
+                    point = clickRoot.BoundingRectangle.SafeRandomPoint();
+                }
+            }
+            //测试.
+            //Mouse.MoveTo(point);
+            Mouse.Position = point;
+            Mouse.LeftClick();
+            RandomWait.Wait(100,800);
         }
     }
 }

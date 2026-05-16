@@ -129,9 +129,20 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendVoiceChats("人工智能自动化技术讨论群", new string[] { "AI.Net", "王浚海","王优孟二","hee","kenny" });
+        await client.SendVoiceChats("人工智能自动化技术讨论群", new string[] { "AI.Net", "王浚海", "王优孟二", "hee", "kenny" });
         //await client.SendVoiceChats("测试04", new string[] { "AI.Net", "秋歌","Alex","测试没有的人" });
     }
+
+    [Fact(DisplayName = "测试Sender输入区获得焦点")]
+    public async Task Test_Send_Input_Focus()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.FcouseSenderInput();
+        Assert.True(true);
+    }
+
+
 
     [Fact(DisplayName = "显示WASAPI设备")]
     public void Test_ListWasapiDevices()

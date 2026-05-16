@@ -44,10 +44,6 @@ namespace WeChatAuto.Components
             }
         }
 
-        /// <summary>
-        /// 聊天标题
-        /// </summary>
-        public string FullTitle => "";
         public ChatContent(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
         {
             this._Client = client;
@@ -60,15 +56,18 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
+        /// 当前窗口的Sender输入区域点击，以获得焦点，也可以取消系统的消息提醒或者关闭右侧Pane等作用
+        /// </summary>
+        /// <returns></returns>
+        public async Task FcouseSenderInput() => await this.Sender.FcouseSenderInput();
+        /// <summary>
         /// 发送消息
         /// </summary>
         /// <param name="who">好友或者群聊的名称</param>
         /// <param name="message">消息内容</param>
         /// <param name="atUser">被@的好友</param>
         public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default)
-        {
-            await Sender.SendMessage(who, message, atUser);
-        }
+          => await Sender.SendMessage(who, message, atUser);
 
         /// <summary>
         /// 发送文件
