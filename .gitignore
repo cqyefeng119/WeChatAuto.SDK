@@ -51,6 +51,7 @@ node_modules/
 .svn
 .idea
 .DS_Store
+.tmp
 
 /Admin.NET.App/unpackage
 /App/unpackage
