@@ -50,6 +50,7 @@ namespace WeChatAuto.Components
         /// </remarks>
         public WeChatClientFactory(IServiceProvider serviceProvider)
         {
+            MainActionThreadInvoker = new UIThreadInvoker(WeChatClientFactory.MainActionThreadName);
             _serviceProvider = serviceProvider;
             _logger = _serviceProvider.GetRequiredService<AutoLogger<WeChatClientFactory>>();
             _recordVideo = _serviceProvider.GetRequiredService<WeChatRecordVideo>();
@@ -59,7 +60,6 @@ namespace WeChatAuto.Components
                 _logger.Trace($"开始录制视频,保存路径: {videoPath}");
             }
             _logger.Trace("微信客户端工厂初始化完成");
-            MainActionThreadInvoker = new UIThreadInvoker(WeChatClientFactory.MainActionThreadName);
         }
         /// <summary>
         /// 微信客户端列表
@@ -136,12 +136,12 @@ namespace WeChatAuto.Components
             _logger.Trace("开始重新获取微信窗口");
             try
             {
-                DragVisibleIfWechatHidden(MainActionThreadInvoker);
+                //DragVisibleIfWechatHidden(MainActionThreadInvoker);
                 MainActionThreadInvoker.Run(automation => _GetTaskBarRoot(automation)
                     .Bind(taskBarRoot => _GetToolBar(taskBarRoot))
                     .BindOrElse(toolBar => _GetNotifyButtons(toolBar), () => _GetNotifyButtonsVersion2(automation))
                     .Bind(buttons => _ProcessNotifyButtons(automation, buttons))
-                ).GetAwaiter().GetResult();
+                ).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -458,64 +458,83 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
             wxNotifyButton.AsButton().Click();
             RandomWait.Wait(100, 800);
             var topWindowProcessId = _GetTopWindowProcessIdResult();  //当前微信的processid
-            var wxTempwindow = _GetTopWindow(topWindowProcessId.Result, automation);  //当前微信的automation window.
-            DrawHightlightHelper.DrawHighlightExt(wxTempwindow);
-
-            var owerInfo = __GetCurrentWxNickName(wxTempwindow);
-            wxTempwindow.Focus();
-            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, wxTempwindow, MainActionThreadInvoker, owerInfo);
-            _wxClientList.Add(owerInfo.NickName, client);
+            (OwerInfo info, Window window) result = __GetCurrentWxNickName(topWindowProcessId.Result, automation);
+            result.window.Focus();
+            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info);
+            _wxClientList.Add(result.info.NickName, client);
         }
 
 
         //得到最新窗口的nickName等信息.
-        private OwerInfo __GetCurrentWxNickName(Window wxTempwindow)
+        private (OwerInfo info, Window window) __GetCurrentWxNickName(int handle, UIA3Automation automation)
         {
-            OwerInfo info = new OwerInfo();
-            wxTempwindow.Focus();
-            var path = @"/Group/Custom/Group/ToolBar/Button[1]";
-            var button = wxTempwindow.FindFirstByXPath(path);
-            button.DrawHighlightExt();
-            var point1 = button.GetClickablePoint();
-            var point2 = new Point(point1.X, point1.Y - WeAutomation.Config.AvatorToWeixinButtonOffsetY);
-            Mouse.Position = point2;
-            Mouse.LeftClick();
-            RandomWait.Wait(300, 800);
-            var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
-                And(cf.ByProcessId(wxTempwindow.Properties.ProcessId))),
-                timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            if (windowResult.Success)
+            try
             {
-                var window = windowResult.Result.AsWindow();
-                window.DrawHighlightExt();
-                button = window.FindFirstDescendant(cf => cf.ByAutomationId("head_image_v_view.head_view_").And(cf.ByControlType(ControlType.Button))
-                    .And(cf.ByProcessId(wxTempwindow.Properties.ProcessId)));
-                button?.DrawHighlightExt();
-                if (button != null)
+                var desktop = automation.GetDesktop();
+                var windowRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByProcessId(handle)).And((cf.ByName("微信").Or(cf.ByName("微信 "))))),
+                    timeout: TimeSpan.FromSeconds(5),
+                    interval: TimeSpan.FromMilliseconds(200));
+                if (windowRetry.Success)
                 {
-                    var wxid = button.GetParent().GetParent().FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)));
-                    if (wxid != null)
+                    var wxTempwindow = windowRetry.Result.AsWindow();
+                    RandomWait.Wait(300, 600);
+                    OwerInfo info = new OwerInfo();
+                    wxTempwindow.Focus();
+                    RandomWait.Wait(300, 600);
+                    var toolBar = wxTempwindow.FindFirstDescendant(cf => cf.ByAutomationId("MainView.main_tabbar").And(cf.ByName("导航")).And(cf.ByControlType(ControlType.ToolBar)));
+                    var button = toolBar.FindFirstChild(cf => cf.ByName("微信").And(cf.ByClassName("mmui::XTabBarItem")).And(cf.ByControlType(ControlType.Button)));
+                    var point1 = button.GetClickablePoint();
+                    var point2 = new Point(point1.X, point1.Y - WeAutomation.Config.AvatorToWeixinButtonOffsetY);
+                    //Mouse.MoveTo(point2);
+                    Mouse.Position = point2;
+                    Mouse.LeftClick();
+                    RandomWait.Wait(300, 800);
+                    var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
+                        And(cf.ByProcessId(wxTempwindow.Properties.ProcessId))),
+                        timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+                    if (windowResult.Success)
                     {
-                        wxid.DrawHighlightExt();
-                        wxid = wxid.GetSibling(1);
-                        if (wxid != null)
+                        var window = windowResult.Result.AsWindow();
+                        window.DrawHighlightExt();
+                        button = window.FindFirstDescendant(cf => cf.ByAutomationId("head_image_v_view.head_view_").And(cf.ByControlType(ControlType.Button))
+                            .And(cf.ByProcessId(wxTempwindow.Properties.ProcessId)));
+                        button?.DrawHighlightExt();
+                        if (button != null)
                         {
-                            info.WxId = wxid.Name.Trim();
-                            info.NickName = button.Name.Trim();
-                            var avatorPath = Path.Combine(AppContext.BaseDirectory, "Avator");
-                            if (!Directory.Exists(avatorPath))
+                            var wxid = button.GetParent().GetParent().FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)));
+                            if (wxid != null)
                             {
-                                Directory.CreateDirectory(avatorPath);
+                                wxid.DrawHighlightExt();
+                                wxid = wxid.GetSibling(1);
+                                if (wxid != null)
+                                {
+                                    info.WxId = wxid.Name.Trim();
+                                    info.NickName = button.Name.Trim();
+                                    var avatorPath = Path.Combine(AppContext.BaseDirectory, "Avator");
+                                    if (!Directory.Exists(avatorPath))
+                                    {
+                                        Directory.CreateDirectory(avatorPath);
+                                    }
+                                    avatorPath = Path.Combine(avatorPath, $"{info.WxId}.png");
+                                    button.CaptureToFile(avatorPath);
+                                    info.AvatorPath = avatorPath;
+                                }
                             }
-                            avatorPath = Path.Combine(avatorPath, $"{info.WxId}.png");
-                            button.CaptureToFile(avatorPath);
-                            info.AvatorPath = avatorPath;
+                            RandomWait.Wait(50, 600);
                         }
                     }
-                    RandomWait.Wait(50, 600);
+                    return (info, wxTempwindow);
+                }
+                else
+                {
+                    throw new Exception("没有获取到窗口");
                 }
             }
-            return info;
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw;
+            }
         }
 
         /// <summary>
@@ -526,29 +545,6 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
         => Retry.WhileException(() => WinApi.GetTopWindowProcessIdByClassName(CURRENT_WEIXIN_CLASSNAME),
             timeout: TimeSpan.FromSeconds(5),
             interval: TimeSpan.FromMilliseconds(200));
-
-
-        /// <summary>
-        /// 获取顶部窗口元素
-        /// </summary>
-        /// <param name="topWindowProcessId"></param>
-        /// <param name="automation"></param>
-        /// <returns></returns>
-        private Window _GetTopWindow(int topWindowProcessId, UIA3Automation automation)
-        {
-            var firstRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window)
-                        .And(cf.ByProcessId(topWindowProcessId))).AsWindow(),
-                        timeout: TimeSpan.FromSeconds(5),
-                        interval: TimeSpan.FromMilliseconds(200));
-            if (firstRetry.Success)
-            {
-                return firstRetry.Result;
-            }
-            else
-            {
-                throw new Exception("错误：微信的UI Tree结构有变化，请联系作者修改UI Tree.");
-            }
-        }
 
         /// <summary>
         /// 释放资源

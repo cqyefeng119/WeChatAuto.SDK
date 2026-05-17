@@ -22,7 +22,6 @@ namespace WeAutoCommon.Utils
         private readonly string _ThreadName;
         public string ThreadName => _ThreadName;
         private volatile bool _disposed = false;
-
         public UIA3Automation Automation => _automation;
 
         public readonly int ActionThreadId;

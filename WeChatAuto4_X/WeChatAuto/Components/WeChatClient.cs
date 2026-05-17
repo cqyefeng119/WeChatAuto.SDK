@@ -38,6 +38,9 @@ namespace WeChatAuto.Components
         private volatile bool _disposed = false;
         private Navigation _Navigation;
         private UIThreadInvoker _MainThreadInvoker;
+        private ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
+        internal ManualResetEvent noticeEvent = new ManualResetEvent(false);    //有消息事件.
+
         #region 下面三个公开字段为比较稳定的字段，只要微信不关闭
         public readonly Window MainWindow;
         public readonly int ClientProcessId;
@@ -81,7 +84,7 @@ namespace WeChatAuto.Components
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
             this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
-            this.Monitor = new Monitor(this,serviceProvider,_MainThreadInvoker);
+            this.Monitor = new Monitor(this, serviceProvider, _MainThreadInvoker,noticeEvent);
             _RunCheckAddressBook();
         }
 
@@ -113,9 +116,13 @@ namespace WeChatAuto.Components
         /// ChatContent对象,参考:<see cref="ChatContent"/>
         /// </summary>
         public ChatContent ChatContent;
-
+        /// <summary>
+        /// 通讯录对象，参考:<see cref="AddressBookList"/>
+        /// </summary>
         public AddressBookList AddressBookList;
-
+        /// <summary>
+        /// 监听器对象，参考:<see cref="Monitor"/>
+        /// </summary>
         public Monitor Monitor;
 
         #endregion
@@ -399,6 +406,7 @@ namespace WeChatAuto.Components
             if (disposing)
             {
                 _Navigation?.Dispose();
+                Monitor?.Dispose();
             }
         }
         #endregion
