@@ -141,7 +141,6 @@ namespace WeChatAuto.Components
                 {
                     //DragVisibleIfWechatHidden(automation);
                     _GetTaskBarRoot(automation)
-                    // .Bind(taskBarRoot => _GetToolBar(taskBarRoot))
                     .Bind(taskBar => _GetNotifyIcons(taskBar))
                     .Bind(buttons => _ProcessNotifyButtons(automation, buttons));
                 }).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -218,7 +217,7 @@ namespace WeChatAuto.Components
             else
             {
                 WeChatConstant.WECHAT_SYSTEM_NAME = "WeChat";
-                var elements = root.FindAllChildren(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("WeChat")));
+                var elements = taskBar.FindAllChildren(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("WeChat")));
                 if (elements.Length > 0)
                     return (elements, true);
             }
