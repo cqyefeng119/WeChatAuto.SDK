@@ -48,6 +48,7 @@ namespace WeChatAuto.Components
         public readonly string NickName;
         public readonly string WxId;
         public readonly string AvatorPath;
+        public readonly int WechatIndex;
         public UIThreadInvoker MainThreadInvoker => _MainThreadInvoker;
         #endregion
 
@@ -61,8 +62,9 @@ namespace WeChatAuto.Components
         /// <param name="window"></param>
         /// <param name="uIThreadInvoker"></param>
         /// <param name="ownerInfo">个人信息</param>
+        /// <param name="index">微信在任务栏的索引</param>
         public WeChatClient(int clientProcessId, IServiceProvider provider, WeChatClientFactory factory,
-         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo)
+         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo,int index)
         {
             this._MainThreadInvoker = uIThreadInvoker;
             this.MainWindow = window;
@@ -72,6 +74,7 @@ namespace WeChatAuto.Components
             this.NickName = ownerInfo.NickName;
             this.WxId = ownerInfo.WxId;
             this.AvatorPath = ownerInfo.AvatorPath;
+            this.WechatIndex = index;
             _logger = provider.GetRequiredService<AutoLogger<WeChatClient>>();
             CheckVersion();
             _Initialize();
@@ -85,6 +88,7 @@ namespace WeChatAuto.Components
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
             this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
             this.Monitor = new Monitor(this, serviceProvider, _MainThreadInvoker,noticeEvent);
+            this.NotifyIcon = new ShellNotifyIcon(this,serviceProvider,WechatIndex);
             _RunCheckAddressBook();
         }
 
@@ -124,6 +128,8 @@ namespace WeChatAuto.Components
         /// 监听器对象，参考:<see cref="Monitor"/>
         /// </summary>
         public Monitor Monitor;
+
+        public ShellNotifyIcon NotifyIcon;
 
         #endregion
         private Navigation GetNavigation()
@@ -200,6 +206,23 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="navigationType">导航栏类型,请参见枚举类型<seealso cref="NavigationType"/></param>
         public async Task CloseNavWin(NavigationType navigationType) => await this.Navigation.CloseNavWin(navigationType);
+        /// <summary>
+        /// 点击任务栏图标
+        /// </summary>
+        /// <param name="index">图标索引，从1开始,索引范围不能越界</param>
+        /// <returns></returns>
+        public async Task ClickNotifyIcon(int index) => (await this.NotifyIcon.GetButtons())[index-1].Click();
+        /// <summary>
+        /// 点击指定微信名称的任务栏图标
+        /// </summary>
+        /// <param name="WechatName">微信名称</param>
+        /// <returns></returns>
+        public async Task ClickNotifyIcon(string WechatName)
+        {
+            var client = this.Factory.GetWeChatClient(WechatName);
+            var button = await client.NotifyIcon.GetButton();
+            button.Click();
+        }
         #endregion
 
         #region 会话管理

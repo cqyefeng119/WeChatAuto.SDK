@@ -34,7 +34,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 聊天内容区气泡列表
     /// </summary>
-    internal class MessageBubbleList
+    public class MessageBubbleList
     {
         private IServiceProvider _serviceProvider;
         private AutoLogger<MessageBubbleList> _logger;

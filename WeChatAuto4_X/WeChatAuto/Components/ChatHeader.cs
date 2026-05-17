@@ -16,7 +16,7 @@ namespace WeChatAuto.Components
 	/// <summary>
 	/// 聊天内容区标题区
 	/// </summary>
-	internal class ChatHeader
+	public class ChatHeader
 	{
 		private readonly IServiceProvider _serviceProvider;
 		private readonly AutoLogger<ChatContent> _logger;

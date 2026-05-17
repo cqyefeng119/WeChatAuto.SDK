@@ -32,7 +32,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 聊天内容区发送者
     /// </summary>
-    internal class Sender
+    public class Sender
     {
         private readonly AutoLogger<Sender> _logger;
         private UIThreadInvoker _uiThreadInvoker;
