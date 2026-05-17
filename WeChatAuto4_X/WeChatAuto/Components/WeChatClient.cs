@@ -81,6 +81,7 @@ namespace WeChatAuto.Components
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
             this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
+            this.Monitor = new Monitor(this,serviceProvider,_MainThreadInvoker);
             _RunCheckAddressBook();
         }
 
@@ -114,6 +115,8 @@ namespace WeChatAuto.Components
         public ChatContent ChatContent;
 
         public AddressBookList AddressBookList;
+
+        public Monitor Monitor;
 
         #endregion
         private Navigation GetNavigation()
