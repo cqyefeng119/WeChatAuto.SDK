@@ -23,6 +23,8 @@ using FlaUI.UIA3;
 using WeAutoCommon.Extentions;
 using System.Threading;
 using System.Diagnostics;
+using WeChatAuto.Models;
+using OneOf;
 
 namespace WeChatAuto.Components
 {
@@ -36,18 +38,15 @@ namespace WeChatAuto.Components
         private IServiceProvider serviceProvider;
         private UIThreadInvoker _MainThreadInvoker;
         private ManualResetEvent noticeEvent;
-
-        private Thread MonitorThread;  //单微信总消息监听线程
-        private TaskCompletionSource<bool> _started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private CancellationTokenSource cts = new CancellationTokenSource();
         private AutoLogger<Monitor> _Logger;
+
 
         /// <summary>
         /// <para>构造器，不应该自行调用</para>
         /// </summary>
         /// <param name="client"></param>
         /// <param name="serviceProvider"></param>
-        /// <param name="event"></param>
+        /// <param name="resetEvent"></param>
         /// <param name="_uiMainThreadInvoker"></param>
         internal Monitor(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, ManualResetEvent resetEvent)
         {
@@ -57,67 +56,8 @@ namespace WeChatAuto.Components
             this.noticeEvent = resetEvent;
 
             _Logger = serviceProvider.GetRequiredService<AutoLogger<Monitor>>();
-            InitMonitorThread();
-            if (!_started.Task.Wait(TimeSpan.FromSeconds(10)))
-            {
-                throw new TimeoutException("Monitor startup timeout.");
-            }
-        }
-        private void InitMonitorThread()
-        {
-            MonitorThread = new Thread(MonitorTotalMessage);
-            MonitorThread.IsBackground = true;
-            MonitorThread.Priority = ThreadPriority.Lowest;
-            MonitorThread.SetApartmentState(ApartmentState.MTA);
-            MonitorThread.Start();
         }
 
-
-        private void MonitorTotalMessage()
-        {
-            UIA3Automation automation = null;
-            try
-            {
-                automation = new UIA3Automation();
-                _started.TrySetResult(true);
-                while (!cts.Token.IsCancellationRequested)
-                {
-                    MonitorTotalMessageCore(automation);
-                    cts.Token.WaitHandle.WaitOne(10 * 1000);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                if (!_started.Task.IsCompleted)
-                    _started.TrySetCanceled();
-            }
-            catch (Exception ex)
-            {
-                if (!_started.Task.IsCompleted)
-                    _started.TrySetException(ex);
-                _Logger.Error($"{nameof(Monitor)} - {nameof(MonitorTotalMessage)}: {ex.ToString()}");
-            }
-            finally
-            {
-                automation?.Dispose();
-            }
-        }
-
-        private void MonitorTotalMessageCore(UIA3Automation automation)
-        {
-            var deskTop = automation.GetDesktop();
-            var windowResult = Retry.WhileNull(() => deskTop.FindFirstChild(cf => cf.ByClassName("mmui::MainWindow").And((cf.ByName("微信").Or(cf.ByName(" 微信")))).And(cf.ByControlType(ControlType.Window)).And(cf.ByProcessId(_Client.MainWindow.Properties.ProcessId))),
-            timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            if (windowResult.Success)
-            {
-                var window = windowResult.Result.AsWindow();
-                var root = _GetToolBarRoot(window);
-                var path = @"/Button[@Name='微信']/Group[2]";
-                var numberGroup = root.FindFirstByXPath(path);
-                numberGroup.CaptureToFile(@"c:\1212.png");
-                _Logger.Info(numberGroup.IsElementActuallyVisible(window.Properties.NativeWindowHandle) ? "没有被挡住" : "被挡住");
-            }
-        }
 
         private AutomationElement _GetToolBarRoot(Window window)
         {
@@ -126,6 +66,40 @@ namespace WeChatAuto.Components
         }
 
         #region 消息监听
+        /// <summary>
+        /// 添加消息监听，用户需要提供一个回调函数，当有消息时，会调用回调函数
+        /// 参考<see cref="MessageContext"/>
+        /// </summary>
+        /// <param name="nickNames">好友昵称,可以是一个，也可以是多个好友/群聊 </param>
+        /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="MessageContext"/></param>
+        public async Task AddMessageListener(OneOf<string,List<string>> nickNames, Action<MessageContext> callBack)
+        {
+            await Task.CompletedTask;
+        }
+        /// <summary>
+        /// 移除被监听中的好友/群聊
+        /// </summary>
+        /// <param name="nickName"></param>
+        /// <returns></returns>
+        public async Task RemoveListeningFriend(string nickName)
+        {
+            
+        }
+        /// <summary>
+        /// 暂停消息监听
+        /// </summary>
+        public async Task PauseMessageListener()
+        {
+            
+        }
+        /// <summary>
+        /// 恢复消息监听
+        /// </summary>
+        /// <returns></returns>
+        public async Task ResumeMessageListener()
+        {
+            
+        }
 
         #endregion
 
@@ -156,15 +130,6 @@ namespace WeChatAuto.Components
                 return;
             if (disposing)
             {
-                cts?.Cancel();
-                try
-                {
-                    MonitorThread.Join(TimeSpan.FromSeconds(5));
-                }
-                catch (OperationCanceledException) { }
-                catch (AggregateException) { }
-
-                cts?.Dispose();
 
             }
         }

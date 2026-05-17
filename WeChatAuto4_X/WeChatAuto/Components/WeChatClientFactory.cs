@@ -17,6 +17,7 @@ using System.Drawing;
 using WeChatAuto.Models;
 using System.IO;
 using WeAutoCommon.Extentions;
+using System.Windows.Controls;
 
 namespace WeChatAuto.Components
 {
@@ -136,12 +137,14 @@ namespace WeChatAuto.Components
             _logger.Trace("开始重新获取微信窗口");
             try
             {
-                //DragVisibleIfWechatHidden(MainActionThreadInvoker);
-                MainActionThreadInvoker.Run(automation => _GetTaskBarRoot(automation)
-                    .Bind(taskBarRoot => _GetToolBar(taskBarRoot))
-                    .BindOrElse(toolBar => _GetNotifyButtons(toolBar), () => _GetNotifyButtonsVersion2(automation))
-                    .Bind(buttons => _ProcessNotifyButtons(automation, buttons))
-                ).ConfigureAwait(false).GetAwaiter().GetResult();
+                MainActionThreadInvoker.Run(automation =>
+                {
+                    //DragVisibleIfWechatHidden(automation);
+                    _GetTaskBarRoot(automation)
+                    // .Bind(taskBarRoot => _GetToolBar(taskBarRoot))
+                    .Bind(taskBar => _GetNotifyIcons(taskBar))
+                    .Bind(buttons => _ProcessNotifyButtons(automation, buttons));
+                }).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -154,158 +157,6 @@ namespace WeChatAuto.Components
             }
         }
 
-        private void DragVisibleIfWechatHidden(UIThreadInvoker _uiTempThreadInvoker)
-        {
-            _uiTempThreadInvoker.Run(automation =>
-            {
-                //适配: Microsoft Windows [版本 10.0.22000.3260] 点击倒三角按钮，如果存在，则拖动溢出区域到任务栏
-                bool flowControl = Adapter10_0_22000(automation);
-                if (!flowControl)
-                {
-                    flowControl = Adapter10_0_22631_6199(automation);
-                    if (!flowControl)
-                    {
-                        throw new Exception("WechatAuto.sdk不适配你的操作系统，请联系作者适配！");
-                    }
-                }
-            }).GetAwaiter().GetResult();
-        }
-
-        private bool Adapter10_0_22631_6199(UIA3Automation automation)
-        {
-            var desktop = automation.GetDesktop();
-            var path = @"/Pane/Pane/Button[@Name='显示隐藏的图标']";
-            var button = desktop.FindFirstByXPath(path)?.AsButton();
-            if (button == null)
-                return false;
-            button.DrawHighlightExt();
-            button.Click();
-            RandomWait.Wait(100, 300);
-            var overflowAreaRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf =>
-cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            if (overflowAreaRetry.Success)
-            {
-                var overflowArea = overflowAreaRetry.Result;
-                overflowArea.DrawHighlightExt();
-                var list = new List<AutomationElement>();
-                var buttons = overflowArea.FindAllDescendants(cf => cf.ByControlType(ControlType.Button)).Where(u => u.Name.Trim() == "微信");
-                list.AddRange(buttons);
-                var visibleHidenButton = desktop.FindFirstByXPath("/Pane[@Name='任务栏']/Pane/Button[@Name='显示隐藏的图标']");
-                if (visibleHidenButton != null)
-                {
-                    visibleHidenButton.DrawHighlightExt();
-                    if (list.Count > 0)
-                    {
-                        foreach (var item in list)
-                        {
-                            //MoveFloatingLayer10_0_22631_6199(item, desktop);
-                            var source = item.BoundingRectangle.Center();
-                            item.DrawHighlight();
-                            // var offsetX = visibleHidenButton.BoundingRectangle.X + visibleHidenButton.BoundingRectangle.Width+1;
-                            // var offsetY = visibleHidenButton.BoundingRectangle.Y + (int)(visibleHidenButton.BoundingRectangle.Height / 2);
-                            var target = visibleHidenButton.BoundingRectangle.Center();
-                            Mouse.MoveTo(source);
-                            // Mouse.Down(MouseButton.Left);
-                            // RandomWait.Wait(300, 900);
-                            // Mouse.MoveTo(target);
-                            // RandomWait.Wait(400, 900);
-                            // Mouse.MoveBy(10, 0);
-                            // RandomWait.Wait(400, 900);
-                            // Mouse.Up(MouseButton.Left);
-                            // RandomWait.Wait(50, 200);
-                            WinMouse.Drag(source, target);
-
-                        }
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        private void MoveFloatingLayer10_0_22631_6199(AutomationElement item, AutomationElement desktop)
-        {
-            var button = item.AsButton();
-            button.DrawHighlightExt();
-            var image = button.FindFirstChild(cf => cf.ByControlType(ControlType.Image));
-            image.DrawHighlightExt();
-            Mouse.MoveTo(image.GetClickablePoint());
-            RandomWait.Wait(600, 1200);
-            //可能出现浮动层，也可能不出现
-            var root = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByControlType(ControlType.Pane).And(cf.ByName("Weixin"))),
-                timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            if (!root.Success)
-                return;
-            button.Click();
-            RandomWait.Wait(800, 1500);
-            // root.Result.DrawHighlightExt();
-            // var path = "//Button[@Name='暂不处理']";
-            // button = root.Result.FindFirstByXPath(path).AsButton();
-            // button.DrawHighlightExt();
-            // button.Click();
-            // RandomWait.Wait(300, 500);
-        }
-
-        private bool Adapter10_0_22000(UIA3Automation automation)
-        {
-            var desktop = automation.GetDesktop();
-            var path = "/Pane/Pane/Button[@Name='通知 V 形']";
-            var button = desktop.FindFirstByXPath(path)?.AsButton();
-            if (button == null)
-                return false;
-            button.Click();
-            RandomWait.Wait(100, 300);
-            var overflowAreaRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf =>
-            cf.ByControlType(ControlType.Pane).And(cf.ByName("通知溢出"))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            if (overflowAreaRetry.Success)
-            {
-                var overflowArea = overflowAreaRetry.Result;
-                var list = new List<AutomationElement>();
-                // 微信
-                var buttons = overflowArea.FindAllDescendants(cf => cf.ByControlType(ControlType.Button)).Where(u => u.Name.Trim() == "微信");
-                list.AddRange(buttons);
-                buttons = overflowArea.FindAllDescendants(cf => cf.ByControlType(ControlType.Button)).Where(u => u.Name.Trim() == "WeChat");
-                list.AddRange(buttons);
-                var statusBar = desktop.FindFirstByXPath("/Pane[@Name='任务栏']/Pane/Pane/ToolBar[@Name='用户提示通知区域']");
-                if (statusBar != null)
-                {
-                    if (list.Count > 0)
-                    {
-                        foreach (var item in list)
-                        {
-                            MoveFloatingLayer(item, desktop);
-                            var source = item.BoundingRectangle.Center();
-                            var target = statusBar.BoundingRectangle.Center();
-                            Mouse.MoveTo(source);
-                            Mouse.Down(MouseButton.Left);
-                            Mouse.MoveTo(target);
-                            Mouse.Up(MouseButton.Left);
-                        }
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        private void MoveFloatingLayer(AutomationElement item, AutomationElement desktop)
-        {
-            var button = item.AsButton();
-            button.DrawHighlightExt();
-            Mouse.MoveTo(button.GetClickablePoint());
-            RandomWait.Wait(300, 900);
-            //可能出现浮动层，也可能不出现
-            var root = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin"))),
-                timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
-            if (!root.Success)
-                return;
-            root.Result.DrawHighlightExt();
-            var path = "//Button[@Name='暂不处理']";
-            button = root.Result.FindFirstByXPath(path).AsButton();
-            button.DrawHighlightExt();
-            button.Click();
-            RandomWait.Wait(300, 500);
-        }
 
         /// <summary>
         /// 获取任务栏根元素
@@ -342,100 +193,51 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
             }
             return result.Success ? Maybe<AutomationElement>.Some(result.Result) : Maybe<AutomationElement>.None();
         }
-        /// <summary>
-        /// 获取通知按钮元素
-        /// </summary>
-        /// <param name="toolBar">工具栏元素<see cref="AutomationElement"/></param>
-        /// <returns></returns>
-        private Maybe<AutomationElement[]> _GetNotifyButtons(AutomationElement toolBar)
+        private Maybe<AutomationElement[]> _GetNotifyIcons(AutomationElement taskBar)
         {
-            RandomWait.Wait(100, 600);
-            //微信
-            var result = Retry.WhileNull(() => toolBar.FindAllChildren(cf => cf.ByName(WeChatConstant.WECHAT_SYSTEM_NAME)
-                          .And(cf.ByControlType(ControlType.Button))),
-                          timeout: TimeSpan.FromSeconds(5),
-                          interval: TimeSpan.FromMilliseconds(200)).Result;
-            //处理第二种异常情况
-            if (result == null || result.Length == 0)
-            {
-                WeChatConstant.WECHAT_SYSTEM_NAME = "WeChat";
-                result = Retry.WhileNull(() => toolBar.FindAllChildren(cf => cf.ByName(WeChatConstant.WECHAT_SYSTEM_NAME)
-                          .And(cf.ByControlType(ControlType.Button))),
-                          timeout: TimeSpan.FromSeconds(5),
-                          interval: TimeSpan.FromMilliseconds(200)).Result;
-            }
-            if (result == null || result.Length == 0)
-            {
-                _logger.Error($"{nameof(WeChatClientFactory)} - {nameof(_GetNotifyButtons)}: 本系统的UI Tree可能不被支持,请联系作者予以支持");
-                throw new Exception("本系统的UI Tree可能不被支持，请联系作者予以支持");
-            }
-            return result.ToMaybe();
+            //第一种情况：有“用户提示通知区域"
+            (AutomationElement[] el, bool success) result = _GetNotifyIconButton_1(taskBar);
+            if (result.success)
+                return result.el.ToMaybe();
+            result = _GetNotifyIconButton_2(taskBar);
+            if (result.success)
+                return result.el.ToMaybe();
+
+            throw new Exception("错误：你没有打开微信或者你系统的微信UI Tree不在Wechatauto.sdk的支持范围，请联系作者予以支持!");
         }
 
-        /// <summary>
-        /// 另外一个window版本获取状态栏通知按钮元素的版本
-        /// 
-        /// window11的不同版本，对于微信桌面版的通知按钮元素的获取方式不同，所以需要根据不同的版本获取不同的元素
-        /// </summary>
-        /// <param name="automation"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        private Maybe<AutomationElement[]> _GetNotifyButtonsVersion2(UIA3Automation automation)
+        private (AutomationElement[] el, bool success) _GetNotifyIconButton_1(AutomationElement taskBar)
         {
-            //第一次UI Tree异常情况获取
-            (bool Success, AutomationElement[] elements) itemResult = __GetNotifyButtons_2(automation);
-            if (itemResult.Success)
+            var root = taskBar.FindFirstDescendant(cf => cf.ByName("用户提示通知区域").And(cf.ByControlType(ControlType.ToolBar)));
+            if (root != null)
             {
-                return Maybe<AutomationElement[]>.Some(itemResult.elements);
+                var elements = root.FindAllChildren(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("微信")));
+                if (elements.Length > 0)
+                    return (elements, true);
             }
             else
             {
-                //对第三种UI Tree异常情况支持
-                itemResult = __GetNotifyButtons_3(automation);
-                if (itemResult.Success)
-                {
-                    return Maybe<AutomationElement[]>.Some(itemResult.elements);
-                }
+                WeChatConstant.WECHAT_SYSTEM_NAME = "WeChat";
+                var elements = root.FindAllChildren(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("WeChat")));
+                if (elements.Length > 0)
+                    return (elements, true);
             }
-
-            throw new Exception($"{nameof(WeChatClientFactory)}-{nameof(_GetNotifyButtonsVersion2)}:获取任务栏微信按钮失败");
+            return (new AutomationElement[0], false);
         }
 
-        //refactor: 添加对2019 server 系统的微信支持，ver=10.0.17763.973
-        private (bool Success, AutomationElement[] elements) __GetNotifyButtons_3(UIA3Automation automation)
+        private (AutomationElement[] el, bool success) _GetNotifyIconButton_2(AutomationElement taskBar)
         {
-            var deskTop = automation.GetDesktop();
-            var root = deskTop.FindFirstDescendant(cf => cf.ByControlType(ControlType.ToolBar).And(cf.ByName("用户提示通知区域")));
-            if (root == null)
-                return (false, null);
-            WeChatConstant.WECHAT_SYSTEM_NAME = "WeChat";
-            var elements = root.FindAllChildren(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(WeChatConstant.WECHAT_SYSTEM_NAME)));
-            if (elements != null && elements.Length > 0)
+            var xPath = "//Button[@ClassName='SystemTray.NormalButton'][@Name='微信'] | //Button[@ClassName='SystemTray.NormalButton'][@Name=' 微信']";
+            var result = Retry.WhileNull(() => taskBar.FindAllByXPath(xPath),
+                      timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (result.Success)
             {
-                return (true, elements);
+                return (result.Result,true);
             }
-            return (false, null);
+            return (new AutomationElement[0],false);
         }
 
-        private (bool Success, AutomationElement[] elements) __GetNotifyButtons_2(UIA3Automation automation)
-        {
-            var taskBarRootRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf =>
-                cf.ByName(WeChatConstant.WECHAT_SYSTEM_TASKBAR).And(cf.ByClassName("Shell_TrayWnd"))),
-                timeout: TimeSpan.FromSeconds(5),
-                interval: TimeSpan.FromMilliseconds(200));
-            if (taskBarRootRetry.Success)
-            {
-                var taskBarRoot = taskBarRootRetry.Result;
-                var xPath = "//Button[@ClassName='SystemTray.NormalButton'][@Name='微信'] | //Button[@ClassName='SystemTray.NormalButton'][@Name=' 微信']";
-                var result = Retry.WhileNull(() => taskBarRoot.FindAllByXPath(xPath),
-                          timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-                if (result.Success)
-                {
-                    return (true, result.Result);
-                }
-            }
-            return (false, null);
-        }
+
         private Maybe<bool> _ProcessNotifyButtons(UIA3Automation automation, AutomationElement[] buttons)
         {
             foreach (var wxNotifyButton in buttons)
@@ -489,7 +291,7 @@ cf.ByControlType(ControlType.Pane).And(cf.ByName("系统托盘溢出窗口。"))
                     Mouse.Position = point2;
                     Mouse.LeftClick();
                     RandomWait.Wait(300, 800);
-                    var windowResult = Retry.WhileNull<AutomationElement>(() => wxTempwindow.Parent.FindFirstChild(cf => cf.ByName("Weixin").
+                    var windowResult = Retry.WhileNull<AutomationElement>(() => desktop.FindFirstChild(cf => cf.ByName("Weixin").
                         And(cf.ByProcessId(wxTempwindow.Properties.ProcessId))),
                         timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
                     if (windowResult.Success)

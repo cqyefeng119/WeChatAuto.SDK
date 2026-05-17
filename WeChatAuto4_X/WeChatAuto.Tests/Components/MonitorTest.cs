@@ -25,13 +25,13 @@ public class MonitorTest
     //     _output.WriteLine($"微信客户端名称: {client.NickName}");
     //     await Task.Delay(30000);
     // }
-    [Fact(DisplayName = "测试是否被挡住")]
-    public async Task Test_element_visible()
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        _output.WriteLine($"微信客户端名称: {client.NickName}");
+    // [Fact(DisplayName = "测试是否被挡住")]
+    // public async Task Test_element_visible()
+    // {
+    //     var framework = _globalFixture.clientFactory;
+    //     var client = framework.GetWeChatClient(_wxClientName);
+    //     _output.WriteLine($"微信客户端名称: {client.NickName}");
         
-        await Task.Delay(30000);
-    }
+    //     await Task.Delay(30000);
+    // }
 }
