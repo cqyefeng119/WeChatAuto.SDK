@@ -26,5 +26,17 @@ namespace WeChatAuto.Tests.Components
             _output.WriteLine($"微信客户端名称: {client.NickName}");
             Assert.True(client.NickName == _wxClientName);
         }
+
+        [Fact(DisplayName = "测试获取所有微信客户端名称")]
+        public void TestGetAllWxClientName()
+        {
+            var framework = _globalFixture.clientFactory;
+            var client = framework.GetWeChatClientNames();
+            foreach (var item in client)
+            {
+                _output.WriteLine(item);
+            }
+            Assert.True(client.Count > 0);
+        }
     }
 }
