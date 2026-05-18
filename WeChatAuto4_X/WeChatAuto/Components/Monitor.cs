@@ -26,6 +26,7 @@ using System.Diagnostics;
 using WeChatAuto.Models;
 using OneOf;
 using System.Collections.Concurrent;
+using System.Windows.Forms;
 
 namespace WeChatAuto.Components
 {
@@ -38,11 +39,12 @@ namespace WeChatAuto.Components
         private WeChatClient _Client;
         private IServiceProvider serviceProvider;
         private UIThreadInvoker _MainThreadInvoker;
-        private AutoResetEvent noticeEvent;
+        private SemaphoreSlim noticeEvent;
         private AutoLogger<Monitor> _Logger;
-        private int messageListnerFlag = 0;
-        private ConcurrentBag<string> _MessageList = new ConcurrentBag<string>();
+        private int messageListnerStartedFlag = 0;   //消息监听启用标识
+        private ConcurrentDictionary<string, bool> _MessageList = new ConcurrentDictionary<string, bool>();
         private CancellationTokenSource messageCts = new CancellationTokenSource();
+        private Task messageRunningTask;
 
 
         /// <summary>
@@ -52,7 +54,7 @@ namespace WeChatAuto.Components
         /// <param name="serviceProvider"></param>
         /// <param name="resetEvent"></param>
         /// <param name="_uiMainThreadInvoker"></param>
-        internal Monitor(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, AutoResetEvent resetEvent)
+        internal Monitor(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, SemaphoreSlim resetEvent)
         {
             this._Client = client;
             this.serviceProvider = serviceProvider;
@@ -60,13 +62,6 @@ namespace WeChatAuto.Components
             this.noticeEvent = resetEvent;
 
             _Logger = serviceProvider.GetRequiredService<AutoLogger<Monitor>>();
-        }
-
-
-        private AutomationElement _GetToolBarRoot(Window window)
-        {
-            var toolBarRetry = Retry.WhileNull(() => window.FindFirstDescendant(cf => cf.ByAutomationId("MainView.main_tabbar").And(cf.ByControlType(ControlType.ToolBar).And(cf.ByName("导航")))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-            return toolBarRetry.Success ? toolBarRetry.Result : null;
         }
 
         #region 消息监听
@@ -82,39 +77,65 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="nickNames">好友昵称,可以是一个，也可以是多个好友/群聊 </param>
         /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="MessageContext"/></param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack)
+        public void AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack)
         {
-            if (Interlocked.CompareExchange(ref messageListnerFlag, 1, 0) == 1)
+            if (Interlocked.CompareExchange(ref messageListnerStartedFlag, 1, 0) == 1)
             {
                 List<string> list = nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.AsT1;
-                list.ForEach(async item => await AddListeningFriend(item));
+                list.ForEach(item => AddListeningFriend(item));
                 return;
             }
-            await WeChatInvoker.Call(AddMessageListenerCore, nickNames, callBack);
+            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.AsT1).ForEach(u => _MessageList.TryAdd(u, false));  //赋初始值.
+            try
+            {
+                var startTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                messageRunningTask = Task.Factory.StartNew(async () =>
+                {
+                    while (!messageCts.Token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            startTcs.TrySetResult();
+                            await noticeEvent.WaitAsync(messageCts.Token);
+                            try
+                            {
+                                await WeChatInvoker.Call(AddMessageListenerCore, callBack, messageCts.Token);
+                            }
+                            finally
+                            {
+                                noticeEvent.Release();
+                            }
+                            await Task.Delay(3000, messageCts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            //do nothing.
+                            if (!startTcs.Task.IsCompleted)
+                                startTcs.TrySetCanceled();
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!startTcs.Task.IsCompleted)
+                                startTcs.SetException(ex);
+                            _Logger.Error($"监听消息发生错误：{ex.ToString()}");
+                        }
+                    }
+                }, messageCts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+                startTcs.Task.Wait();
+            }
+            catch (OperationCanceledException)
+            {
+                //do nothing.
+            }
+            catch (Exception ex)
+            {
+                _Logger.Error($"监听消息发生错误：{ex.ToString()}");
+            }
         }
 
-        private void AddMessageListenerCore(UIA3Automation automation, OneOf<string, List<string>> nickNames, Action<MessageContext> callBack)
+        private void AddMessageListenerCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token)
         {
-            _MessageList = new ConcurrentBag<string>(nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.AsT1);  //赋初始值.
-            while (!messageCts.Token.IsCancellationRequested)
-            {
-                try
-                {
-                    noticeEvent.WaitOne();
 
-
-                    noticeEvent.Set();
-                    messageCts.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(3));
-                }
-                catch (OperationCanceledException)
-                {
-                    //do nothing.
-                }
-                catch (Exception ex)
-                {
-                    _Logger.Error($"监听消息发生错误：{ex.ToString()}");
-                }
-            }
         }
 
         /// <summary>
@@ -122,13 +143,13 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who">好友名称</param>
         /// <returns></returns>
-        public async Task AddListeningFriend(string who)
+        public void AddListeningFriend(string who)
         {
-            if (messageListnerFlag != 1)
+            if (messageListnerStartedFlag != 1)
                 throw new Exception("错误：请先启动消息监听器");
-            if (!_MessageList.Contains(who))
+            if (!_MessageList.Keys.Contains(who))
             {
-                _MessageList.Add(who);
+                _MessageList.TryAdd(who, false);
             }
         }
         /// <summary>
@@ -136,12 +157,11 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who"></param>
         /// <returns></returns>
-        public async Task RemoveListeningFriend(string who)
+        public void RemoveListeningFriend(string who)
         {
-            if (messageListnerFlag != 1)
+            if (messageListnerStartedFlag != 1)
                 throw new Exception("错误：请先启动消息监听器");
-            _MessageList = new ConcurrentBag<string>(_MessageList.Where(x => x != who));
-            await Task.CompletedTask;
+            _MessageList.TryRemove(who, out _);
         }
 
         #endregion
@@ -173,7 +193,22 @@ namespace WeChatAuto.Components
                 return;
             if (disposing)
             {
+                messageCts?.Cancel();
+                if (messageRunningTask != null)
+                {
+                    if (!messageRunningTask.IsCompleted)
+                    {
+                        try
+                        {
+                            messageRunningTask.Wait(TimeSpan.FromSeconds(3));
+                        }
+                        catch (AggregateException) { }
+                        catch (Exception) { }
+                    }
+                }
 
+                messageCts?.Dispose();
+                messageRunningTask?.Dispose();
             }
         }
         #endregion
