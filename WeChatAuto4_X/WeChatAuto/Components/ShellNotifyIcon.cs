@@ -53,7 +53,7 @@ namespace WeChatAuto.Components
             return await WeChatInvoker.Call(GetButtons);
         }
 
-        private List<Button> GetButtons(UIA3Automation automation)
+        internal List<Button> GetButtons(UIA3Automation automation)
         {
             var toolBar = _GetTaskBarRoot(automation);
             var elements = ShellNotifyHelper.GetNotifyIcons(toolBar);
@@ -65,7 +65,7 @@ namespace WeChatAuto.Components
             return await WeChatInvoker.Call(GetButtonCore);
         }
 
-        private Button GetButtonCore(UIA3Automation automation)
+        internal Button GetButtonCore(UIA3Automation automation)
         {
             var toolBar = _GetTaskBarRoot(automation);
             var elements = ShellNotifyHelper.GetNotifyIcons(toolBar);

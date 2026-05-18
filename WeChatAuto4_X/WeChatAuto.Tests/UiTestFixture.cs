@@ -16,7 +16,7 @@ public class UiTestFixture : IDisposable
         {
             options.DebugMode = false;
             options.WxVersion = "4.1.9.55";
-            options.InitAdressBook = false;
+            options.InitAdressBook = true;
             // options.EnableMouseKeyboardSimulator = true;
             // options.KMDeviceVID = 0x2612;
             // options.KMDevicePID = 0x1701;

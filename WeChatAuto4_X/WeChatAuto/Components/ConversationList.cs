@@ -256,7 +256,7 @@ namespace WeChatAuto.Components
             return await WeChatInvoker.Call(GetVisibleConversationsCore);
         }
 
-        private List<SimpleConversation> GetVisibleConversationsCore(UIA3Automation automation)
+        internal List<SimpleConversation> GetVisibleConversationsCore(UIA3Automation automation)
         {
             var list = new List<SimpleConversation>();
             var root = ConversationRoot;

@@ -26,7 +26,7 @@ using System.Diagnostics;
 using WeChatAuto.Models;
 using OneOf;
 using System.Collections.Concurrent;
-using System.Windows.Forms;
+using WeChatAuto.Services;
 
 namespace WeChatAuto.Components
 {
@@ -45,6 +45,7 @@ namespace WeChatAuto.Components
         private ConcurrentDictionary<string, bool> _MessageList = new ConcurrentDictionary<string, bool>();
         private CancellationTokenSource messageCts = new CancellationTokenSource();
         private Task messageRunningTask;
+        private Action<string> UIInvoker;
 
 
         /// <summary>
@@ -77,7 +78,9 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="nickNames">好友昵称,可以是一个，也可以是多个好友/群聊 </param>
         /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="MessageContext"/></param>
-        public void AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack)
+        /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
+        /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
+        public void AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, Action<string> UIInvoker = null)
         {
             if (Interlocked.CompareExchange(ref messageListnerStartedFlag, 1, 0) == 1)
             {
@@ -85,21 +88,22 @@ namespace WeChatAuto.Components
                 list.ForEach(item => AddListeningFriend(item));
                 return;
             }
+            this.UIInvoker = UIInvoker;
             (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.AsT1).ForEach(u => _MessageList.TryAdd(u, false));  //赋初始值.
             try
             {
-                var startTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                messageRunningTask = Task.Factory.StartNew(async () =>
+                var startTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                messageRunningTask = Task.Run(async () =>
                 {
                     while (!messageCts.Token.IsCancellationRequested)
                     {
                         try
                         {
-                            startTcs.TrySetResult();
+                            startTcs.TrySetResult(true);
                             await noticeEvent.WaitAsync(messageCts.Token);
                             try
                             {
-                                await WeChatInvoker.Call(AddMessageListenerCore, callBack, messageCts.Token);
+                                await WeChatInvoker.Call(AddMessageListenerCore, callBack, messageCts.Token, IsOpenMonitor);
                             }
                             finally
                             {
@@ -120,7 +124,7 @@ namespace WeChatAuto.Components
                             _Logger.Error($"监听消息发生错误：{ex.ToString()}");
                         }
                     }
-                }, messageCts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+                }, messageCts.Token);
                 startTcs.Task.Wait();
             }
             catch (OperationCanceledException)
@@ -133,9 +137,50 @@ namespace WeChatAuto.Components
             }
         }
 
-        private void AddMessageListenerCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token)
+        private void AddMessageListenerCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor)
         {
+            token.ThrowIfCancellationRequested();
+            _TryPopupNoticeMenu(automation, token);
+            if (!_CheckExistNotice(automation, token))
+                return;
 
+            if (this.UIInvoker != null)
+            {
+                token.ThrowIfCancellationRequested();
+                WeAutomation.currentContext.Send((state) => this.UIInvoker.Invoke(state.ToString()), this._Client.NickName);
+            }
+            token.ThrowIfCancellationRequested();
+            _MessageClickScheduling(automation, callBack, token, IsOpenMonitor);
+        }
+
+        private void _MessageClickScheduling(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor)
+        {
+            this._Client.MainWindow.Focus();
+            Mouse.Position = _Client.MainWindow.BoundingRectangle.Center();
+            var root = this._Client.Conversations.ConversationRoot;
+
+        }
+
+        //仅是了解有没有消息，但是并不做解读数量等操作.
+        private bool _CheckExistNotice(UIA3Automation automation, CancellationToken token)
+        {
+            var desktop = automation.GetDesktop();
+            token.ThrowIfCancellationRequested();
+            var winRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("Weixin").And(cf.ByControlType(ControlType.Window)).And(cf.ByClassName("mmui::UnreadMessageHoverWindow"))), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+            token.ThrowIfCancellationRequested();
+            return winRetry.Success;
+        }
+
+        private void _TryPopupNoticeMenu(UIA3Automation automation, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            Button button = _Client.NotifyIcon.GetButtonCore(automation);
+            Point point1 = button.BoundingRectangle.SafeRandomPoint();
+            Point point2 = button.BoundingRectangle.SafeRandomPoint();
+            Mouse.Position = point1;
+            RandomWait.Wait(100, 500);
+            token.ThrowIfCancellationRequested();
+            Mouse.MoveTo(point2);  //弹出菜单
         }
 
         /// <summary>
