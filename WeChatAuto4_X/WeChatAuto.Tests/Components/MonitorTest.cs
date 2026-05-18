@@ -31,7 +31,18 @@ public class MonitorTest
     //     var framework = _globalFixture.clientFactory;
     //     var client = framework.GetWeChatClient(_wxClientName);
     //     _output.WriteLine($"微信客户端名称: {client.NickName}");
-        
+
     //     await Task.Delay(30000);
     // }
+    [Fact(DisplayName = "测试开放式监听")]
+    public async Task Test_Message_Monitor_open()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        client.AddMessageListener("", (context) =>
+        {
+
+        }, true);
+        await Task.Delay(-1);
+    }
 }

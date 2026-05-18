@@ -533,11 +533,13 @@ namespace WeChatAuto.Components
                 return;
             var point = root.BoundingRectangle.SafeRandomPoint();
             var retryCount = 0;
+            _Client.MainWindow.Focus();
             while (retryCount <= 2)
             {
-                _Client.MainWindow.Focus();
                 Mouse.Position = point;
+                RandomWait.Wait(20, 100);
                 Mouse.Scroll(WeAutomation.Config.ConversationInterval);
+                RandomWait.Wait(50, 250);
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 if (!callBack(items, root.BoundingRectangle))
                     break;
@@ -550,7 +552,7 @@ namespace WeChatAuto.Components
                 {
                     retryCount = 0;
                 }
-                RandomWait.Wait(200, 1000);
+                RandomWait.Wait(50, 250);
             }
         }
 
@@ -568,13 +570,15 @@ namespace WeChatAuto.Components
             //从当前位置往下.
             var point = root.BoundingRectangle.SafeRandomPoint();
             var retryCount = 0;
-            RandomWait.Wait(100, 500);
+            RandomWait.Wait(100, 200);
             var oldTitle = "";
+            _Client.MainWindow.Focus();
             while (retryCount <= 2)
             {
-                _Client.MainWindow.Focus();
                 Mouse.Position = point;
+                RandomWait.Wait(50, 100);
                 Mouse.Scroll(-1 * WeAutomation.Config.ConversationInterval);
+                RandomWait.Wait(50, 250);
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 if (items == null || items.Length == 0)
                     break;
@@ -590,7 +594,7 @@ namespace WeChatAuto.Components
                 {
                     retryCount++;
                 }
-                RandomWait.Wait(100, 500);
+                RandomWait.Wait(50, 300);
             }
         }
     }

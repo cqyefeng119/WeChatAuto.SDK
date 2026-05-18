@@ -39,7 +39,7 @@ namespace WeChatAuto.Components
         private Navigation _Navigation;
         private UIThreadInvoker _MainThreadInvoker;
         private ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
-        internal SemaphoreSlim noticeEvent = new SemaphoreSlim(1,1);    //有消息事件.
+        internal SemaphoreSlim noticeEvent = new SemaphoreSlim(1, 1);    //有消息事件.
 
         #region 下面三个公开字段为比较稳定的字段，只要微信不关闭
         public readonly Window MainWindow;
@@ -64,7 +64,7 @@ namespace WeChatAuto.Components
         /// <param name="ownerInfo">个人信息</param>
         /// <param name="index">微信在任务栏的索引</param>
         public WeChatClient(int clientProcessId, IServiceProvider provider, WeChatClientFactory factory,
-         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo,int index)
+         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo, int index)
         {
             this._MainThreadInvoker = uIThreadInvoker;
             this.MainWindow = window;
@@ -87,8 +87,8 @@ namespace WeChatAuto.Components
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
             this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
-            this.Monitor = new Monitor(this, serviceProvider, _MainThreadInvoker,noticeEvent);
-            this.NotifyIcon = new ShellNotifyIcon(this,serviceProvider,WechatIndex);
+            this.Monitor = new Monitor(this, serviceProvider, _MainThreadInvoker, noticeEvent);
+            this.NotifyIcon = new ShellNotifyIcon(this, serviceProvider, WechatIndex);
             _RunCheckAddressBook();
         }
 
@@ -211,7 +211,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="index">图标索引，从1开始,索引范围不能越界</param>
         /// <returns></returns>
-        public async Task ClickNotifyIcon(int index) => (await this.NotifyIcon.GetButtons())[index-1].Click();
+        public async Task ClickNotifyIcon(int index) => (await this.NotifyIcon.GetButtons())[index - 1].Click();
         /// <summary>
         /// 点击指定微信名称的任务栏图标
         /// </summary>
@@ -377,6 +377,37 @@ namespace WeChatAuto.Components
         #endregion
 
         #region  监听管理
+        /// <summary>
+        /// 添加消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
+        /// 参考<see cref="MessageContext"/>
+        /// 消息监听最主要以事件触发的方式，当消息过来的时候，监听才会运行.
+        /// <para>使用规则：</para>
+        /// <para>1. 仅能监听“允许消息通知”的好友/群聊,所以需要监听的好友/群聊不要设置为“消息免打扰”;</para>
+        /// <para>2. 如果要避免太多消息影响，请将不监听的好友/群设置为“消息免打扰”，以提高监听性能;</para>
+        /// <para>3. 此方法可以多次添加，第一次添加时会启动消息监听，第二次（类似的:第三次等）添加效果等同<see cref="AddListeningFriend"/>方法</para>
+        /// <para>4. 为了减少会话窗口的滚动，建议不要添加太多消息“置顶”，以提高监听效率.</para>
+        /// <para>执行逻辑:</para>
+        /// <para>1. 启动消息监听器时，SDK会将会话列表整个循环一遍，会自动点击并回调用户设定的方法，以防止遗漏消息</para>
+        /// <para>2. 以后的监听过程会增量监听，以提高效率.</para>
+        /// </summary>
+        /// <param name="nickNames">好友昵称,可以是一个，也可以是多个好友/群聊 </param>
+        /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="MessageContext"/></param>
+        /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
+        /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
+        /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
+        public void AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null) => this.Monitor.AddMessageListener(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker);
+        /// <summary>
+        /// 监听过程中添加好友
+        /// </summary>
+        /// <param name="who">好友名称</param>
+        /// <returns></returns>
+        public void AddListeningFriend(string who) => this.Monitor.AddListeningFriend(who);
+        /// <summary>
+        /// 监听过程中移除被监听中的好友/群聊
+        /// </summary>
+        /// <param name="who"></param>
+        /// <returns></returns>
+        public void RemoveListeningFriend(string who) => this.Monitor.RemoveListeningFriend(who);
         #endregion
 
         #region 好友/群聊管理
