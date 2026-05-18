@@ -92,7 +92,7 @@ namespace WeAutoCommon.Models
 
         public override string ToString()
         {
-            return $"title={this.ConversationTitle} - IsDoNotDisturb={this.IsDoNotDisturb.ToString()} - IsTop={this.IsTop.ToString()} - NotReadNumbr={this.NotReadNumbr.ToString()}";
+            return JsonConvert.SerializeObject(this);
         }
 
     }

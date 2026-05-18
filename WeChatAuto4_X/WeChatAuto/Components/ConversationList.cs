@@ -114,7 +114,7 @@ namespace WeChatAuto.Components
             {
                 if (freshTarget.BoundingRectangle.Y + freshTarget.BoundingRectangle.Height > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
                 {
-                    _ScrollDownStep();
+                    DownCore();
                     freshTarget = FindTarget();
                     rect = freshTarget.BoundingRectangle;
                 }
@@ -259,14 +259,19 @@ namespace WeChatAuto.Components
         internal List<SimpleConversation> GetVisibleConversationsCore(UIA3Automation automation)
         {
             var list = new List<SimpleConversation>();
-            var root = ConversationRoot;
-            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            var items = GetVisibleConversationElements(automation);
             foreach (var item in items)
             {
                 var cItem = GetConversationItemFromName(item.Name);
                 list.Add(cItem);
             }
             return list;
+        }
+        internal AutomationElement[] GetVisibleConversationElements(UIA3Automation automation)
+        {
+            var root = ConversationRoot;
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            return items;
         }
         private SimpleConversation GetConversationItemFromName(string name)
         {
@@ -298,8 +303,8 @@ namespace WeChatAuto.Components
         {
             HashSet<string> list = new HashSet<string>();
             //先最到顶端，然后再往上收集所有标题
-            _ScrollListTop(automation, (items, rect) => true);
-            _ScrollListBottom(automation, (items, rect) =>
+            UpCore(automation, (items, rect) => true);
+            DownCore(automation, (items, rect) =>
             {
                 foreach (var item in items)
                 {
@@ -333,7 +338,7 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Up(Func<AutomationElement[], Rectangle, bool> callBack)
         {
-            await WeChatInvoker.Call(_ScrollListTop, callBack);
+            await WeChatInvoker.Call(UpCore, callBack);
         }
 
 
@@ -347,7 +352,7 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Down(Func<AutomationElement[], Rectangle, bool> callBack)
         {
-            await WeChatInvoker.Call(_ScrollListBottom, callBack);
+            await WeChatInvoker.Call(DownCore, callBack);
         }
 
         internal bool LocateConversationCore(UIA3Automation automation, string title)
@@ -439,7 +444,7 @@ namespace WeChatAuto.Components
             Mouse.Scroll(WeAutomation.Config.ConversationInterval);
         }
         //往下滚动
-        internal void _ScrollDownStep()
+        internal void DownCore()
         {
             _Client.MainWindow.Focus();
             var root = this.ConversationRoot;
@@ -516,7 +521,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        internal void _ScrollListTop(UIA3Automation automation, Func<AutomationElement[], Rectangle, bool> callBack)
+        internal void UpCore(UIA3Automation automation, Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
             _Client.MainWindow.Focus();
@@ -528,7 +533,7 @@ namespace WeChatAuto.Components
                 return;
             var point = root.BoundingRectangle.SafeRandomPoint();
             var retryCount = 0;
-            while (retryCount <= 1)
+            while (retryCount <= 2)
             {
                 _Client.MainWindow.Focus();
                 Mouse.Position = point;
@@ -549,7 +554,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        internal void _ScrollListBottom(UIA3Automation automation, Func<AutomationElement[], Rectangle, bool> callBack)
+        internal void DownCore(UIA3Automation automation, Func<AutomationElement[], Rectangle, bool> callBack)
         {
             var root = this.ConversationRoot;
 

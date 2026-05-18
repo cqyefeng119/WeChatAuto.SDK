@@ -23,21 +23,6 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public string DefaultSavePath { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "wxauto_download");
 
-        // /// <summary>
-        // /// 检查微信客户端是否运行的时间间隔，单位秒
-        // /// 用于风控退出时的重试机制
-        // /// </summary>
-        // public int CheckAppRunningInterval { get; set; } = 3;
-        // /// <summary>
-        // /// 微信客户端退出时的重试等待时间，单位秒,默认等候10秒
-        // /// </summary>
-        // public int AppRetryWaitTime { get; set; } = 10;
-        // /// <summary>
-        // /// 是否启用检查微信客户端是否运行
-        // /// 默认启用
-        // /// </summary>
-        // public bool EnableCheckAppRunning { get; set; } = true;
-
         /// <summary>
         /// 监听消息时间间隔，单位秒
         /// </summary>
@@ -61,6 +46,10 @@ namespace WeAutoCommon.Configs
         /// 监听会话列表切换时间间隔，单位：秒
         /// </summary>
         public int ConversationChangeListenerInterval { get; set; } = 5;
+        /// <summary>
+        /// 消息监听间隔时间，单位为秒
+        /// </summary>
+        public int MonitorMessageInterval {get;set;} = 3;
         /// <summary>
         /// 会话列表鼠标滚动行数.
         /// </summary>

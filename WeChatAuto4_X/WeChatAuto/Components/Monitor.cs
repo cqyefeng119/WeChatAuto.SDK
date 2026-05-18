@@ -109,7 +109,7 @@ namespace WeChatAuto.Components
                             {
                                 noticeEvent.Release();
                             }
-                            await Task.Delay(3000, messageCts.Token);
+                            await Task.Delay(WeAutomation.Config.MonitorMessageInterval * 1_000, messageCts.Token);
                         }
                         catch (OperationCanceledException)
                         {
@@ -158,6 +158,61 @@ namespace WeChatAuto.Components
             this._Client.MainWindow.Focus();
             Mouse.Position = _Client.MainWindow.BoundingRectangle.Center();
             var root = this._Client.Conversations.ConversationRoot;
+
+            var index = 0;
+            //当前的消息列表处理
+            _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, root.BoundingRectangle, token);
+            //先往上翻到顶.
+            this._Client.Conversations.UpCore(automation, (els, rootRect) =>
+            {
+                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
+                return true;
+            });
+            //再往下翻
+            this._Client.Conversations.DownCore(automation, (el, rootRect) =>
+            {
+                index++;
+                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
+                if (index < 30)
+                {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        private void _ProcessVisibleConversation(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, Rectangle rootRect, CancellationToken token)
+        {
+            var dontClickItems = new string[] { "服务通知", "文件传输助手", "公众号", "元宝", "微信团队" };
+            List<SimpleConversation> fullList = _Client.Conversations.GetVisibleConversationsCore(automation);
+            var filterObjList = fullList.Where(item => !item.IsDoNotDisturb && item.NotReadNumbr > 0 && !dontClickItems.Contains(item.ConversationTitle)).ToList();  //取出没有设置“免打扰”的好友,并且未读数>0，并且排除不能点击的item.
+            var elementList = _Client.Conversations.GetVisibleConversationElements(automation);
+            List<AutomationElement> list = new List<AutomationElement>();
+            if (IsOpenMonitor)
+            {
+                list = elementList.Where(item => filterObjList.Select(x => x.ConversationTitle).Contains(item.Name.Trim())).ToList();
+            }
+            else
+            {
+                var tmpList = filterObjList.Select(x => x.ConversationTitle).ToList().Intersect(this._MessageList.Keys).ToList();  //与设定监听的集合做交集.
+                list = elementList.Where(item => tmpList.Contains(item.Name.Trim())).ToList();
+            }
+            foreach (var item in list)
+            {
+                token.ThrowIfCancellationRequested();
+                if (item.BoundingRectangle.IsClickSafe(rootRect))
+                {
+                    var point = item.BoundingRectangle.SafeRandomPoint();
+                    Mouse.Position = point;
+                    Mouse.Click();
+                    RandomWait.Wait(200, 900);
+                    _ParserMessaageCore(automation, callBack, token);
+                }
+            }
+        }
+
+        private void _ParserMessaageCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token)
+        {
 
         }
 
