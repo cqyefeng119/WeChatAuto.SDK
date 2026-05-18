@@ -27,6 +27,7 @@ using WeChatAuto.Models;
 using OneOf;
 using System.Collections.Concurrent;
 using WeChatAuto.Services;
+using System.Text.RegularExpressions;
 
 namespace WeChatAuto.Components
 {
@@ -44,6 +45,7 @@ namespace WeChatAuto.Components
         private AutoLogger<Monitor> _Logger;
         private int messageListnerStartedFlag = 0;   //消息监听启用标识
         private bool messageStarted = true;
+        private int totalNewMessage = 0;   //新消息数量
         private ConcurrentDictionary<string, bool> _MessageList = new ConcurrentDictionary<string, bool>();
         private CancellationTokenSource messageCts = new CancellationTokenSource();
         private Task messageRunningTask;
@@ -158,17 +160,28 @@ namespace WeChatAuto.Components
             token.ThrowIfCancellationRequested();
             if (messageStarted)
             {
+                //一开始轮询一次.
                 messageStarted = false;
                 _TravelConversationList(automation, callBack, IsOpenMonitor, token, root);
                 return;
             }
-            _TryPopupNoticeMenu(automation, token);
-            if (!_CheckExistNotice(automation, token))
+            #region 鼠标方案,比较有意思，但是不够优雅，暂时出消
+            // _TryPopupNoticeMenu(automation, token);
+            // if (!_CheckExistNotice(automation, token))
+            // {
+            //     var point = this._Client.MainWindow.BoundingRectangle.SafeRandomPoint();
+            //     Mouse.Position = point;
+            //     return;
+            // }
+            #endregion
+            #region UI Tree方案
+            this.totalNewMessage = _GetTotalMessage(token);
+            if (this.totalNewMessage == 0)
             {
-                var point = this._Client.MainWindow.BoundingRectangle.SafeRandomPoint();
-                Mouse.Position = point;
                 return;
             }
+
+            #endregion
 
             if (this.UIInvoker != null)
             {
@@ -177,6 +190,30 @@ namespace WeChatAuto.Components
             }
             token.ThrowIfCancellationRequested();
             _MessageClickScheduling(automation, callBack, token, IsOpenMonitor, root);
+        }
+
+        private int _GetTotalMessage(CancellationToken token)
+        {
+            var root = this._Client.Navigation.rootElement;
+            if (root == null)
+                return 0;
+            var item = root.FindFirstChild(cf => cf.ByName("微信").And(cf.ByControlType(ControlType.Button)));
+            if (item == null)
+                return 0;
+            item.WaitUntilClickable();
+            var title = item.Properties.FullDescription;
+            if (string.IsNullOrEmpty(title) || title == "微信")
+                return 0;
+            var pattern = @"^([\d]+)条新消息$";
+            var match = Regex.Match(title, pattern);
+            if (match.Success)
+            {
+                return int.TryParse(match.Groups[1].Value, out var result) ? result : 0;
+            }
+            else
+            {
+                return 0;
+            }
         }
 
         private void _TravelConversationList(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationToken token, ListBox root)
@@ -189,12 +226,14 @@ namespace WeChatAuto.Components
                 _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
                 return true;
             });
-            //再往下翻
+            //再往下翻到底
             this._Client.Conversations.DownCore(automation, (el, rootRect) =>
             {
                 _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
                 return true;
             });
+            //再往上翻到顶
+            this._Client.Conversations.UpCore(automation, (els, rootRect) => true);
         }
 
         private void _MessageClickScheduling(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor, ListBox root)
@@ -282,7 +321,13 @@ namespace WeChatAuto.Components
             _Logger.Debug($"自动点击了:{el.Name.Trim()}");
         }
 
-        //仅是了解有没有消息，但是并不做解读数量等操作.
+        /// <summary>
+        /// 仅是了解有没有消息，但是并不做解读数量等操作.
+        /// </summary>
+        /// <param name="automation"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        [Obsolete("此方法可用，但是不够优雅，暂时取消")]
         private bool _CheckExistNotice(UIA3Automation automation, CancellationToken token)
         {
             var desktop = automation.GetDesktop();
@@ -292,6 +337,7 @@ namespace WeChatAuto.Components
             return winRetry.Success;
         }
 
+        [Obsolete("这个方法可用，但是不够优雅，暂时出消")]
         private void _TryPopupNoticeMenu(UIA3Automation automation, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();

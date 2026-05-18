@@ -31,7 +31,7 @@ namespace WeChatAuto.Components
     {
         private readonly IServiceProvider _serviceProvider;
         private WeChatClient _Client;
-        private AutomationElement rootElement => _GetNavigationRoot();
+        internal AutomationElement rootElement => _GetNavigationRoot();
         private readonly AutoLogger<Navigation> _logger;
         private UIThreadInvoker _uiMainThreadInvoker;
 
@@ -53,8 +53,8 @@ namespace WeChatAuto.Components
         private AutomationElement _GetNavigationRoot()
         {
             var path = @"/Group/Custom/Group/ToolBar[@Name='导航']";
-            var item = _Client.MainWindow.FindFirstByXPath(path);
-            return item;
+            var itemRetry = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath(path), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+            return itemRetry.Success ? itemRetry.Result : null;
         }
         /// <summary>
         /// <para>保存个人头像,大部分情况不需要调用此方法，因为系统初始化的时候已经将头像保存在.\Avator\wxid.png</para>
@@ -104,7 +104,7 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型</param>
         public async Task SwitchNavigation(NavigationType navigationType)
         {
-            await WeChatInvoker.Call(SwitchNavigationCore,navigationType);
+            await WeChatInvoker.Call(SwitchNavigationCore, navigationType);
         }
 
         internal void SwitchNavigationCore(UIA3Automation automation, NavigationType navigationType)
@@ -124,7 +124,7 @@ namespace WeChatAuto.Components
                 _Client.MainWindow.Focus();
                 Mouse.Position = point;
                 Mouse.Click();
-                RandomWait.Wait(600,1500);
+                RandomWait.Wait(600, 1500);
             }
         }
 
@@ -135,10 +135,10 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型</param>
         public async Task CloseNavWin(NavigationType navigationType)
         {
-            await WeChatInvoker.Call(CloseNavigationCore,navigationType);
+            await WeChatInvoker.Call(CloseNavigationCore, navigationType);
         }
 
-        internal void CloseNavigationCore(UIA3Automation automation,NavigationType navigationType)
+        internal void CloseNavigationCore(UIA3Automation automation, NavigationType navigationType)
         {
             RetryResult<Window> retryResult = null;
             RetryResult<Button> buttonResult = null;

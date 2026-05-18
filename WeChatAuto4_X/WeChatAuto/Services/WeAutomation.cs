@@ -62,6 +62,12 @@ namespace WeChatAuto.Services
 
             UpdateNarrator(); //打开讲述人模式.
 
+            // 阻止显示器关闭/屏保
+            SetThreadExecutionState(
+                ES_CONTINUOUS |
+                ES_SYSTEM_REQUIRED |
+                ES_DISPLAY_REQUIRED);
+
             RegisterServices(services);
 
             return services;
@@ -131,6 +137,13 @@ namespace WeChatAuto.Services
                 Trace.WriteLine("wechatauto.sdk想通过修改注册表来打开'讲述人'模式，但失败了，请手动打开'讲述人'模式....");
             }
         }
+
+        [DllImport("kernel32.dll")]
+        static extern uint SetThreadExecutionState(uint esFlags);
+
+        const uint ES_CONTINUOUS = 0x80000000;
+        const uint ES_SYSTEM_REQUIRED = 0x00000001;
+        const uint ES_DISPLAY_REQUIRED = 0x00000002;
 
     }
 }
