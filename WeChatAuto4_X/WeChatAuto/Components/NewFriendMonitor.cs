@@ -28,6 +28,9 @@ using OneOf;
 using System.Collections.Concurrent;
 using WeChatAuto.Services;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
+using WeChatAuto.Options;
+using MessagePack.Internal;
 
 namespace WeChatAuto.Components
 {
@@ -36,21 +39,28 @@ namespace WeChatAuto.Components
     /// </summary>
     public class NewFriendMonitor : IDisposable
     {
+        private readonly Channel<int> channel = Channel.CreateBounded<int>(new BoundedChannelOptions(100)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = true,
+        });
         private int _disposed = 0;
         private readonly WeChatClient _Client;
         private readonly Random random = new Random((int)DateTime.Now.Ticks);
         private readonly IServiceProvider serviceProvider;
         private readonly UIThreadInvoker _MainThreadInvoker;
         private readonly SemaphoreSlim noticeEvent;
-        private readonly AutoLogger<MessageMonitor> _Logger;
+        private readonly AutoLogger<NewFriendMonitor> _Logger;
         #region 好友监听字段
-        private bool newFriendMonitorStarted = true;
+        private int newFriendMonitorStarted = 0;   //消息监听启用标识
         private int totalNewFriends = 0;   //新好友数量
-        private readonly ConcurrentDictionary<string, bool> _MessageList = new ConcurrentDictionary<string, bool>();
-        private CancellationTokenSource newFriendCts = new CancellationTokenSource();
-        private Task newFriendFetchTask;
+        private CancellationTokenSource cts = new CancellationTokenSource();
+        private Task fetchNumberTask;
+        private Task automationTask;
         private Action<string> UIInvoker;
         private volatile int _IsContinue = 1;
+        private FriendRequestAutoAcceptOptions options;
         #endregion
 
 
@@ -68,16 +78,74 @@ namespace WeChatAuto.Components
             this._MainThreadInvoker = _uiMainThreadInvoker;
             this.noticeEvent = resetEvent;
 
-            _Logger = serviceProvider.GetRequiredService<AutoLogger<MessageMonitor>>();
+            _Logger = serviceProvider.GetRequiredService<AutoLogger<NewFriendMonitor>>();
+            InitConsume();
         }
 
+        private void InitConsume()
+        {
+            var token = cts.Token;
+            automationTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await foreach (var item in channel.Reader.ReadAllAsync(token))
+                    {
+                        await noticeEvent.WaitAsync(token);
+                        try
+                        {
+                            await WeChatInvoker.Call(AddNewFriendCore, this.options, token);
+                        }
+                        finally
+                        {
+                            noticeEvent.Release();
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+
+                }
+                catch (Exception ex)
+                {
+                    _Logger.Error($"发生错误:{ex.ToString()}");
+                }
+            }, token);
+        }
+
+        private void AddNewFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
+        {
+
+        }
+
+
         #region 好友监听
-        
-        public async Task AddNewFriendListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
-        => await AddNewFriendListenerCore(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker, new DateTimeRange());
+        /// <summary>
+        /// <para>自动通过加好友申请监听</para>
+        /// <para>实现的功能</para>
+        /// <para>1. 通过好友申请</para>
+        /// <para>2. 根据设定的关键词过滤好友申请的打招呼文本，只有包含关键词的打招呼内容才会被通过</para>
+        /// <para>3. 通过好友申请时，可以设置后缀,以区分不同类型的好友,方便后续的自动化实现</para>
+        /// <para>4. 通过好友申请时，可以设置特定的微信标签，以方便后续的自动化与好友管理</para>
+        /// <para>5. 也可以通过好友申请后，删除申请记录</para>
+        /// </summary>
+        /// <param name="options">配置选项，请参考<see cref="FriendRequestAutoAcceptOptions"/>类</param>
+        /// <returns></returns>
+        public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options)
+        {
+            this.options = options;
+            await AddFriendRequestAutoAcceptListener(
+                options.PassedCallBack,
+                options.PassedDelete,
+                options.KeyWord,
+                options.Suffix,
+                options.Label,
+                options.TokenSource,
+                options.UIInvoker);
+        }
 
         /// <summary>
-        /// 暂停消息监听
+        /// 暂停好友申请监听
         /// </summary>
         /// <returns></returns>
         public async Task PauseNewFriendListener()
@@ -88,35 +156,59 @@ namespace WeChatAuto.Components
             }
         }
         /// <summary>
-        /// 恢复消息监听
+        /// 恢复好友申请监听
         /// </summary>
         /// <returns></returns>
         public async Task ResumeNewFriendListener()
         {
-            while(Interlocked.Exchange(ref this._IsContinue,1) == 0)
+            while (Interlocked.Exchange(ref this._IsContinue, 1) == 0)
             {
                 await Task.Delay(0);
             }
         }
 
-
-        private async Task AddNewFriendListenerCore(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationTokenSource tokenSource, Action<string> UIInvoker, DateTimeRange range)
+        /// <summary>
+        /// <para>自动通过加好友申请监听</para>
+        /// <para>实现的功能</para>
+        /// <para>1. 通过好友申请</para>
+        /// <para>2. 根据设定的关键词过滤好友申请的打招呼文本，只有包含关键词的打招呼内容才会被通过</para>
+        /// <para>3. 通过好友申请时，可以设置后缀,以区分不同类型的好友,方便后续的自动化实现</para>
+        /// <para>4. 通过好友申请时，可以设置特定的微信标签，以方便后续的自动化与好友管理</para>
+        /// <para>5. 也可以通过好友申请后，删除申请记录</para>
+        /// </summary>
+        /// <param name="passedCallBack">
+        /// <para>通过后的回调事件,SDK提供使用者三种信息:</para>
+        /// <para>1. 通过的好友昵称列表</para>
+        /// <para>2. 一个<see cref="WeChatClient"/>对象，可以通过好友申请后，通过此对象给好友发消息，注册自动监听等操作</para>
+        /// <para>3. 一个<see cref="IServiceProvider"/>依赖注入容器提供者，可以通过依赖注入获取自己的业务对象</para>
+        /// </param>
+        /// <param name="passedDelete">通过好友申请后是否删除申请记录，默为删除</param>
+        /// <param name="keyWord">关键词，如果设置关键词，只通过打招呼含有关键词的好友申请</param>
+        /// <param name="suffix">后缀，如果设置后缀，被通过的好友会自动加上此后缀,如:AI.Net_Test</param>
+        /// <param name="label">标签，给好友设置微信标签</param>
+        /// <param name="tokenSource">取消令牌，可以取消监听</param>
+        /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
+        private async Task AddFriendRequestAutoAcceptListener(Action<List<string>, WeChatClient, IServiceProvider> passedCallBack, bool passedDelete = true, string keyWord = null, string suffix = null, string label = null, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
         {
+            if (Interlocked.CompareExchange(ref this.newFriendMonitorStarted, 1, 0) == 1)
+            {
+                return;
+            }
             this.UIInvoker = UIInvoker;
             CancellationToken token;
             if (tokenSource != default)
             {
-                token = CancellationTokenSource.CreateLinkedTokenSource(newFriendCts.Token, tokenSource.Token).Token;
+                token = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, tokenSource.Token).Token;
             }
             else
             {
-                token = newFriendCts.Token;
+                token = cts.Token;
             }
-            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.AsT1).ForEach(u => _MessageList.TryAdd(u, false));  //赋初始值.
             try
             {
                 var startTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                newFriendFetchTask = Task.Run(async () =>
+                UIThreadInvoker newFriendInvoker = new UIThreadInvoker("new-friends-fetch");
+                fetchNumberTask = Task.Run(async () =>
                 {
                     startTcs.TrySetResult(true);
                     using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromSeconds(WeAutomation.Config.MonitorMessageInterval));
@@ -126,15 +218,7 @@ namespace WeChatAuto.Components
                         {
                             if (_IsContinue != 1)  //如果暂停了
                                 continue;
-                            await noticeEvent.WaitAsync(token);
-                            try
-                            {
-                                //await WeChatInvoker.Call(AddMessageListenerAction, callBack, token, IsOpenMonitor);
-                            }
-                            finally
-                            {
-                                noticeEvent.Release();
-                            }
+                            await __FetchNewFriendNumber(token, newFriendInvoker);
                         }
                         catch (OperationCanceledException)
                         {
@@ -157,9 +241,41 @@ namespace WeChatAuto.Components
             }
             catch (Exception ex)
             {
-                _Logger.Error($"监听消息发生错误：{ex.ToString()}");
+                _Logger.Error($"监听好友申请发生错误：{ex.ToString()}");
             }
         }
+
+        private async Task __FetchNewFriendNumber(CancellationToken token, UIThreadInvoker newFriendInvoker)
+        {
+            await newFriendInvoker.Run(automation =>
+            {
+                var desktop = automation.GetDesktop();
+                var windowRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("微信").And(cf.ByClassName("mmui::MainWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId))))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+                if (windowRetry.Success)
+                {
+                    var window = windowRetry.Result;
+                    var path = @"/Group/Custom/Group/ToolBar/Button[@Name='通讯录'][@ClassName='mmui::XTabBarItem']";
+                    var buttonRetry = Retry.WhileNull(() => window.FindFirstByXPath(path), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+                    if (buttonRetry.Success)
+                    {
+                        var value = buttonRetry.Result.Properties.FullDescription;
+                        if (string.IsNullOrWhiteSpace(value) || value.Equals("通讯录"))
+                            return;
+                        var pattern = @"^([\d]+)\s*条新朋友申请$";
+                        var match = Regex.Match(value, pattern);
+                        if (match.Success)
+                        {
+                            int number = int.TryParse(match.Groups[1].Value, out var result) ? result : 0;
+                            if (number > 0)
+                                channel.Writer.TryWrite(number);
+                        }
+                    }
+                }
+            });
+        }
+
+
+
 
         /// <summary>
         /// 允许调用者做一些UI操作.
@@ -174,37 +290,6 @@ namespace WeChatAuto.Components
             }
         }
 
-        private int _GetTotalMessage(CancellationToken token)
-        {
-            try
-            {
-                var root = this._Client.Navigation.rootElement;
-                if (root == null)
-                    return 0;
-                var item = root.FindFirstChild(cf => cf.ByName("微信").And(cf.ByControlType(ControlType.Button)));
-                if (item == null)
-                    return 0;
-                item.WaitUntilClickable();
-                var title = item.Properties.FullDescription;
-                if (string.IsNullOrEmpty(title) || title == "微信")
-                    return 0;
-                var pattern = @"^([\d]+)条新消息$";
-                var match = Regex.Match(title, pattern);
-                if (match.Success)
-                {
-                    return int.TryParse(match.Groups[1].Value, out var result) ? result : 0;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                _Logger.Error($"{nameof(MessageMonitor)} - {nameof(_GetTotalMessage)}发生错误:{ex.ToString()}");
-                return 0;
-            }
-        }
 
         #endregion
         ~NewFriendMonitor()
@@ -223,22 +308,36 @@ namespace WeChatAuto.Components
                 return;
             if (disposing)
             {
-                newFriendCts?.Cancel();
-                if (newFriendFetchTask != null)
+                channel.Writer.Complete();
+                cts?.Cancel();
+                if (fetchNumberTask != null)
                 {
-                    if (!newFriendFetchTask.IsCompleted)
+                    if (!fetchNumberTask.IsCompleted)
                     {
                         try
                         {
-                            newFriendFetchTask.Wait(TimeSpan.FromSeconds(3));
+                            fetchNumberTask.Wait(TimeSpan.FromSeconds(3));
+                        }
+                        catch (AggregateException) { }
+                        catch (Exception) { }
+                    }
+                }
+                if (automationTask != null)
+                {
+                    if (!automationTask.IsCompleted)
+                    {
+                        try
+                        {
+                            automationTask.Wait(TimeSpan.FromSeconds(3));
                         }
                         catch (AggregateException) { }
                         catch (Exception) { }
                     }
                 }
 
-                newFriendCts?.Dispose();
-                newFriendFetchTask?.Dispose();
+                cts?.Dispose();
+                fetchNumberTask?.Dispose();
+                automationTask?.Dispose();
             }
         }
     }
