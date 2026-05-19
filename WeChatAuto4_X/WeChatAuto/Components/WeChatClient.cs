@@ -88,6 +88,7 @@ namespace WeChatAuto.Components
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
             this.AddressBookList = new AddressBookList(this, this._MainThreadInvoker, serviceProvider);
             this.MessageMonitor = new MessageMonitor(this, serviceProvider, _MainThreadInvoker, noticeEvent);
+            this.NewFriendMonitor = new NewFriendMonitor(this, serviceProvider, _MainThreadInvoker, noticeEvent);
             this.NotifyIcon = new ShellNotifyIcon(this, serviceProvider, WechatIndex);
             _RunCheckAddressBook();
         }
@@ -128,8 +129,13 @@ namespace WeChatAuto.Components
         /// 消息监听器对象，参考:<see cref="MessageMonitor"/>
         /// </summary>
         public MessageMonitor MessageMonitor;
-
+        /// <summary>
+        /// 任务栏操作对象，参考<see cref="ShellNotifyIcon"/>
+        /// </summary>
         public ShellNotifyIcon NotifyIcon;
+
+        public NewFriendMonitor NewFriendMonitor;
+
 
         #endregion
         private Navigation GetNavigation()
@@ -391,7 +397,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null) => await this.MessageMonitor.AddMessageListener(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker);
+        public async Task AddMessageListener(OneOf<string, List<string>,string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null) => await this.MessageMonitor.AddMessageListener(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker);
         /// <summary>
         /// 添加一个从什么时候开始，什么时候结束的消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
         /// 参考<see cref="MessageContext"/>
@@ -412,7 +418,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>,string[]> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
           => await this.MessageMonitor.AddMessageListener(nickNames, callBack, startTime, endTime, IsOpenMonitor, tokenSource, UIInvoker);
         /// <summary>
         /// 添加一天中多个时间段的消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
@@ -433,7 +439,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>,string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
             => await this.MessageMonitor.AddMessageListener(nickNames, callBack, range, IsOpenMonitor, tokenSource, UIInvoker);
         /// <summary>
         /// 暂停消息监听
@@ -509,6 +515,7 @@ namespace WeChatAuto.Components
             if (disposing)
             {
                 MessageMonitor?.Dispose();
+                NewFriendMonitor?.Dispose();
             }
         }
         #endregion

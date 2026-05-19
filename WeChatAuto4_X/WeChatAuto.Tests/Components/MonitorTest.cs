@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using OneOf;
+using WeChatAuto.Models;
 using Xunit.Abstractions;
 
 namespace WeChatAuto.Tests.Components;
@@ -17,23 +18,6 @@ public class MonitorTest
         _globalFixture = globalFixture;
     }
 
-    // [Fact(DisplayName = "测试截图")]
-    // public async Task Test_Capture_image()
-    // {
-    //     var framework = _globalFixture.clientFactory;
-    //     var client = framework.GetWeChatClient(_wxClientName);
-    //     _output.WriteLine($"微信客户端名称: {client.NickName}");
-    //     await Task.Delay(30000);
-    // }
-    // [Fact(DisplayName = "测试是否被挡住")]
-    // public async Task Test_element_visible()
-    // {
-    //     var framework = _globalFixture.clientFactory;
-    //     var client = framework.GetWeChatClient(_wxClientName);
-    //     _output.WriteLine($"微信客户端名称: {client.NickName}");
-
-    //     await Task.Delay(30000);
-    // }
     [Fact(DisplayName = "测试开放式监听")]
     public async Task Test_Message_Monitor_open()
     {
@@ -45,4 +29,54 @@ public class MonitorTest
         }, true);
         await Task.Delay(-1);
     }
+
+    [Fact(DisplayName = "测试固定好友、群监听")]
+    public async Task Test_Message_Monitor_friend()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.AddMessageListener(new string[] { "AI.Net", "DroidMirror官方技术支持" }, (context) =>
+        {
+
+        }, false);
+        await Task.Delay(-1);
+    }
+
+    [Theory(DisplayName = "测试开始时间-结束时间的消息监听")]
+    [InlineData("", "")]
+    public async Task Test_Message_Monitor_friend_starendtime(string start, string end)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var t1 = TimeOnly.ParseExact(start, "HH:mm");
+        var t2 = TimeOnly.ParseExact(end, "HH:mm");
+        await client.AddMessageListener(new string[] { "AI.Net", "DroidMirror官方技术支持" }, (context) =>
+        {
+
+        }, t1, t2, false);
+        await Task.Delay(-1);
+    }
+
+    [Fact(DisplayName = "测试多个时间段的监听")]
+    public async Task Test_Message_Monitor_friend_muti_rang()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        List<TimeOnlyRange> list = new List<TimeOnlyRange>();
+        list.Add(new TimeOnlyRange
+        {
+
+        });
+
+        list.Add(new TimeOnlyRange
+        {
+
+        });
+        await client.AddMessageListener(new string[] { "AI.Net", "DroidMirror官方技术支持" }, (context) =>
+        {
+
+        }, list, false);
+        await Task.Delay(-1);
+    }
+
 }

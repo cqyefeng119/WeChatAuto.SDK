@@ -91,7 +91,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
         => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker, new DateTimeRange());
 
         /// <summary>
@@ -114,7 +114,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
         => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker, new DateTimeRange()
         {
             IsCheckDate = true,
@@ -145,7 +145,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="tokenSource">取消令牌,请参考<see cref="CancellationTokenSource"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationTokenSource tokenSource = default, Action<string> UIInvoker = null)
         => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, tokenSource, UIInvoker, new DateTimeRange()
         {
             IsCheckDate = true,
@@ -169,7 +169,7 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task ResumeMessageListener()
         {
-            while(Interlocked.Exchange(ref this._IsContinue,1) == 0)
+            while (Interlocked.Exchange(ref this._IsContinue, 1) == 0)
             {
                 await Task.Delay(0);
             }
@@ -203,7 +203,7 @@ namespace WeChatAuto.Components
             await Task.CompletedTask;
         }
 
-        private async Task AddMessageListenerCore(OneOf<string, List<string>> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationTokenSource tokenSource, Action<string> UIInvoker, DateTimeRange range)
+        private async Task AddMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationTokenSource tokenSource, Action<string> UIInvoker, DateTimeRange range)
         {
             if (Interlocked.CompareExchange(ref messageListnerStartedFlag, 1, 0) == 1)
             {
@@ -224,7 +224,7 @@ namespace WeChatAuto.Components
             {
                 token = messageCts.Token;
             }
-            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.AsT1).ForEach(u => _MessageList.TryAdd(u, false));  //赋初始值.
+            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1 : nickNames.AsT2.ToList()).ForEach(u => _MessageList.TryAdd(u, false));  //赋初始值.
             try
             {
                 var startTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -386,6 +386,8 @@ namespace WeChatAuto.Components
 
             //当前的消息列表处理
             _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, root.BoundingRectangle, token);
+            if (_GetTotalMessage(token) == 0)
+                return;
 
             //先往下滚动
             this._Client.Conversations.DownCore(automation, (el, rootRect) =>
@@ -416,34 +418,34 @@ namespace WeChatAuto.Components
             RandomWait.Wait(100, 350);
             var filterObjList = fullList.Where(item => !item.IsDoNotDisturb && item.NotReadNumbr > 0).ToList();  //取出没有设置“免打扰”的好友,并且未读数>0
             var elementList = _Client.Conversations.GetVisibleConversationElements(automation);
-            List<AutomationElement> list = new List<AutomationElement>();
-            if (IsOpenMonitor)
+            List<AutomationElement> clickList = new List<AutomationElement>();
+            // if (IsOpenMonitor)
+            // {
+            var tmpList = filterObjList.Select(x => x.ConversationTitle);
+            foreach (var item in elementList)
             {
-                var tmpList = filterObjList.Select(x => x.ConversationTitle);
-                foreach (var item in elementList)
+                string[] aryItems = item.Name.Split('\n');
+                var name = aryItems[0].Trim();
+                if (tmpList.Contains(name))
                 {
-                    string[] aryItems = item.Name.Split('\n');
-                    var name = aryItems[0].Trim();
-                    if (tmpList.Contains(name))
-                    {
-                        list.Add(item);
-                    }
+                    clickList.Add(item);
                 }
             }
-            else
-            {
-                var tmpList = filterObjList.Select(x => x.ConversationTitle).ToList().Intersect(this._MessageList.Keys).ToList();  //与设定监听的集合做交集.
-                foreach (var item in elementList)
-                {
-                    string[] aryItems = item.Name.Split('\n');
-                    var name = aryItems[0].Trim();
-                    if (tmpList.Contains(name))
-                    {
-                        list.Add(item);
-                    }
-                }
-            }
-            foreach (var item in list)
+            // }
+            // else
+            // {
+            //     var tmpList = filterObjList.Select(x => x.ConversationTitle).ToList().Intersect(this._MessageList.Keys).ToList();  //与设定监听的集合做交集.
+            //     foreach (var item in elementList)
+            //     {
+            //         string[] aryItems = item.Name.Split('\n');
+            //         var name = aryItems[0].Trim();
+            //         if (tmpList.Contains(name))
+            //         {
+            //             clickList.Add(item);
+            //         }
+            //     }
+            // }
+            foreach (var item in clickList)
             {
                 token.ThrowIfCancellationRequested();
                 if (item.BoundingRectangle.IsClickSafe(rootRect))
@@ -469,6 +471,7 @@ namespace WeChatAuto.Components
                     var button = backButtonRetry.Result;
                     button.WaitUntilClickable();
                     button.Click();
+                    RandomWait.Wait(300, 900);
                 }
             }
         }
