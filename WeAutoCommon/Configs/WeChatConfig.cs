@@ -51,10 +51,10 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public int MonitorMessageInterval {get;set;} = 3;
         /// <summary>
-        /// 消息监听时往下滚动的次数，如果监听列表多，建议设置成：15-40
-        /// 如果监听列表少，建议设置成:15-25，以提高效率 
+        /// 消息监听时往下滚动的次数，如果监听列表多，建议设置成：10-30
+        /// 如果监听列表少，建议设置成:5~10，以提高效率 
         /// </summary>
-        public int MonitorMessageMaxDownInterval {get;set;} = 15;
+        public int MonitorMessageMaxDownInterval {get;set;} = 8;
         /// <summary>
         /// 会话列表鼠标滚动行数.
         /// </summary>

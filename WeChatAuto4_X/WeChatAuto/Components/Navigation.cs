@@ -27,7 +27,7 @@ namespace WeChatAuto.Components
     /// <summary>
     /// 对微信导航栏的封装.
     /// </summary>
-    public class Navigation : IDisposable
+    public class Navigation
     {
         private readonly IServiceProvider _serviceProvider;
         private WeChatClient _Client;
@@ -196,11 +196,6 @@ namespace WeChatAuto.Components
                 window.Close();
                 _Client.MainWindow.Focus();
             }
-        }
-
-        public void Dispose()
-        {
-
         }
     }
 }

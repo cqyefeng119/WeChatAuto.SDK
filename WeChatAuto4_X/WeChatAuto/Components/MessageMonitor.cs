@@ -32,9 +32,9 @@ using System.Text.RegularExpressions;
 namespace WeChatAuto.Components
 {
     /// <summary>
-    /// 监听器
+    /// 消息监听器
     /// </summary>
-    public class Monitor : IDisposable
+    public class MessageMonitor : IDisposable
     {
         private int _disposed = 0;
         private readonly WeChatClient _Client;
@@ -42,7 +42,7 @@ namespace WeChatAuto.Components
         private readonly IServiceProvider serviceProvider;
         private readonly UIThreadInvoker _MainThreadInvoker;
         private readonly SemaphoreSlim noticeEvent;
-        private readonly AutoLogger<Monitor> _Logger;
+        private readonly AutoLogger<MessageMonitor> _Logger;
         #region 消息监听字段
         private int messageListnerStartedFlag = 0;   //消息监听启用标识
         private bool messageStarted = true;
@@ -62,14 +62,14 @@ namespace WeChatAuto.Components
         /// <param name="serviceProvider"></param>
         /// <param name="resetEvent"></param>
         /// <param name="_uiMainThreadInvoker"></param>
-        internal Monitor(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, SemaphoreSlim resetEvent)
+        internal MessageMonitor(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, SemaphoreSlim resetEvent)
         {
             this._Client = client;
             this.serviceProvider = serviceProvider;
             this._MainThreadInvoker = _uiMainThreadInvoker;
             this.noticeEvent = resetEvent;
 
-            _Logger = serviceProvider.GetRequiredService<AutoLogger<Monitor>>();
+            _Logger = serviceProvider.GetRequiredService<AutoLogger<MessageMonitor>>();
         }
 
         #region 消息监听
@@ -351,7 +351,7 @@ namespace WeChatAuto.Components
             }
             catch (Exception ex)
             {
-                _Logger.Error($"{nameof(Monitor)} - {nameof(_GetTotalMessage)}发生错误:{ex.ToString()}");
+                _Logger.Error($"{nameof(MessageMonitor)} - {nameof(_GetTotalMessage)}发生错误:{ex.ToString()}");
                 return 0;
             }
         }
@@ -511,13 +511,6 @@ namespace WeChatAuto.Components
         #region 会话切换监听
         #endregion
 
-        #region 新好友申请监听
-
-        #endregion
-
-        #region 添加朋友圈监听
-        #endregion
-
         private bool _CheckRuntime(List<TimeOnlyRange> timeList)
         {
             var now = TimeOnly.FromDateTime(DateTime.Now);
@@ -544,7 +537,7 @@ namespace WeChatAuto.Components
         }
 
         #region 释放器
-        ~Monitor()
+        ~MessageMonitor()
         {
             Dispose(false);
         }
