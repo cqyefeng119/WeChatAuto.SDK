@@ -47,7 +47,7 @@ namespace WeChatAuto.Components
         private int messageListnerStartedFlag = 0;   //消息监听启用标识
         private bool messageStarted = true;
         private int totalNewMessage = 0;   //新消息数量
-        private readonly ConcurrentDictionary<string, bool> _MessageList = new ConcurrentDictionary<string, bool>();
+        private readonly ConcurrentDictionary<string, bool> _MonitorList = new ConcurrentDictionary<string, bool>();
         private CancellationTokenSource messageCts = new CancellationTokenSource();
         private Task messageRunningTask;
         private Action<string> UIInvoker;
@@ -184,9 +184,9 @@ namespace WeChatAuto.Components
         {
             if (messageListnerStartedFlag != 1)
                 throw new Exception("错误：请先启动消息监听器");
-            if (!_MessageList.Keys.Contains(who))
+            if (!_MonitorList.Keys.Contains(who))
             {
-                _MessageList.TryAdd(who, false);
+                _MonitorList.TryAdd(who, false);
             }
             await Task.CompletedTask;
         }
@@ -199,7 +199,7 @@ namespace WeChatAuto.Components
         {
             if (messageListnerStartedFlag != 1)
                 throw new Exception("错误：请先启动消息监听器");
-            _MessageList.TryRemove(who, out _);
+            _MonitorList.TryRemove(who, out _);
             await Task.CompletedTask;
         }
 
@@ -224,7 +224,7 @@ namespace WeChatAuto.Components
             {
                 token = messageCts.Token;
             }
-            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1 : nickNames.AsT2.ToList()).ForEach(u => _MessageList.TryAdd(u, false));  //赋初始值.
+            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1 : nickNames.AsT2.ToList()).ForEach(u => _MonitorList.TryAdd(u, false));  //赋初始值.
             try
             {
                 var startTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -413,14 +413,11 @@ namespace WeChatAuto.Components
         private void _ProcessVisibleConversation(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, Rectangle rootRect, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            var dontCheckItems = new string[] { "服务号", "服务通知", "文件传输助手", "公众号", "元宝", "微信团队" };
             List<SimpleConversation> fullList = _Client.Conversations.GetVisibleConversationsCore(automation);
             RandomWait.Wait(100, 350);
             var filterObjList = fullList.Where(item => !item.IsDoNotDisturb && item.NotReadNumbr > 0).ToList();  //取出没有设置“免打扰”的好友,并且未读数>0
             var elementList = _Client.Conversations.GetVisibleConversationElements(automation);
             List<AutomationElement> clickList = new List<AutomationElement>();
-            // if (IsOpenMonitor)
-            // {
             var tmpList = filterObjList.Select(x => x.ConversationTitle);
             foreach (var item in elementList)
             {
@@ -431,34 +428,43 @@ namespace WeChatAuto.Components
                     clickList.Add(item);
                 }
             }
-            // }
-            // else
-            // {
-            //     var tmpList = filterObjList.Select(x => x.ConversationTitle).ToList().Intersect(this._MessageList.Keys).ToList();  //与设定监听的集合做交集.
-            //     foreach (var item in elementList)
-            //     {
-            //         string[] aryItems = item.Name.Split('\n');
-            //         var name = aryItems[0].Trim();
-            //         if (tmpList.Contains(name))
-            //         {
-            //             clickList.Add(item);
-            //         }
-            //     }
-            // }
+            var checkList = new List<string>();
+            if (IsOpenMonitor)
+            {
+                checkList.AddRange(clickList.Select(u => u.GetName()));
+            }
+            else
+            {
+                var l1 = clickList.Select(u => u.GetName()).ToList(); //本次获取的对象。
+                var l2 = this._MonitorList.Keys;  //所有监听对象
+                checkList.AddRange(l2.Intersect(l1));
+            }
+
             foreach (var item in clickList)
             {
                 token.ThrowIfCancellationRequested();
                 if (item.BoundingRectangle.IsClickSafe(rootRect))
                 {
-                    var serviceBackClick = item.Name.StartsWith("服务号\n") ? true : false;
+                    var serviceBackClickFlag = item.Name.StartsWith("服务号\n") ? true : false;
                     var point = item.BoundingRectangle.SafeRandomPoint();
                     Mouse.Position = point;
                     Mouse.Click();
                     RandomWait.Wait(300, 900);
-                    _ProcessClickServiceNumber(serviceBackClick);
-                    _ParserMessaageCore(automation, callBack, token, item);
+                    _ProcessClickServiceNumber(serviceBackClickFlag);  //点击了服务号需要进行返回
+                    if (!serviceBackClickFlag && checkList.Contains(item.GetName()))
+                    {
+                        _ParserMessaageCore(automation, callBack, token, item);
+                    }
                 }
             }
+        }
+
+
+
+        private void _ParserMessaageCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, AutomationElement el)
+        {
+            var dontCheckItems = new string[] { "服务号", "服务通知", "文件传输助手", "公众号", "元宝", "微信团队" };
+            _Logger.Debug($"自动点击了:{el.Name.Trim()}");
         }
 
         private void _ProcessClickServiceNumber(bool serviceBackClick)
@@ -474,11 +480,6 @@ namespace WeChatAuto.Components
                     RandomWait.Wait(300, 900);
                 }
             }
-        }
-
-        private void _ParserMessaageCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, AutomationElement el)
-        {
-            _Logger.Debug($"自动点击了:{el.Name.Trim()}");
         }
 
         /// <summary>
