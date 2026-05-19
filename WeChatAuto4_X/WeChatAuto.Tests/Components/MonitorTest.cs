@@ -39,7 +39,7 @@ public class MonitorTest
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        client.AddMessageListener("", (context) =>
+        await client.AddMessageListener("", (context) =>
         {
 
         }, true);
