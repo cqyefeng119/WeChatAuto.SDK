@@ -36,7 +36,7 @@ namespace WeChatAuto.Options
     /// <summary>
     /// 取消令牌
     /// </summary>
-    public CancellationTokenSource TokenSource { get; set; }
+    public CancellationToken TokenSource { get; set; }
 
     /// <summary>
     /// UI线程调度器

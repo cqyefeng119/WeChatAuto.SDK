@@ -23,6 +23,8 @@ using FlaUI.Core;
 using MessagePack;
 using System.Net.Http;
 using System.Drawing;
+using WeChatAuto.Options;
+using FlaUI.Core.Capturing;
 
 namespace WeChatAuto.Components
 {
@@ -36,7 +38,6 @@ namespace WeChatAuto.Components
 		private AutoLogger<AddressBookList> _logger;
 		private WeChatClient _Client;
 		private ListBox Root => _Client.MainWindow.FindFirstDescendant(cf => cf.ByName("通讯录").And(cf.ByAutomationId("primary_table_.contact_list"))).AsListBox();
-		//_Client.MainWindow.FindFirstByXPath("/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/List[@Name='通讯录'][@AutomationId='primary_table_.contact_list']")?.AsListBox();
 		public AddressBookList(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
 		{
 			_logger = serviceProvider.GetRequiredService<AutoLogger<AddressBookList>>();
@@ -678,17 +679,264 @@ namespace WeChatAuto.Components
 			return null;
 		}
 
+
 		/// <summary>
-		/// 通过新好友
+		/// 通过新的好友加好友申请
 		/// </summary>
-		/// <param name="keyWord">关键字,如果设置关键字，则通过包含关键字的新好友，如果没有设置，则通过所有新好友</param>
-		/// <param name="suffix">后缀,如果设置后缀，则在此好友昵称后添加后缀</param>
-		/// <param name="label">好友标签</param>
-		/// <param name="isDelet">添加好友成功后是否删除好友申请按钮，默认删除</param>
-		/// <returns>通过的新好友昵称列表</returns>
-		internal List<string> PassedAllNewFriend(string keyWord = null, string suffix = null, string label = null, bool isDelet = true)
+		/// <param name="options">配置对象，具体参见<see cref="FriendRequestAutoAcceptOptions"/></param>
+		/// <param name="token">取消今牌</param>
+		/// <returns>返回加成功的好友昵称</returns>
+		public async Task<List<string>> PassedAllNewFriend(FriendRequestAutoAcceptOptions options, CancellationToken token)
 		{
-			return null;
+			return await WeChatInvoker.Call(PassedAllNewFriendCore, options, token);
+		}
+
+		internal List<string> PassedAllNewFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
+		{
+			this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.通讯录);
+			try
+			{
+				token.ThrowIfCancellationRequested();
+				var result = new List<string>();
+				if (Root == null)
+					return result;
+				this._Client.MainWindow.Focus();
+				__CollapseAllGroups(Root);
+				var newFriendRootItem = Root.Items.Where(u => u.Name.Equals("新的朋友") && u.ClassName.Equals("mmui::ContactsCellGroupView") && u.ControlType == ControlType.ListItem).FirstOrDefault();
+				if (newFriendRootItem == null)
+					return result;
+				newFriendRootItem.Click();
+				token.ThrowIfCancellationRequested();
+				RandomWait.Wait(300, 900);
+				var scrollPoint = Root.BoundingRectangle.SafeRandomPoint();
+				var downIndex = 0;
+				List<string> oldSnapList = new List<string>();
+				while (downIndex < 2)
+				{
+					(bool scroll, List<string> snapList) processTag = _ProcessThisPage(options, token, automation);
+					if (!processTag.scroll)
+						break;
+					var exceptList = processTag.snapList.Except(oldSnapList).ToList();
+					if (exceptList.Count == 0)
+					{
+						downIndex++;
+					}
+					else
+					{
+						oldSnapList = processTag.snapList;
+					}
+					Mouse.Scroll(-3);
+				}
+
+				return result;
+			}
+			catch (Exception ex)
+			{
+				_logger.Error($"通过好友申请时发生错误，错误原因:{ex.ToString()}");
+				return new List<string>();
+			}
+			finally
+			{
+				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.聊天);
+			}
+		}
+
+		//反复处理本页
+		private (bool scroll, List<string> snapList) _ProcessThisPage(FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation)
+		{
+			var isFinish = false;
+			while (!isFinish)
+			{
+				var items = Root.Items.Where(x => x.ClassName.Equals("mmui::XTableCell") && x.ControlType == ControlType.ListItem);
+				foreach (var item in items)
+				{
+					token.ThrowIfCancellationRequested();
+					var retryItem = item.GetSibling(1);
+					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell"))
+					{
+						isFinish = true;
+						break;
+					}
+					retryItem = item.GetSibling(-1);
+					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell") && !retryItem.Name.Equals("新的朋友"))
+					{
+						isFinish = true;
+						break;
+					}
+					var change = _ProcessThisItem(item, options, token, automation);
+					if (change)
+					{
+						break;
+					}
+				}
+			}
+			return (false,null); //需要处理
+		}
+
+		private bool _ProcessThisItem(ListBoxItem item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation)
+		{
+			var result = false;
+			if (item.Name.EndsWith("等待验证"))
+			{
+				item.Click();
+				RandomWait.Wait(600, 1200);  //等候页面刷新
+				var validButtonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("前往验证").And(cf.ByControlType(ControlType.Button).And(cf.ByClassName("mmui::XOutlineButton")))));
+				if (validButtonRetry.Success)
+				{
+					var validButton = validButtonRetry.Result.AsButton();
+					var root = validButton.GetParent();
+					if (!string.IsNullOrWhiteSpace(options.KeyWord))  //如果设定关键词，检查是否包含关键词
+					{
+						var textGroup = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByClassName("QWidget"))));
+						if (textGroup == null)
+							return false;
+						var texts = textGroup.FindAllChildren(cf => cf.ByControlType(ControlType.Text));
+						if (texts.Length == 0)
+							return false;
+						var checkTag = false;
+						foreach (var text in texts)
+						{
+							if (text.Name.Contains(options.KeyWord))
+							{
+								checkTag = true;
+								break;
+							}
+						}
+						if (!checkTag)
+							return false;
+					}
+					//通过关键词检查
+					validButton.ClickEnhance(this._Client.MainWindow);
+					RandomWait.Wait(300, 600);
+					var windowRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))),
+					timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+					if (windowRetry.Success)
+					{
+						var win = windowRetry.Result.AsWindow();
+						try
+						{
+							var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group))));
+							if (passedFriendRoot == null)
+								return false;
+							var memoItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("修改备注").And(cf.ByClassName("mmui::XLineEdit"))));
+							__ProcessMemoItem(win, memoItem, token, options);
+							RandomWait.Wait(800, 1200);
+							var lableItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("修改标签")).And(cf.ByAutomationId("button")));
+							__ProcessLabelItem(lableItem, token, options);
+							RandomWait.Wait(1200, 3000);
+							__ProcessOk(passedFriendRoot);
+							win = automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))).AsWindow();
+							if (win != null)
+								win.Close();
+						}
+						catch (Exception ex)
+						{
+							_logger.Error($"通过好友申请时发生错误，错误原因:{ex.ToString()}");
+							win?.Close();
+						}
+					}
+
+					return true;
+				}
+			}
+			return result;
+		}
+
+		private void __ProcessOk(AutomationElement passedFriendRoot)
+		{
+			//获取wxid，保存进缓存
+			throw new NotImplementedException();
+		}
+
+		private void __ProcessLabelItem(AutomationElement lableItem, CancellationToken token, FriendRequestAutoAcceptOptions options)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void __ProcessMemoItem(FlaUI.Core.AutomationElements.Window window, AutomationElement memoItem, CancellationToken token, FriendRequestAutoAcceptOptions options)
+		{
+			token.ThrowIfCancellationRequested();
+			//首先获取到旧备注名
+			var name = memoItem.GetParent().Name;
+			if (name.Trim().Length != name.Length)
+			{
+				name = name.Trim();
+			}
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				name = Path.GetFileNameWithoutExtension(Path.GetRandomFileName());  //如果为空，则得到一个随机名称
+			}
+			//检查是否与cache中的名称重复，如果重复，则以xxx_1,2,3的形式增加
+			var cacheFile = Path.Combine(AppContext.BaseDirectory, $"{this._Client.WxId}_cache.dat");
+			if (File.Exists(cacheFile))
+			{
+				name = _ProcessCacheSameFile(cacheFile, name);
+			}
+			if (!string.IsNullOrWhiteSpace(options.Suffix))
+			{
+				if (!name.EndsWith($"_{options.Suffix}"))
+				{
+					name = name + $"_{options.Suffix}";
+				}
+			}
+			window.Focus();
+			var point = memoItem.BoundingRectangle.SafeRandomPoint();
+			Mouse.Position = point;
+			Mouse.LeftClick();
+			RandomWait.Wait(100,400);
+			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL,VirtualKeyShort.KEY_A);
+			RandomWait.Wait(300,800);
+			Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
+			RandomWait.Wait(1500,3000);
+			Clipboard.SetText(name);
+			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL,VirtualKeyShort.KEY_V);
+			RandomWait.Wait(300,800);
+			var randValue = Random.Shared.Next(1,10);
+			if (randValue > 5)
+				Keyboard.TypeSimultaneously(VirtualKeyShort.RETURN);
+			RandomWait.Wait(500,1500);
+		}
+
+		private string _ProcessCacheSameFile(string cacheFile, string name)
+		{
+			byte[] bytes = File.ReadAllBytes(cacheFile);
+			var lt = MessagePackSerializer.Deserialize<List<FriendInfo>>(bytes);
+			if (lt.Select(x=>x.MemoName).ToList().Contains(name))
+			{
+				var count = lt.Select(x=>x.MemoName).Where(x=>x.StartsWith(name)).Count();
+				name = name + $"_{count}";
+			}
+			return name;
+		}
+
+		private bool _CanScroll()
+		{
+			var root = Root;
+			var tmpList = root.Items.Where(item => item.ClassName.Equals("mmui::ContactsCellGroupView") && !item.Name.Equals("新的朋友"));
+			if (tmpList.Count() > 0)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		private (bool success, AutomationElement el, bool click) _TryGetNextItem(ListBoxItem item)
+		{
+			var rItem = item.GetSibling(1);
+			if (rItem.ClassName.Equals("mmui::ContactsCellGroupView") || (!rItem.ClassName.Equals("mmui::XTableCell")))
+			{
+				return (false, null, false);
+			}
+			if (rItem == null)
+			{
+				return (true, null, false);
+			}
+			var name = rItem.Name;
+			if (name.EndsWith("等待验证"))
+			{
+				return (true, rItem, true);
+			}
+			return (true, rItem, false);
 		}
 
 		/// <summary>
@@ -697,7 +945,7 @@ namespace WeChatAuto.Components
 		/// </summary>
 		/// <param name="nickName">好友昵称</param>
 		/// <returns>是否成功</returns>
-		internal bool RemoveFriend(string nickName)
+		public bool RemoveFriend(string nickName)
 		{
 			return false;
 		}
@@ -710,18 +958,18 @@ namespace WeChatAuto.Components
 		/// <param name="friendNames">微信号/手机号列表</param>
 		/// <param name="label">好友标签</param>
 		/// <returns>好友昵称列表和是否成功</returns>
-		internal List<(string friendName, bool isSuccess, string errMessage)> AddFriends(List<string> friendNames, string label = "")
+		public List<(string friendName, bool isSuccess, string errMessage)> AddFriends(List<string> friendNames, string label = "")
 		{
 			return null;
 		}
 		/// <summary>
-		/// 添加好友
+		/// 通过微信号，手机号添加好友
 		/// 注意：不能添加太频繁，否则可能会触发微信的风控机制，导致加好友失败
 		/// </summary>
 		/// <param name="friendName">微信号/手机号</param>
 		/// <param name="label">好友标签</param>
 		/// <returns>是否成功</returns>
-		internal bool AddFriend(string friendName, string label = "")
+		public bool AddFriend(string friendName, string label = "")
 		{
 			return true;
 		}
