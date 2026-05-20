@@ -146,7 +146,7 @@ namespace WeChatAuto.Utils
         }
 
         /// <summary>
-        /// 执行一个返回一个函数
+        /// 执行一个函数
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="Func"></param>
@@ -164,7 +164,7 @@ namespace WeChatAuto.Utils
         }
 
         /// <summary>
-        /// 执行一个返回一个带一个参数函数
+        /// 执行带一个参数函数
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="T1"></typeparam>
@@ -183,7 +183,7 @@ namespace WeChatAuto.Utils
             }).ConfigureAwait(false);
         }
         /// <summary>
-        /// 执行一个返回一个带两个参数函数
+        /// 执行一个带两个参数函数
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="T1"></typeparam>
@@ -201,6 +201,56 @@ namespace WeChatAuto.Utils
             return await WeChatClientFactory.MainActionThreadInvoker.Run(automation =>
             {
                 return Func(automation, t1, t2);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 执行一个带三个参数函数
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="Func"></param>
+        /// <param name="t1"></param>
+        /// <param name="t2"></param>
+        /// <param name="t3"></param>
+        /// <returns></returns>
+        public static async Task<T> Call<T1, T2, T3, T>(Func<UIA3Automation, T1, T2, T3, T> Func, T1 t1, T2 t2, T3 t3)
+        {
+            if (System.Threading.Thread.CurrentThread.ManagedThreadId == WeChatClientFactory.MainActionThreadInvoker.ActionThreadId)
+            {
+                return await Task.FromResult(Func(WeChatClientFactory.MainActionThreadInvoker.Automation, t1, t2, t3));
+            }
+            return await WeChatClientFactory.MainActionThreadInvoker.Run(automation =>
+            {
+                return Func(automation, t1, t2, t3);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 执行一个带四个参数函数
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="Func"></param>
+        /// <param name="t1"></param>
+        /// <param name="t2"></param>
+        /// <param name="t3"></param>
+        /// <param name="t4"></param>
+        /// <returns></returns>
+        public static async Task<T> Call<T1, T2, T3, T4, T>(Func<UIA3Automation, T1, T2, T3, T4, T> Func, T1 t1, T2 t2, T3 t3, T4 t4)
+        {
+            if (System.Threading.Thread.CurrentThread.ManagedThreadId == WeChatClientFactory.MainActionThreadInvoker.ActionThreadId)
+            {
+                return await Task.FromResult(Func(WeChatClientFactory.MainActionThreadInvoker.Automation, t1, t2, t3, t4));
+            }
+            return await WeChatClientFactory.MainActionThreadInvoker.Run(automation =>
+            {
+                return Func(automation, t1, t2, t3, t4);
             }).ConfigureAwait(false);
         }
     }

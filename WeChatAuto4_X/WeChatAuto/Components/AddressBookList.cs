@@ -778,69 +778,72 @@ namespace WeChatAuto.Components
 			var result = false;
 			if (item.Name.EndsWith("等待验证"))
 			{
-				item.Click();
-				RandomWait.Wait(600, 1200);  //等候页面刷新
-				var validButtonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("前往验证").And(cf.ByControlType(ControlType.Button).And(cf.ByClassName("mmui::XOutlineButton")))));
-				if (validButtonRetry.Success)
-				{
-					var validButton = validButtonRetry.Result.AsButton();
-					var root = validButton.GetParent();
-					if (!string.IsNullOrWhiteSpace(options.KeyWord))  //如果设定关键词，检查是否包含关键词
-					{
-						var textGroup = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByClassName("QWidget"))));
-						if (textGroup == null)
-							return false;
-						var texts = textGroup.FindAllChildren(cf => cf.ByControlType(ControlType.Text));
-						if (texts.Length == 0)
-							return false;
-						var checkTag = false;
-						foreach (var text in texts)
-						{
-							if (text.Name.Contains(options.KeyWord))
-							{
-								checkTag = true;
-								break;
-							}
-						}
-						if (!checkTag)
-							return false;
-					}
-					//通过关键词检查
-					validButton.ClickEnhance(this._Client.MainWindow);
-					RandomWait.Wait(300, 600);
-					var windowRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))),
-					timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-					if (windowRetry.Success)
-					{
-						var win = windowRetry.Result.AsWindow();
-						try
-						{
-							var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group))));
-							if (passedFriendRoot == null)
-								return false;
-							var memoItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("修改备注").And(cf.ByClassName("mmui::XLineEdit"))));
-							__ProcessMemoItem(win, memoItem, token, options);
-							RandomWait.Wait(800, 1200);
-							var lableItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("修改标签")).And(cf.ByAutomationId("button")));
-							__ProcessLabelItem(lableItem, token, options, automation, win);
-							RandomWait.Wait(1200, 3000);
-							__ProcessOk(passedFriendRoot, win, token, options);
-
-							win = automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))).AsWindow();
-							if (win != null)
-								win.Close();
-						}
-						catch (Exception ex)
-						{
-							_logger.Error($"通过好友申请时发生错误，错误原因:{ex.ToString()}");
-							win?.Close();
-						}
-					}
-
-					return true;
-				}
+				return result;
 			}
-			return result;
+
+			item.Click();
+			RandomWait.Wait(600, 1200);  //等候页面刷新
+			token.ThrowIfCancellationRequested();
+			var validButtonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("前往验证").And(cf.ByControlType(ControlType.Button).And(cf.ByClassName("mmui::XOutlineButton")))));
+			if (validButtonRetry.Success)
+			{
+				var validButton = validButtonRetry.Result.AsButton();
+				var root = validButton.GetParent();
+				if (!string.IsNullOrWhiteSpace(options.KeyWord))  //如果设定关键词，检查是否包含关键词
+				{
+					var textGroup = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByClassName("QWidget"))));
+					if (textGroup == null)
+						return false;
+					var texts = textGroup.FindAllChildren(cf => cf.ByControlType(ControlType.Text));
+					if (texts.Length == 0)
+						return false;
+					var checkTag = false;
+					foreach (var text in texts)
+					{
+						if (text.Name.Contains(options.KeyWord))
+						{
+							checkTag = true;
+							break;
+						}
+					}
+					if (!checkTag)
+						return false;
+				}
+				//通过关键词检查后操作
+				validButton.ClickEnhance(this._Client.MainWindow);
+				RandomWait.Wait(300, 600);
+				var windowRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))),
+				timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+				if (windowRetry.Success)
+				{
+					var win = windowRetry.Result.AsWindow();  //通过朋友验证窗口
+					try
+					{
+						var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group))));
+						if (passedFriendRoot == null)
+							return false;
+						var memoItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("修改备注").And(cf.ByClassName("mmui::XLineEdit"))));
+						__ProcessMemoItem(win, memoItem, token, options);
+						RandomWait.Wait(800, 1200);
+						var lableItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("修改标签")).And(cf.ByAutomationId("button")));
+						__ProcessLabelItem(lableItem, token, options, automation, win);
+						RandomWait.Wait(1200, 3000);
+						__ProcessOk(passedFriendRoot, win, token, options);
+						//其实上面已经关闭了win,但是为了保险，再检查一遍.
+						win = automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))).AsWindow();
+						if (win != null)
+							win.Close();
+					}
+					catch (Exception ex)
+					{
+						_logger.Error($"通过好友申请时发生错误，错误原因:{ex.ToString()}");
+						win?.Close();
+					}
+				}
+
+				return true;
+			}
+			return false;
 		}
 
 		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options)
@@ -852,8 +855,10 @@ namespace WeChatAuto.Components
 			Mouse.Click(point);
 			//获取wxid，保存进缓存
 			RandomWait.Wait(1000, 1500);
+			token.ThrowIfCancellationRequested();
 			var wxidLabelRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)).And(cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text"))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
 			FriendInfo friendInfo = new FriendInfo();
+			token.ThrowIfCancellationRequested();
 			if (wxidLabelRetry.Success)
 			{
 				//wxid
@@ -863,6 +868,7 @@ namespace WeChatAuto.Components
 				{
 					friendInfo.WxId = wxidItem.Name;
 				}
+				token.ThrowIfCancellationRequested();
 				//昵称
 				var parent = label.GetParent().GetSibling(-1);
 				if (parent != null)
@@ -878,6 +884,7 @@ namespace WeChatAuto.Components
 						}
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//地区
 				parent = label.GetParent().GetSibling(1);
 				if (parent != null)
@@ -892,6 +899,7 @@ namespace WeChatAuto.Components
 						}
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//共同群聊
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("共同群聊").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.chatroom_intersection.key_text_h_view.key_text_view")).And(cf.ByClassName("mmui::XTextView")));
 
@@ -904,6 +912,7 @@ namespace WeChatAuto.Components
 						friendInfo.SameGroupNumber = text.Name;
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//个性签名
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("个性签名").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.sign.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
 				if (label != null)
@@ -915,6 +924,7 @@ namespace WeChatAuto.Components
 						friendInfo.Signature = text.Name;
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//来源
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("来源").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.source.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
 				if (label != null)
@@ -926,6 +936,7 @@ namespace WeChatAuto.Components
 						friendInfo.Source = text.Name;
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//添加时间
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("添加时间").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.became_friend_time.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
 				if (label != null)
@@ -937,6 +948,7 @@ namespace WeChatAuto.Components
 						friendInfo.AddDateTime = text.Name;
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//备注
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("备注").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
 				if (label != null)
@@ -956,6 +968,7 @@ namespace WeChatAuto.Components
 
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//标签
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("标签").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.tag_line.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
 				if (label != null)
@@ -969,6 +982,7 @@ namespace WeChatAuto.Components
 						friendInfo.Lable = lables.Select(u => u.Trim()).ToList();
 					}
 				}
+				token.ThrowIfCancellationRequested();
 				//图标
 				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByAutomationId("head_image_v_view.head_view_")).And(cf.ByClassName("mmui::ContactHeadView")));
 				var path = Path.Combine(AppContext.BaseDirectory, "Avator", $"{friendInfo.WxId}.png");
@@ -982,6 +996,7 @@ namespace WeChatAuto.Components
 		{
 			if (string.IsNullOrWhiteSpace(options.Label))
 				return;
+			token.ThrowIfCancellationRequested();
 			var point = lableItem.BoundingRectangle.SafeRandomPoint();
 			Mouse.MoveTo(point);
 			RandomWait.Wait(100, 600);

@@ -140,8 +140,10 @@ namespace WeChatAuto.Components
         /// <para>5. 也可以通过好友申请后，删除申请记录</para>
         /// </summary>
         /// <param name="options">配置选项，请参考<see cref="FriendRequestAutoAcceptOptions"/>类</param>
+        /// <param name="token">取消令版</param>
+        /// <param name="UIInvoker">UI线程调度器,适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
         /// <returns></returns>
-        public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options)
+        public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options,CancellationToken token,Action<string> UIInvoker)
         {
             this.options = options;
             await AddFriendRequestAutoAcceptListener(
@@ -150,8 +152,8 @@ namespace WeChatAuto.Components
                 options.KeyWord,
                 options.Suffix,
                 options.Label,
-                options.TokenSource,
-                options.UIInvoker);
+                token,
+                UIInvoker);
         }
 
         /// <summary>
