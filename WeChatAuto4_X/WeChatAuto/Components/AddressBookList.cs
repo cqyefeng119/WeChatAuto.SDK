@@ -24,7 +24,7 @@ using MessagePack;
 using System.Net.Http;
 using System.Drawing;
 using WeChatAuto.Options;
-using FlaUI.Core.Capturing;
+
 
 namespace WeChatAuto.Components
 {
@@ -770,7 +770,7 @@ namespace WeChatAuto.Components
 					}
 				}
 			}
-			return (false,null); //需要处理
+			return (false, null); //需要处理
 		}
 
 		private bool _ProcessThisItem(ListBoxItem item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation)
@@ -822,9 +822,10 @@ namespace WeChatAuto.Components
 							__ProcessMemoItem(win, memoItem, token, options);
 							RandomWait.Wait(800, 1200);
 							var lableItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("修改标签")).And(cf.ByAutomationId("button")));
-							__ProcessLabelItem(lableItem, token, options);
+							__ProcessLabelItem(lableItem, token, options, automation, win);
 							RandomWait.Wait(1200, 3000);
-							__ProcessOk(passedFriendRoot);
+							__ProcessOk(passedFriendRoot, win, token, options);
+
 							win = automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))).AsWindow();
 							if (win != null)
 								win.Close();
@@ -842,15 +843,213 @@ namespace WeChatAuto.Components
 			return result;
 		}
 
-		private void __ProcessOk(AutomationElement passedFriendRoot)
+		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options)
 		{
+			//点击确定按钮
+			var button = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("确定")).And(cf.ByClassName("mmui::XOutlineButton")));
+			win.Focus();
+			var point = button.BoundingRectangle.SafeRandomPoint();
+			Mouse.Click(point);
 			//获取wxid，保存进缓存
-			throw new NotImplementedException();
+			RandomWait.Wait(1000, 1500);
+			var wxidLabelRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)).And(cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text"))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			FriendInfo friendInfo = new FriendInfo();
+			if (wxidLabelRetry.Success)
+			{
+				//wxid
+				var label = wxidLabelRetry.Result;
+				var wxidItem = label.GetSibling(1);
+				if (wxidItem != null)
+				{
+					friendInfo.WxId = wxidItem.Name;
+				}
+				//昵称
+				var parent = label.GetParent().GetSibling(-1);
+				if (parent != null)
+				{
+					label = parent.FindFirstDescendant(cf => cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text").And(cf.ByName("昵称：")));
+					if (label != null)
+					{
+						var nickNameItem = label.GetSibling(1);
+						if (nickNameItem != null)
+						{
+							friendInfo.NickName = nickNameItem.Name;
+							friendInfo.MemoName = nickNameItem.Name; //暂时一致，后面会改变.
+						}
+					}
+				}
+				//地区
+				parent = label.GetParent().GetSibling(1);
+				if (parent != null)
+				{
+					label = parent.FindFirstDescendant(cf => cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text").And(cf.ByName("地区：")));
+					if (label != null)
+					{
+						var areaItem = label.GetSibling(1);
+						if (areaItem != null)
+						{
+							friendInfo.Area = areaItem.Name;
+						}
+					}
+				}
+				//共同群聊
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("共同群聊").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.chatroom_intersection.key_text_h_view.key_text_view")).And(cf.ByClassName("mmui::XTextView")));
+
+				if (label != null)
+				{
+					parent = label.GetParent().GetParent();
+					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.chatroom_intersection.value_normal_view.content_view.value_reader_view.value_reader_").And(cf.ByControlType(ControlType.Text)).And(cf.ByClassName("mmui::ProfileTextView")));
+					if (text != null)
+					{
+						friendInfo.SameGroupNumber = text.Name;
+					}
+				}
+				//个性签名
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("个性签名").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.sign.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
+				if (label != null)
+				{
+					parent = label.GetParent().GetParent();
+					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.sign.value_normal_view.content_view.value_reader_view.value_reader_").And(cf.ByControlType(ControlType.Text)));
+					if (text != null)
+					{
+						friendInfo.Signature = text.Name;
+					}
+				}
+				//来源
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("来源").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.source.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
+				if (label != null)
+				{
+					parent = label.GetParent().GetParent();
+					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.source.value_normal_view.content_view.value_reader_view.value_reader_").And(cf.ByControlType(ControlType.Text)));
+					if (text != null)
+					{
+						friendInfo.Source = text.Name;
+					}
+				}
+				//添加时间
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("添加时间").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.became_friend_time.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
+				if (label != null)
+				{
+					parent = label.GetParent().GetParent();
+					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.became_friend_time.value_normal_view.content_view.value_reader_view.value_reader_").And(cf.ByControlType(ControlType.Text)));
+					if (text != null)
+					{
+						friendInfo.AddDateTime = text.Name;
+					}
+				}
+				//备注
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("备注").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
+				if (label != null)
+				{
+					parent = label.GetParent().GetParent();
+					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.value_remark_view.content_view.ProfileTextView").And(cf.ByControlType(ControlType.Text)));
+					if (text != null)
+					{
+						if (!string.IsNullOrWhiteSpace(text.Name))
+						{
+							friendInfo.MemoName = text.Name;
+							if (string.IsNullOrWhiteSpace(friendInfo.NickName))
+							{
+								friendInfo.NickName = friendInfo.MemoName;
+							}
+						}
+
+					}
+				}
+				//标签
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("标签").And(cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.tag_line.key_text_h_view.key_text_view").And(cf.ByControlType(ControlType.Text))));
+				if (label != null)
+				{
+					parent = label.GetParent().GetParent();
+					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.tag_line.value_normal_view.content_view.value_reader_view.value_reader_").And(cf.ByControlType(ControlType.Text)));
+					//声音,nnn
+					if (text != null)
+					{
+						var lables = text.Name.Split(",");
+						friendInfo.Lable = lables.Select(u => u.Trim()).ToList();
+					}
+				}
+				//图标
+				label = this._Client.MainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByAutomationId("head_image_v_view.head_view_")).And(cf.ByClassName("mmui::ContactHeadView")));
+				var path = Path.Combine(AppContext.BaseDirectory, "Avator", $"{friendInfo.WxId}.png");
+				friendInfo.AvatarPath = path;
+				label.CaptureToFile(path);
+				RandomWait.Wait(300, 600);
+			}
 		}
 
-		private void __ProcessLabelItem(AutomationElement lableItem, CancellationToken token, FriendRequestAutoAcceptOptions options)
+		private void __ProcessLabelItem(AutomationElement lableItem, CancellationToken token, FriendRequestAutoAcceptOptions options, UIA3Automation automation, FlaUI.Core.AutomationElements.Window win)
 		{
-			throw new NotImplementedException();
+			if (string.IsNullOrWhiteSpace(options.Label))
+				return;
+			var point = lableItem.BoundingRectangle.SafeRandomPoint();
+			Mouse.MoveTo(point);
+			RandomWait.Wait(100, 600);
+			Mouse.LeftClick();
+			RandomWait.Wait(1000, 3000);
+			var winResult = Retry.WhileNull(() => win.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::LabelPopover")).And(cf.ByName("Weixin"))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			if (winResult.Success)
+			{
+				var window = winResult.Result;
+				//标签名可能已经存在，或者不存在，需要新建.
+				var list = window.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
+				var items = list.Items;
+				if (items.Select(x => x.Name.Equals(options.Label)).Count() > 0)
+				{
+					//已经有标签
+					var selectItem = items.FirstOrDefault(x => x.Name.Equals(options.Label));
+					if (selectItem != null)
+					{
+						var point2 = selectItem.BoundingRectangle.SafeRandomPoint();
+						Mouse.MoveTo(point2);
+						Mouse.LeftClick();
+						RandomWait.Wait(300, 900);
+					}
+				}
+				else
+				{
+					//无标签，需要新建
+					var searchEdit = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("搜索")).And(cf.ByClassName("mmui::XValidatorTextEdit")));
+					if (searchEdit != null)
+					{
+						searchEdit.Focus();
+						var point2 = searchEdit.BoundingRectangle.SafeRandomPoint();
+						Mouse.Click(point2);
+						Clipboard.SetText(options.Label);
+						Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+						RandomWait.Wait(300, 900);
+						list = window.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
+						var createItemRetry = Retry.WhileNull(() => list.Items.Where(u => u.Name.Contains("创建新标签") && u.ControlType == ControlType.ListItem).FirstOrDefault(),
+						timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+						if (createItemRetry != null)
+						{
+							var createItem = createItemRetry.Result;
+							point2 = createItem.BoundingRectangle.SafeRandomPoint();
+							Mouse.Click(point2);
+							RandomWait.Wait(300, 900);
+						}
+					}
+				}
+				var randomRetry = Random.Shared.Next(1, 10);
+				if (randomRetry <= 5)
+				{
+					//点击备注栏
+					var clkItem = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("修改备注").And(cf.ByClassName("mmui::XLineEdit"))));
+					clkItem.Click();
+				}
+				else
+				{
+					//点击“确定上面一点”
+					var button = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("确定")).And(cf.ByClassName("mmui::XOutlineButton")));
+					if (button != null)
+					{
+						var buttonRect = button.BoundingRectangle;
+						var point2 = new Rectangle(buttonRect.X, buttonRect.Y - 200, buttonRect.Width, 200 - 50).SafeRandomPoint();
+						Mouse.MoveTo(point2);
+						Mouse.Click();
+					}
+				}
+			}
 		}
 
 		private void __ProcessMemoItem(FlaUI.Core.AutomationElements.Window window, AutomationElement memoItem, CancellationToken token, FriendRequestAutoAcceptOptions options)
@@ -883,27 +1082,27 @@ namespace WeChatAuto.Components
 			var point = memoItem.BoundingRectangle.SafeRandomPoint();
 			Mouse.Position = point;
 			Mouse.LeftClick();
-			RandomWait.Wait(100,400);
-			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL,VirtualKeyShort.KEY_A);
-			RandomWait.Wait(300,800);
+			RandomWait.Wait(100, 400);
+			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+			RandomWait.Wait(300, 800);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
-			RandomWait.Wait(1500,3000);
+			RandomWait.Wait(1500, 3000);
 			Clipboard.SetText(name);
-			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL,VirtualKeyShort.KEY_V);
-			RandomWait.Wait(300,800);
-			var randValue = Random.Shared.Next(1,10);
+			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+			RandomWait.Wait(300, 800);
+			var randValue = Random.Shared.Next(1, 10);
 			if (randValue > 5)
 				Keyboard.TypeSimultaneously(VirtualKeyShort.RETURN);
-			RandomWait.Wait(500,1500);
+			RandomWait.Wait(500, 1500);
 		}
 
 		private string _ProcessCacheSameFile(string cacheFile, string name)
 		{
 			byte[] bytes = File.ReadAllBytes(cacheFile);
 			var lt = MessagePackSerializer.Deserialize<List<FriendInfo>>(bytes);
-			if (lt.Select(x=>x.MemoName).ToList().Contains(name))
+			if (lt.Select(x => x.MemoName).ToList().Contains(name))
 			{
-				var count = lt.Select(x=>x.MemoName).Where(x=>x.StartsWith(name)).Count();
+				var count = lt.Select(x => x.MemoName).Where(x => x.StartsWith(name)).Count();
 				name = name + $"_{count}";
 			}
 			return name;
