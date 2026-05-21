@@ -467,7 +467,7 @@ namespace WeChatAuto.Components
         public async Task RemoveListeningFriend(string who) => await this.MessageMonitor.RemoveListeningFriend(who);
 
         /// <summary>
-        /// <para>自动通过加好友监听</para>
+        /// <para>新好友添加监听</para>
         /// <para>实现的功能</para>
         /// <para>1. 通过好友申请</para>
         /// <para>2. 根据设定的关键词过滤好友申请的打招呼文本，只有包含关键词的打招呼内容才会被通过</para>
@@ -481,6 +481,16 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options, CancellationToken token = default, Action<string> UIInvoker = null)
           => await this.NewFriendMonitor.AddFriendRequestAutoAcceptListener(options, token, UIInvoker);
+        /// <summary>
+        /// 暂停好友申请监听
+        /// </summary>
+        /// <returns></returns>
+        public async Task PauseNewFriendListener() => await this.NewFriendMonitor.PauseNewFriendListener();
+        /// <summary>
+        /// 恢复好友申请监听
+        /// </summary>
+        /// <returns></returns>
+        public async Task ResumeNewFriendListener() => await this.NewFriendMonitor.ResumeNewFriendListener();
         #endregion
 
         #region 好友/群聊管理
@@ -511,7 +521,7 @@ namespace WeChatAuto.Components
         public async Task<List<string>> GetAllFriendNames() => await AddressBookList.GetAllFriendNames();
 
         /// <summary>
-        /// 通过加好友申请
+        /// 通过加好友添加申请
         /// </summary>
         /// <param name="options">配置对象，具体参见<see cref="FriendRequestAutoAcceptOptions"/></param>
         /// <param name="token">取消今牌</param>
