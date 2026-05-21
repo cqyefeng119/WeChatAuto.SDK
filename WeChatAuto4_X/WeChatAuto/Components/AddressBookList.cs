@@ -676,7 +676,9 @@ namespace WeChatAuto.Components
 		/// <returns>返回加成功的好友昵称</returns>
 		public async Task<List<string>> PassedAllNewFriend(FriendRequestAutoAcceptOptions options, CancellationToken token)
 		{
-			return await WeChatInvoker.Call(PassedAllNewFriendCore, options, token);
+			var list = await WeChatInvoker.Call(PassedAllNewFriendCore, options, token);
+			await options?.PassedCallBack(list, this._Client, this._serviceProvider);
+			return list;
 		}
 
 		internal List<string> PassedAllNewFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
@@ -719,7 +721,6 @@ namespace WeChatAuto.Components
 					Mouse.Scroll(-3);
 				}
 				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.聊天);
-				options?.PassedCallBack(result,this._Client,this._serviceProvider);
 				return result;
 			}
 			catch (Exception ex)
@@ -804,7 +805,7 @@ namespace WeChatAuto.Components
 					var checkTag = false;
 					foreach (var text in texts)
 					{
-						if (text.Name.Contains(options.KeyWord))
+						if (text.Name.ToUpper().Contains(options.KeyWord.ToUpper()))
 						{
 							checkTag = true;
 							break;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using WeChatAuto.Components;
 
 namespace WeChatAuto.Options
@@ -10,8 +11,8 @@ namespace WeChatAuto.Options
         /// <summary>
         /// 通过后的回调
         /// </summary>
-        public Action<List<string>, WeChatClient, IServiceProvider> PassedCallBack { get; set; }
 
+        public Func<List<string>, WeChatClient, IServiceProvider,Task> PassedCallBack { get; set; }
         /// <summary>
         /// 通过后是否删除申请记录
         /// </summary>

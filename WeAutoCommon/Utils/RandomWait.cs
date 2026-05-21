@@ -13,7 +13,7 @@ namespace WeAutoCommon.Utils
         /// <param name="maxTime">最大时间,单位:毫秒</param>
         public static void Wait(int minTime, int maxTime)
         {
-            Random rng = new Random();
+            Random rng = new Random((int)DateTime.Now.Ticks);
             Thread.Sleep(rng.Next(minTime, maxTime + 1));
         }
         /// <summary>
@@ -23,7 +23,7 @@ namespace WeAutoCommon.Utils
         /// <param name="maxTime">最大时间,单位:毫秒</param>
         public static async Task WaitAsync(int minTime, int maxTime)
         {
-            await Task.Delay(new Random().Next(minTime, maxTime + 1));
+            await Task.Delay(new Random((int)DateTime.Now.Ticks).Next(minTime, maxTime + 1));
         }
     }
 }

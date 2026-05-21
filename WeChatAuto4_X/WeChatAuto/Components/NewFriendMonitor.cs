@@ -98,7 +98,8 @@ namespace WeChatAuto.Components
                         await noticeEvent.WaitAsync(token);
                         try
                         {
-                            await WeChatInvoker.Call(AutoAcceptFriendCore, this.options, token);
+                            var list = await WeChatInvoker.Call(AutoAcceptFriendCore, this.options, token);
+                            await options.PassedCallBack(list, this._Client, serviceProvider);
                         }
                         finally
                         {
@@ -117,10 +118,11 @@ namespace WeChatAuto.Components
             }, token);
         }
 
-        internal void AutoAcceptFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
+        internal List<string> AutoAcceptFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
         {
             _SwtichUI(token);  //做多微信的切换工作.
             List<string> result = this._Client.AddressBookList.PassedAllNewFriendCore(automation, options, token);
+            return result;
         }
 
 
@@ -191,7 +193,7 @@ namespace WeChatAuto.Components
         /// <param name="label">标签，给好友设置微信标签</param>
         /// <param name="userToken">取消令牌，可以取消监听,<see cref="CancellationToken"/></param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        private async Task AddFriendRequestAutoAcceptListener(Action<List<string>, WeChatClient, IServiceProvider> passedCallBack, bool passedDelete = true, string keyWord = null, string suffix = null, string label = null, CancellationToken userToken = default, Action<string> UIInvoker = null)
+        private async Task AddFriendRequestAutoAcceptListener(Func<List<string>, WeChatClient, IServiceProvider,Task> passedCallBack, bool passedDelete = true, string keyWord = null, string suffix = null, string label = null, CancellationToken userToken = default, Action<string> UIInvoker = null)
         {
             if (Interlocked.CompareExchange(ref this.newFriendMonitorStarted, 1, 0) == 1)
             {
