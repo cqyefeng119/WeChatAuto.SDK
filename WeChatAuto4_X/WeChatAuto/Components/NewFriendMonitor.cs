@@ -120,11 +120,11 @@ namespace WeChatAuto.Components
         internal void AutoAcceptFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
         {
             _SwtichUI(token);  //做多微信的切换工作.
-            List<string> result = this._Client.AddressBookList.PassedAllNewFriendCore(automation,options,token);
+            List<string> result = this._Client.AddressBookList.PassedAllNewFriendCore(automation, options, token);
             //已经回到“微信”页面
             if (result.Count > 0)
             {
-                options.PassedCallBack?.Invoke(result,this._Client,serviceProvider);
+                options.PassedCallBack?.Invoke(result, this._Client, serviceProvider);
             }
         }
 
@@ -143,7 +143,7 @@ namespace WeChatAuto.Components
         /// <param name="token">取消令版</param>
         /// <param name="UIInvoker">UI线程调度器,适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
         /// <returns></returns>
-        public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options,CancellationToken token,Action<string> UIInvoker)
+        public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options, CancellationToken token = default, Action<string> UIInvoker = null)
         {
             this.options = options;
             await AddFriendRequestAutoAcceptListener(

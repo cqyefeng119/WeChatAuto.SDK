@@ -22,6 +22,7 @@ using System.Configuration;
 using System.Drawing;
 using System.Linq;
 using System.IO;
+using WeChatAuto.Options;
 
 
 namespace WeChatAuto.Components
@@ -397,7 +398,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>,string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null) 
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
             => await this.MessageMonitor.AddMessageListener(nickNames, callBack, IsOpenMonitor, userToken, UIInvoker);
         /// <summary>
         /// 添加一个从什么时候开始，什么时候结束的消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
@@ -419,7 +420,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>,string[]> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
           => await this.MessageMonitor.AddMessageListener(nickNames, callBack, startTime, endTime, IsOpenMonitor, userToken, UIInvoker);
         /// <summary>
         /// 添加一天中多个时间段的消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
@@ -440,7 +441,7 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>,string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
             => await this.MessageMonitor.AddMessageListener(nickNames, callBack, range, IsOpenMonitor, userToken, UIInvoker);
         /// <summary>
         /// 暂停消息监听
@@ -464,9 +465,26 @@ namespace WeChatAuto.Components
         /// <param name="who"></param>
         /// <returns></returns>
         public async Task RemoveListeningFriend(string who) => await this.MessageMonitor.RemoveListeningFriend(who);
+
+        /// <summary>
+        /// <para>自动通过加好友监听</para>
+        /// <para>实现的功能</para>
+        /// <para>1. 通过好友申请</para>
+        /// <para>2. 根据设定的关键词过滤好友申请的打招呼文本，只有包含关键词的打招呼内容才会被通过</para>
+        /// <para>3. 通过好友申请时，可以设置后缀,以区分不同类型的好友,方便后续的自动化实现</para>
+        /// <para>4. 通过好友申请时，可以设置特定的微信标签，以方便后续的自动化与好友管理</para>
+        /// <para>5. 也可以通过好友申请后，删除申请记录</para>
+        /// </summary>
+        /// <param name="options">配置选项，请参考<see cref="FriendRequestAutoAcceptOptions"/>类</param>
+        /// <param name="token">取消令版</param>
+        /// <param name="UIInvoker">UI线程调度器,适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
+        /// <returns></returns>
+        public async Task AddFriendRequestAutoAcceptListener(FriendRequestAutoAcceptOptions options, CancellationToken token = default, Action<string> UIInvoker = null)
+          => await this.NewFriendMonitor.AddFriendRequestAutoAcceptListener(options, token, UIInvoker);
         #endregion
 
         #region 好友/群聊管理
+
 
         #endregion
 
@@ -490,8 +508,16 @@ namespace WeChatAuto.Components
         /// 注意：如果是企业微信，会剔除@xxxx后缀，以保持一致性.
         /// </summary>
         /// <returns></returns>
-
         public async Task<List<string>> GetAllFriendNames() => await AddressBookList.GetAllFriendNames();
+
+        /// <summary>
+        /// 通过加好友申请
+        /// </summary>
+        /// <param name="options">配置对象，具体参见<see cref="FriendRequestAutoAcceptOptions"/></param>
+        /// <param name="token">取消今牌</param>
+        /// <returns>返回加成功的好友昵称列表</returns>
+        public async Task<List<string>> PassedAllNewFriend(FriendRequestAutoAcceptOptions options, CancellationToken token = default)
+          => await this.AddressBookList.PassedAllNewFriend(options, token);
 
         #endregion
 

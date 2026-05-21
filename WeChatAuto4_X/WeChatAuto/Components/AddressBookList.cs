@@ -668,18 +668,6 @@ namespace WeChatAuto.Components
 			return list;
 		}
 
-
-		/// <summary>
-		/// 获取所有待添加好友
-		/// </summary>
-		/// <param name="keyWord">关键字,如果设置关键字，则返回包含关键字的新好友，如果没有设置，则返回所有新好友</param>
-		/// <returns>待添加好友昵称列表</returns>
-		internal List<string> GetAllWillAddFriends(string keyWord = null)
-		{
-			return null;
-		}
-
-
 		/// <summary>
 		/// 通过新的好友加好友申请
 		/// </summary>
@@ -723,8 +711,11 @@ namespace WeChatAuto.Components
 					}
 					else
 					{
+						downIndex = 0;
 						oldSnapList = processTag.snapList;
 					}
+					this._Client.MainWindow.Focus();
+					Mouse.Position = scrollPoint;
 					Mouse.Scroll(-3);
 				}
 
@@ -748,29 +739,41 @@ namespace WeChatAuto.Components
 			while (!isFinish)
 			{
 				var items = Root.Items.Where(x => x.ClassName.Equals("mmui::XTableCell") && x.ControlType == ControlType.ListItem);
+				var retry = false;
 				foreach (var item in items)
 				{
 					token.ThrowIfCancellationRequested();
+					#region 退出策略
 					var retryItem = item.GetSibling(1);
 					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell"))
 					{
 						isFinish = true;
-						break;
+						return (false, null);
 					}
 					retryItem = item.GetSibling(-1);
 					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell") && !retryItem.Name.Equals("新的朋友"))
 					{
 						isFinish = true;
-						break;
+						return (false, null);
 					}
+					#endregion
 					var change = _ProcessThisItem(item, options, token, automation);
 					if (change)
 					{
-						break;
+						retry = true;
+						break;  //如果被子项被改变了，通讯录列表也被改变，则重新重试一次.
+					}
+					else
+					{
+						retry = false;
 					}
 				}
+				if (!retry)
+				{
+					isFinish = true;
+				}
 			}
-			return (false, null); //需要处理
+			return (true, Root.Items.Select(item => item.Name).ToList());
 		}
 
 		private bool _ProcessThisItem(ListBoxItem item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation)
@@ -989,6 +992,9 @@ namespace WeChatAuto.Components
 				friendInfo.AvatarPath = path;
 				label.CaptureToFile(path);
 				RandomWait.Wait(300, 600);
+				//保存进缓存文件
+
+				__SaveToCacheFile(friendInfo);
 			}
 		}
 
@@ -1071,26 +1077,26 @@ namespace WeChatAuto.Components
 		{
 			token.ThrowIfCancellationRequested();
 			//首先获取到旧备注名
-			var name = memoItem.GetParent().Name;
-			if (name.Trim().Length != name.Length)
+			var oriName = memoItem.GetParent().Name;
+			if (oriName.Trim().Length != oriName.Length)
 			{
-				name = name.Trim();
+				oriName = oriName.Trim();
 			}
-			if (string.IsNullOrWhiteSpace(name))
+			if (string.IsNullOrWhiteSpace(oriName))
 			{
-				name = Path.GetFileNameWithoutExtension(Path.GetRandomFileName());  //如果为空，则得到一个随机名称
+				oriName = Path.GetFileNameWithoutExtension(Path.GetRandomFileName());  //如果为空，则得到一个随机名称
 			}
 			//检查是否与cache中的名称重复，如果重复，则以xxx_1,2,3的形式增加
 			var cacheFile = Path.Combine(AppContext.BaseDirectory, $"{this._Client.WxId}_cache.dat");
 			if (File.Exists(cacheFile))
 			{
-				name = _ProcessCacheSameFile(cacheFile, name);
+				oriName = _ProcessCacheSameName(cacheFile, oriName);
 			}
 			if (!string.IsNullOrWhiteSpace(options.Suffix))
 			{
-				if (!name.EndsWith($"_{options.Suffix}"))
+				if (!oriName.EndsWith($"_{options.Suffix}"))
 				{
-					name = name + $"_{options.Suffix}";
+					oriName = oriName + $"_{options.Suffix}";
 				}
 			}
 			window.Focus();
@@ -1101,8 +1107,8 @@ namespace WeChatAuto.Components
 			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
 			RandomWait.Wait(300, 800);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
-			RandomWait.Wait(1500, 3000);
-			Clipboard.SetText(name);
+			RandomWait.Wait(600, 1500);
+			Clipboard.SetText(oriName);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 			RandomWait.Wait(300, 800);
 			var randValue = Random.Shared.Next(1, 10);
@@ -1111,7 +1117,35 @@ namespace WeChatAuto.Components
 			RandomWait.Wait(500, 1500);
 		}
 
-		private string _ProcessCacheSameFile(string cacheFile, string name)
+		private void __SaveToCacheFile(FriendInfo friendInfo)
+		{
+			var cacheFile = Path.Combine(AppContext.BaseDirectory, $"{this._Client.WxId}_cache.dat");
+			if (File.Exists(cacheFile))
+			{
+				byte[] bytes = File.ReadAllBytes(cacheFile);
+				var lt = MessagePackSerializer.Deserialize<List<FriendInfo>>(bytes);
+				if (lt.Select(x => x.WxId).ToList().Contains(friendInfo.WxId))
+				{
+					//有微信id相当，应该只是修改
+					var item = lt.Find(x => x.WxId.Equals(friendInfo.WxId));
+					item.MemoName = friendInfo.MemoName;
+					item.Lable = friendInfo.Lable;
+					item.SameGroupNumber = friendInfo.SameGroupNumber;
+					item.Signature = friendInfo.Signature;
+					item.Source = friendInfo.Source;
+					item.Area = friendInfo.Area;
+				}
+				else
+				{
+					lt.Add(friendInfo);
+				}
+				bytes = MessagePackSerializer.Serialize<List<FriendInfo>>(lt);
+				File.WriteAllBytes(cacheFile, bytes);
+				RandomWait.Wait(100, 600);
+			}
+		}
+
+		private string _ProcessCacheSameName(string cacheFile, string name)
 		{
 			byte[] bytes = File.ReadAllBytes(cacheFile);
 			var lt = MessagePackSerializer.Deserialize<List<FriendInfo>>(bytes);
