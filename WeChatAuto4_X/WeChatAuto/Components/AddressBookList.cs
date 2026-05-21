@@ -808,6 +808,7 @@ namespace WeChatAuto.Components
 				if (windowRetry.Success)
 				{
 					var win = windowRetry.Result.AsWindow();  //通过朋友验证窗口
+					win.Move(this._Client.MainWindow.BoundingRectangle.X +(this._Client.MainWindow.BoundingRectangle.Width - win.BoundingRectangle.Width) / 2, this._Client.MainWindow.BoundingRectangle.Y + (this._Client.MainWindow.BoundingRectangle.Height - win.BoundingRectangle.Height) / 2);
 					try
 					{
 						var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group))));
@@ -875,11 +876,14 @@ namespace WeChatAuto.Components
 			if (el.BoundingRectangle.Y >= root.BoundingRectangle.Y && el.BoundingRectangle.Y + el.BoundingRectangle.Height <= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
 			{
 				//删除
-				var point = el.BoundingRectangle.SafeRandomPoint();
-				Mouse.Position = point;
+				var point = el.BoundingRectangle.Center();
+				Mouse.Position = new System.Drawing.Point((int)point.X+Random.Shared.Next(-10,10), (int)point.Y);
 				RandomWait.Wait(300, 800);
-				Mouse.LeftClick();
+				Mouse.Click();
 				RandomWait.Wait(800, 2000);
+				var point2 = new System.Drawing.Point((int)point.X+Random.Shared.Next(-10,10), (int)point.Y);
+				Mouse.MoveTo(point2);
+				RandomWait.Wait(300, 800);
 				Mouse.RightClick();
 				token.ThrowIfCancellationRequested();
 				RandomWait.Wait(800, 2000);
@@ -889,10 +893,11 @@ namespace WeChatAuto.Components
 				if (win.Success)
 				{
 					var menu = win.Result.FindFirstChild(cf => cf.ByName("删除").And(cf.ByAutomationId("XMenuItem")));
-					point = menu.BoundingRectangle.SafeRandomPoint();
-					Mouse.MoveTo(point);
+					point = menu.BoundingRectangle.Center();
+					point2 = new System.Drawing.Point((int)point.X+Random.Shared.Next(-10,10), (int)point.Y);
+					Mouse.MoveTo(point2);
 					RandomWait.Wait(300, 800);
-					Mouse.Click();
+					menu?.Click();
 					RandomWait.Wait(800, 2000);
 
 					return true;
@@ -1069,7 +1074,7 @@ namespace WeChatAuto.Components
 				//标签名可能已经存在，或者不存在，需要新建.
 				var list = window.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
 				var items = list.FindAllChildren(cf=>cf.ByControlType(ControlType.CheckBox));
-				if (items.Select(x => x.Name.Equals(options.Label)).Count() > 0)
+				if (items.Select(x=>x.Name).Where(x => x.Equals(options.Label)).Count() > 0)
 				{
 					//已经有标签
 					var selectItem = items.FirstOrDefault(x => x.Name.Equals(options.Label));
