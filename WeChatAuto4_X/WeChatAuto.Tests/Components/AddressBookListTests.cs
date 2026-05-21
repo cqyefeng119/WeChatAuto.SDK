@@ -66,7 +66,7 @@ public class AddressBookListTests
                 foreach (var who in whos)
                 {
                     await client.SendMessage(who, $"你好，我已经知道你是{who}");
-                    await RandomWait.WaitAsync(500,1200);
+                    await RandomWait.WaitAsync(500, 1200);
                 }
                 _output.WriteLine(string.Join(",", whos));
                 count = whos.Count();
@@ -88,14 +88,41 @@ public class AddressBookListTests
                 foreach (var who in whos)
                 {
                     await client.SendMessage(who, $"你好，我已经知道你是{who}");
-                    await RandomWait.WaitAsync(500,1200);
+                    await RandomWait.WaitAsync(500, 1200);
                 }
                 _output.WriteLine(string.Join(",", whos));
                 count = whos.Count();
             },
-            KeyWord="test"
+            KeyWord = "test"
         });
         Assert.True(list.Count > 0);
     }
+
+
+    [Fact(DisplayName = "测试自动通过好友申请-固定关键词-标签-后缀好友")]
+    public async Task Test_Passed_keyword_label_suffix_friend()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var count = 0;
+        var list = await client.PassedAllNewFriend(new Options.FriendRequestAutoAcceptOptions
+        {
+            PassedCallBack = async (whos, client, serviceProvider) =>
+            {
+                foreach (var who in whos)
+                {
+                    await client.SendMessage(who, $"你好，我已经知道你是{who}");
+                    await RandomWait.WaitAsync(500, 1200);
+                }
+                _output.WriteLine(string.Join(",", whos));
+                count = whos.Count();
+            },
+            KeyWord = "test",
+            Label = "测试标签",
+            Suffix = "test"
+        });
+        Assert.True(list.Count > 0);
+    }
+
 
 }

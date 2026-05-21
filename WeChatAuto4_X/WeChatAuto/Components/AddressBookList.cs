@@ -677,7 +677,10 @@ namespace WeChatAuto.Components
 		public async Task<List<string>> PassedAllNewFriend(FriendRequestAutoAcceptOptions options, CancellationToken token)
 		{
 			var list = await WeChatInvoker.Call(PassedAllNewFriendCore, options, token);
-			await options?.PassedCallBack(list, this._Client, this._serviceProvider);
+			if (list.Count > 0)
+			{
+				await options?.PassedCallBack(list, this._Client, this._serviceProvider);
+			}
 			return list;
 		}
 
@@ -737,42 +740,40 @@ namespace WeChatAuto.Components
 		//反复处理本页
 		private (bool scroll, List<string> snapList) _ProcessThisPage(FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<string> resultList)
 		{
-			var isFinish = false;
-			while (!isFinish)
+			bool change = false;
+			while (true)
 			{
+				var newFriendRootItem = Root.Items.Where(u => u.Name.Equals("新的朋友") && u.ClassName.Equals("mmui::ContactsCellGroupView") && u.ControlType == ControlType.ListItem).FirstOrDefault();
+				if (newFriendRootItem == null)
+					return (false, null);
 				var items = Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem)));
-				var retry = false;
 				foreach (var item in items)
 				{
 					token.ThrowIfCancellationRequested();
+					var thisChangeTag = _ProcessThisItem(item, options, token, automation, resultList);
+					RandomWait.Wait(600, 1500);
+					if (thisChangeTag)
+					{
+						change = true;
+						break;  //如果被子项被改变了，通讯录列表也被改变，则重新重试一次.
+					}
 					#region 退出策略
 					var retryItem = item.GetSibling(1);
 					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell"))
 					{
-						isFinish = true;
 						return (false, null);
 					}
 					retryItem = item.GetSibling(-1);
 					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell") && !retryItem.Name.Equals("新的朋友"))
 					{
-						isFinish = true;
 						return (false, null);
 					}
 					#endregion
-					var change = _ProcessThisItem(item, options, token, automation, resultList);
-					if (change)
-					{
-						retry = true;
-						break;  //如果被子项被改变了，通讯录列表也被改变，则重新重试一次.
-					}
-					else
-					{
-						retry = false;
-					}
+					change = false;
 				}
-				if (!retry)
+				if (!change)
 				{
-					isFinish = true;
+					break;
 				}
 			}
 			return (true, Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem))).Select(u => u.Name).ToList());
@@ -780,10 +781,10 @@ namespace WeChatAuto.Components
 
 		private bool _ProcessThisItem(AutomationElement item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<string> resultList)
 		{
-			var result = false;
 			if (!item.Name.EndsWith("等待验证"))
 			{
-				return result;
+				var deleResult = __DeletePassedItem(automation, item, token, options);
+				return deleResult;
 			}
 
 			item.Click();
@@ -794,25 +795,10 @@ namespace WeChatAuto.Components
 			{
 				var validButton = validButtonRetry.Result.AsButton();
 				var root = validButton.GetParent();
-				if (!string.IsNullOrWhiteSpace(options.KeyWord))  //如果设定关键词，检查是否包含关键词
+				(bool flowControl, bool value) = __CheckKeyword__(options, root);  //关键词检查，控制是否继续往下走
+				if (!flowControl)
 				{
-					var textGroup = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByClassName("QWidget"))));
-					if (textGroup == null)
-						return false;
-					var texts = textGroup.FindAllChildren(cf => cf.ByControlType(ControlType.Text));
-					if (texts.Length == 0)
-						return false;
-					var checkTag = false;
-					foreach (var text in texts)
-					{
-						if (text.Name.ToUpper().Contains(options.KeyWord.ToUpper()))
-						{
-							checkTag = true;
-							break;
-						}
-					}
-					if (!checkTag)
-						return false;
+					return value;
 				}
 				//通过关键词检查后操作
 				validButton.ClickEnhance(this._Client.MainWindow);
@@ -851,6 +837,71 @@ namespace WeChatAuto.Components
 			return false;
 		}
 
+		private static (bool flowControl, bool value) __CheckKeyword__(FriendRequestAutoAcceptOptions options, AutomationElement root)
+		{
+			if (!string.IsNullOrWhiteSpace(options.KeyWord))  //如果设定关键词，检查是否包含关键词
+			{
+				var textGroup = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByClassName("QWidget"))));
+				if (textGroup == null)
+					return (flowControl: false, value: false);
+				var texts = textGroup.FindAllChildren(cf => cf.ByControlType(ControlType.Text));
+				if (texts.Length == 0)
+					return (flowControl: false, value: false);
+				var checkTag = false;
+				foreach (var text in texts)
+				{
+					if (text.Name.ToUpper().Contains(options.KeyWord.ToUpper()))
+					{
+						checkTag = true;
+						break;
+					}
+				}
+				if (!checkTag)
+					return (flowControl: false, value: false);
+			}
+
+			return (flowControl: true, value: default);
+		}
+
+		private bool __DeletePassedItem(UIA3Automation automation, AutomationElement el, CancellationToken token, FriendRequestAutoAcceptOptions options)
+		{
+			if (!options.PassedDelete)
+				return false;
+
+			var root = Root;
+			if (root == null)
+				return false;
+			token.ThrowIfCancellationRequested();
+			if (el.BoundingRectangle.Y >= root.BoundingRectangle.Y && el.BoundingRectangle.Y + el.BoundingRectangle.Height <= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+			{
+				//删除
+				var point = el.BoundingRectangle.SafeRandomPoint();
+				Mouse.Position = point;
+				RandomWait.Wait(300, 800);
+				Mouse.LeftClick();
+				RandomWait.Wait(800, 2000);
+				Mouse.RightClick();
+				token.ThrowIfCancellationRequested();
+				RandomWait.Wait(800, 2000);
+
+				var win = Retry.WhileNull(() => this._Client.MainWindow.FindFirstChild(cf => cf.ByName("Weixin").And(cf.ByClassName("mmui::XMenu"))),
+					timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+				if (win.Success)
+				{
+					var menu = win.Result.FindFirstChild(cf => cf.ByName("删除").And(cf.ByAutomationId("XMenuItem")));
+					point = menu.BoundingRectangle.SafeRandomPoint();
+					Mouse.MoveTo(point);
+					RandomWait.Wait(300, 800);
+					Mouse.Click();
+					RandomWait.Wait(800, 2000);
+
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options, List<string> resultList)
 		{
 			//点击确定按钮
@@ -861,7 +912,7 @@ namespace WeChatAuto.Components
 			//获取wxid，保存进缓存
 			RandomWait.Wait(1000, 1500);
 			token.ThrowIfCancellationRequested();
-			var wxidLabelRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)).And(cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text"))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			var wxidLabelRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstDescendant(cf => cf.ByName("微信号：").And(cf.ByControlType(ControlType.Text)).And(cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text"))), TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
 			FriendInfo friendInfo = new FriendInfo();
 			token.ThrowIfCancellationRequested();
 			if (wxidLabelRetry.Success)
@@ -1017,7 +1068,7 @@ namespace WeChatAuto.Components
 				var window = winResult.Result;
 				//标签名可能已经存在，或者不存在，需要新建.
 				var list = window.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
-				var items = list.Items;
+				var items = list.FindAllChildren(cf=>cf.ByControlType(ControlType.CheckBox));
 				if (items.Select(x => x.Name.Equals(options.Label)).Count() > 0)
 				{
 					//已经有标签
