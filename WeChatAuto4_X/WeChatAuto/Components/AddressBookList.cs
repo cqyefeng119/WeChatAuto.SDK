@@ -701,7 +701,7 @@ namespace WeChatAuto.Components
 				List<string> oldSnapList = new List<string>();
 				while (downIndex < 2)
 				{
-					(bool scroll, List<string> snapList) processTag = _ProcessThisPage(options, token, automation);
+					(bool scroll, List<string> snapList) processTag = _ProcessThisPage(options, token, automation, result);
 					if (!processTag.scroll)
 						break;
 					var exceptList = processTag.snapList.Except(oldSnapList).ToList();
@@ -718,7 +718,8 @@ namespace WeChatAuto.Components
 					Mouse.Position = scrollPoint;
 					Mouse.Scroll(-3);
 				}
-
+				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.聊天);
+				options?.PassedCallBack(result,this._Client,this._serviceProvider);
 				return result;
 			}
 			catch (Exception ex)
@@ -733,12 +734,12 @@ namespace WeChatAuto.Components
 		}
 
 		//反复处理本页
-		private (bool scroll, List<string> snapList) _ProcessThisPage(FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation)
+		private (bool scroll, List<string> snapList) _ProcessThisPage(FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<string> resultList)
 		{
 			var isFinish = false;
 			while (!isFinish)
 			{
-				var items = Root.Items.Where(x => x.ClassName.Equals("mmui::XTableCell") && x.ControlType == ControlType.ListItem);
+				var items = Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem)));
 				var retry = false;
 				foreach (var item in items)
 				{
@@ -757,7 +758,7 @@ namespace WeChatAuto.Components
 						return (false, null);
 					}
 					#endregion
-					var change = _ProcessThisItem(item, options, token, automation);
+					var change = _ProcessThisItem(item, options, token, automation, resultList);
 					if (change)
 					{
 						retry = true;
@@ -773,13 +774,13 @@ namespace WeChatAuto.Components
 					isFinish = true;
 				}
 			}
-			return (true, Root.Items.Select(item => item.Name).ToList());
+			return (true, Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem))).Select(u => u.Name).ToList());
 		}
 
-		private bool _ProcessThisItem(ListBoxItem item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation)
+		private bool _ProcessThisItem(AutomationElement item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<string> resultList)
 		{
 			var result = false;
-			if (item.Name.EndsWith("等待验证"))
+			if (!item.Name.EndsWith("等待验证"))
 			{
 				return result;
 			}
@@ -831,7 +832,7 @@ namespace WeChatAuto.Components
 						var lableItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("修改标签")).And(cf.ByAutomationId("button")));
 						__ProcessLabelItem(lableItem, token, options, automation, win);
 						RandomWait.Wait(1200, 3000);
-						__ProcessOk(passedFriendRoot, win, token, options);
+						__ProcessOk(passedFriendRoot, win, token, options, resultList);
 						//其实上面已经关闭了win,但是为了保险，再检查一遍.
 						win = automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))).AsWindow();
 						if (win != null)
@@ -849,7 +850,7 @@ namespace WeChatAuto.Components
 			return false;
 		}
 
-		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options)
+		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options, List<string> resultList)
 		{
 			//点击确定按钮
 			var button = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("确定")).And(cf.ByClassName("mmui::XOutlineButton")));
@@ -889,7 +890,7 @@ namespace WeChatAuto.Components
 				}
 				token.ThrowIfCancellationRequested();
 				//地区
-				parent = label.GetParent().GetSibling(1);
+				parent = label.GetParent().GetParent();
 				if (parent != null)
 				{
 					label = parent.FindFirstDescendant(cf => cf.ByAutomationId("right_v_view.user_info_center_view.basic_line_view.basic_line.key_text").And(cf.ByName("地区：")));
@@ -957,7 +958,8 @@ namespace WeChatAuto.Components
 				if (label != null)
 				{
 					parent = label.GetParent().GetParent();
-					var text = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.value_remark_view.content_view.ProfileTextView").And(cf.ByControlType(ControlType.Text)));
+					var pButton = parent.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.value_remark_view").And(cf.ByControlType(ControlType.Button)));
+					var text = pButton.FindFirstDescendant(cf => cf.ByAutomationId("content_v_view.ProfileResizeVBoxView.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.value_remark_view.content_view.ProfileTextView").And(cf.ByControlType(ControlType.Text)));
 					if (text != null)
 					{
 						if (!string.IsNullOrWhiteSpace(text.Name))
@@ -993,7 +995,7 @@ namespace WeChatAuto.Components
 				label.CaptureToFile(path);
 				RandomWait.Wait(300, 600);
 				//保存进缓存文件
-
+				resultList.Add(friendInfo.MemoName);
 				__SaveToCacheFile(friendInfo);
 			}
 		}

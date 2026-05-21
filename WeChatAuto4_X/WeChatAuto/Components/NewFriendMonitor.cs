@@ -121,11 +121,6 @@ namespace WeChatAuto.Components
         {
             _SwtichUI(token);  //做多微信的切换工作.
             List<string> result = this._Client.AddressBookList.PassedAllNewFriendCore(automation, options, token);
-            //已经回到“微信”页面
-            if (result.Count > 0)
-            {
-                options.PassedCallBack?.Invoke(result, this._Client, serviceProvider);
-            }
         }
 
 

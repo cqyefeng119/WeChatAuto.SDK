@@ -52,15 +52,21 @@ public class AddressBookListTests
         }
     }
 
-    [Fact(DisplayName = "测试自动通过好友申请")]
+    [Fact(DisplayName = "测试自动通过好友申请-无条件通过全部好友")]
     public async Task Test_Passed_Friend()
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
+        var count = 0;
         var list = await client.PassedAllNewFriend(new Options.FriendRequestAutoAcceptOptions
         {
-            
+            PassedCallBack = (whos, client, serviceProvider) =>
+            {
+                _output.WriteLine(string.Join(",", whos));
+                count = whos.Count();
+            },
         });
+        Assert.True(list.Count > 0);
     }
 
 }
