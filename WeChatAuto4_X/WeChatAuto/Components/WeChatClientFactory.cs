@@ -61,7 +61,18 @@ namespace WeChatAuto.Components
                 _logger.Trace($"开始录制视频,保存路径: {videoPath}");
             }
             _logger.Trace("微信客户端工厂初始化完成");
+            InitOCRService();
         }
+
+        /// <summary>
+        /// 初始化OCR引擎
+        /// </summary>
+        private void InitOCRService()
+        {
+            OCRService oCRService = _serviceProvider.GetRequiredService<OCRService>();
+            oCRService.InitOCREngin(WeAutomation.Config);
+        }
+
         /// <summary>
         /// 微信客户端列表
         /// </summary>
@@ -182,7 +193,7 @@ namespace WeChatAuto.Components
             foreach (var wxNotifyButton in buttons)
             {
                 index++;
-                _InitWechatAutomationFramework(automation, wxNotifyButton,index);
+                _InitWechatAutomationFramework(automation, wxNotifyButton, index);
             }
             this._IsInit = true;
             _logger.Trace($"当前微信客户端数量: 共{_wxClientList.Count}个");
@@ -194,7 +205,7 @@ namespace WeChatAuto.Components
         /// <param name="automation"></param>
         /// <param name="wxNotifyButton"></param>
         /// <param name="index">任务栏索引</param>
-        private void _InitWechatAutomationFramework(UIA3Automation automation, AutomationElement wxNotifyButton,int index)
+        private void _InitWechatAutomationFramework(UIA3Automation automation, AutomationElement wxNotifyButton, int index)
         {
             DrawHightlightHelper.DrawHighlightExt(wxNotifyButton);
             RandomWait.Wait(100, 600);
@@ -203,7 +214,7 @@ namespace WeChatAuto.Components
             var topWindowProcessId = _GetTopWindowProcessIdResult();  //当前微信的processid
             (OwerInfo info, Window window) result = __GetCurrentWxNickName(topWindowProcessId.Result, automation);
             result.window.Focus();
-            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info,index);
+            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info, index);
             _wxClientList.Add(result.info.NickName, client);
         }
 

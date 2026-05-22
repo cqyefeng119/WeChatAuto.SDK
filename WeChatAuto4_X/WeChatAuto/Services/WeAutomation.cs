@@ -95,6 +95,7 @@ namespace WeChatAuto.Services
             {
                 return new WeChatRecordVideo(_config.TargetVideoPath);
             });
+            services.AddSingleton<OCRService>();
         }
 
         /// <summary>
