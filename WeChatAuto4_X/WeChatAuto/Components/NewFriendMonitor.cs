@@ -221,7 +221,7 @@ namespace WeChatAuto.Components
                 fetchNumberTask = Task.Run(async () =>
                 {
                     startTcs.TrySetResult(true);
-                    using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromSeconds(20));  //20秒循环一次.
+                    using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromSeconds(WeAutomation.Config.MonitorNewFriendRequestInterval));  //20秒循环一次.
                     bool firstTag = true;
                     while (firstTag || await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
                     {

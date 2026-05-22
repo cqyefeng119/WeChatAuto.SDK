@@ -56,6 +56,10 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public int MonitorMessageMaxDownInterval {get;set;} = 8;
         /// <summary>
+        /// 好友申请监听间隔时间，单位为秒
+        /// </summary>
+        public int MonitorNewFriendRequestInterval {get;set;} = 20;
+        /// <summary>
         /// 会话列表鼠标滚动行数.
         /// </summary>
         public int ConversationInterval { get; set; } = 5;
