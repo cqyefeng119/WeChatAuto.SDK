@@ -326,7 +326,7 @@ namespace WeChatAuto.Components
             {
                 _Client.Conversations.SearchWhoCore(automation, who);
             }
-            RandomWait.Wait(100, 600);
+            RandomWait.Wait(300, 1200);
             SendMessageCore(automation, message, atUser);
         }
         public async Task SendFile(string who, string[] files)
@@ -366,10 +366,18 @@ namespace WeChatAuto.Components
         /// <param name="atUser">被@的好友</param>
         public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser = default)
         {
-            await WeChatInvoker.Call(SendMessageCore, message, atUser);
+            await WeChatInvoker.Call(SendMessageCore, message, atUser,(Action)null);
         }
 
-        internal void SendMessageCore(UIA3Automation automation, string message, OneOf<string, string[], List<string>> atUser)
+        public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser, DateOnly date, string chatGuid)
+        {
+            await WeChatInvoker.Call(SendMessageCore,message,atUser,()=>
+            {
+                
+            });
+        }
+
+        internal void SendMessageCore(UIA3Automation automation, string message, OneOf<string, string[], List<string>> atUser, Action refAction = null)
         {
             if (string.IsNullOrWhiteSpace(message))
                 return;
@@ -601,7 +609,7 @@ namespace WeChatAuto.Components
             //Mouse.MoveTo(point);
             Mouse.Position = point;
             Mouse.LeftClick();
-            RandomWait.Wait(100,800);
+            RandomWait.Wait(100, 800);
         }
     }
 }
