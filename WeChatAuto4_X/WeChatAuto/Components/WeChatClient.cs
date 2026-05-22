@@ -23,6 +23,7 @@ using System.Drawing;
 using System.Linq;
 using System.IO;
 using WeChatAuto.Options;
+using RapidOCRLib;
 
 
 namespace WeChatAuto.Components
@@ -134,9 +135,15 @@ namespace WeChatAuto.Components
         /// 任务栏操作对象，参考<see cref="ShellNotifyIcon"/>
         /// </summary>
         public ShellNotifyIcon NotifyIcon;
-
+        /// <summary>
+        /// 通过新好友添加好友监听器
+        /// </summary>
         public NewFriendMonitor NewFriendMonitor;
 
+        /// <summary>
+        /// 得到OCR引擎
+        /// </summary>
+        public OcrLite OcrEngee => serviceProvider.GetRequiredService<OCRService>().OcrEngin;
 
         #endregion
         private Navigation GetNavigation()

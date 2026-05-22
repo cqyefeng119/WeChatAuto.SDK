@@ -41,16 +41,16 @@ namespace WeChatAuto.Services
 
         private OcrLite _CheckModeFiles(WeChatConfig config)
         {
-            var detFileName = Path.IsPathRooted(config.OCRDetModeFilePath) ? config.OCRDetModeFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRDetModeFilePath);
+            var detFileName = Path.IsPathRooted(config.OCRDetModelFilePath) ? config.OCRDetModelFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRDetModelFilePath);
             if (!File.Exists(detFileName))
                 throw new Exception("错误：Det模型文件不存在！");
-            var clsFileName = Path.IsPathRooted(config.OCRClsModeFilePath) ? config.OCRClsModeFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRClsModeFilePath);
+            var clsFileName = Path.IsPathRooted(config.OCRClsModelFilePath) ? config.OCRClsModelFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRClsModelFilePath);
             if (!File.Exists(clsFileName))
                 throw new Exception("错误：cls模型文件不存在!");
-            var recFileName = Path.IsPathRooted(config.OCRRecModeFilePath) ? config.OCRRecModeFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRRecModeFilePath);
+            var recFileName = Path.IsPathRooted(config.OCRRecModelFilePath) ? config.OCRRecModelFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRRecModelFilePath);
             if (!File.Exists(recFileName))
                 throw new Exception("错误：rec模型文件不存在!");
-            var dictFileName = Path.IsPathRooted(config.OCRDictModeFilePath) ? config.OCRDictModeFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRDictModeFilePath);
+            var dictFileName = Path.IsPathRooted(config.OCRDictModelFilePath) ? config.OCRDictModelFilePath : Path.Combine(AppContext.BaseDirectory, "models", config.OCRDictModelFilePath);
             if (!File.Exists(dictFileName))
                 throw new Exception("错误：dict字典文件不存在！");
             OcrLite ocrLite = new OcrLite()
