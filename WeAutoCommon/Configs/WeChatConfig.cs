@@ -49,21 +49,41 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 消息监听间隔时间，单位为秒
         /// </summary>
-        public int MonitorMessageInterval {get;set;} = 3;
+        public int MonitorMessageInterval { get; set; } = 3;
         /// <summary>
         /// 消息监听时往下滚动的次数，如果监听列表多，建议设置成：10-30
         /// 如果监听列表少，建议设置成:5~10，以提高效率 
         /// </summary>
-        public int MonitorMessageMaxDownInterval {get;set;} = 8;
+        public int MonitorMessageMaxDownInterval { get; set; } = 8;
         /// <summary>
         /// 好友申请监听间隔时间，单位为秒
         /// </summary>
-        public int MonitorNewFriendRequestInterval {get;set;} = 20;
+        public int MonitorNewFriendRequestInterval { get; set; } = 20;
         /// <summary>
         /// 会话列表鼠标滚动行数.
         /// </summary>
         public int ConversationInterval { get; set; } = 5;
-
+        /// <summary>
+        /// 是否启用OCR,但是一些功能由于腾迅的限制必须要启用OCR
+        /// 如果启用OCR,则必须保证OCR模型在models目录下，并且需要配置好模型文件名称
+        /// </summary>
+        public bool EnableOCR { get; set; } = false;
+        /// <summary>
+        /// ocr-det模型路径
+        /// </summary>
+        public string OCRDetModeFilePath { get; set; } = "ch_PP-OCRv5_mobile_det.onnx";
+        /// <summary>
+        /// ocr-cls模型路径
+        /// </summary>
+        public string OCRClsModeFilePath { get; set; } = "ch_ppocr_mobile_v2.0_cls_infer.onnx";
+        /// <summary>
+        /// ocr-rec模型路径
+        /// </summary>
+        public string OCRRecModeFilePath { get; set; } = "ch_PP-OCRv5_rec_mobile_infer.onnx";
+        /// <summary>
+        /// OCR的字典文件路径
+        /// </summary>
+        public string OCRDictModeFilePath { get; set; } = "ppocrv5_dict.txt";
         /// <summary>
         /// 是否启用调试模式
         /// </summary>
