@@ -44,6 +44,7 @@
     <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OneOf" Version="3.0.271" />
+    <PackageReference Include="RapidOCRLib" Version="0.9.5" />
     <PackageReference Include="System.Threading.Channels" Version="9.0.10" />
   </ItemGroup>  
 
