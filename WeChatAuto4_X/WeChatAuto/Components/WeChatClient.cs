@@ -92,6 +92,8 @@ namespace WeChatAuto.Components
             this.MessageMonitor = new MessageMonitor(this, serviceProvider, _MainThreadInvoker, noticeEvent);
             this.NewFriendMonitor = new NewFriendMonitor(this, serviceProvider, _MainThreadInvoker, noticeEvent);
             this.NotifyIcon = new ShellNotifyIcon(this, serviceProvider, WechatIndex);
+            this.OwnerGroup = new OwnerGroup(this, _MainThreadInvoker, serviceProvider);
+            this.OuterGroup = new OuterGroup(this, _MainThreadInvoker, serviceProvider);
             _RunCheckAddressBook();
         }
 
@@ -144,6 +146,16 @@ namespace WeChatAuto.Components
         /// 得到OCR引擎
         /// </summary>
         public OcrLite OcrEngee => serviceProvider.GetRequiredService<OCRService>().OcrEngin;
+        /// <summary>
+        /// 自有群
+        /// </summary>
+        public OwnerGroup OwnerGroup;
+
+        /// <summary>
+        /// 外部群
+        /// </summary>
+        public OuterGroup OuterGroup;
+
 
         #endregion
         private Navigation GetNavigation()
@@ -501,7 +513,19 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 好友/群聊管理
+        /// <summary>
+        /// 是否是自有群
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <returns>是否是自有群</returns>
+        public async Task<bool> IsOwnerChatGroup(string groupName) => await OwnerGroup.IsOwnerChatGroup(groupName);
 
+        /// <summary>
+        /// 获取群主
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <returns>群主昵称</returns>
+        public async Task<string> GetGroupOwner(string groupName) => await OwnerGroup.GetGroupOwner(groupName);
 
         #endregion
 

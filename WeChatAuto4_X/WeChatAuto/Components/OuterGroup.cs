@@ -81,13 +81,13 @@ namespace WeChatAuto.Components
         public async Task<ChatResponse> AddAllChatGroupMemberToFriends(string groupName, List<string> exceptList = null, int intervalSecond = 3,
             string helloText = "", string label = "", int pageNo = 1, int pageSize = 15)
           => throw new Exception("正在完成中");
-        /// <summary>
-        /// 添加群聊里面的所有好友为自己的好友,适用于从外部群中添加所有好友为自己的好友
-        /// 注意：此方法容易触发微信风控机制，建议使用分页添加，并使用键鼠模拟器的方式增加好友。
-        /// </summary>
-        /// <param name="groupName">群聊名称</param>
-        /// <param name="options">添加群聊成员为好友的选项<see cref="AddGroupMemberOptions"/></param>
-        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
+        // /// <summary>
+        // /// 添加群聊里面的所有好友为自己的好友,适用于从外部群中添加所有好友为自己的好友
+        // /// 注意：此方法容易触发微信风控机制，建议使用分页添加，并使用键鼠模拟器的方式增加好友。
+        // /// </summary>
+        // /// <param name="groupName">群聊名称</param>
+        // /// <param name="options">添加群聊成员为好友的选项<see cref="AddGroupMemberOptions"/></param>
+        // /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
         // public async Task<ChatResponse> AddAllChatGroupMemberToFriends(string groupName, Action<AddGroupMemberOptions> options)
         //   => await WxMainWindow.AddAllChatGroupMemberToFriends(groupName, options);
 

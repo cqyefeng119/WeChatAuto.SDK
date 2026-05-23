@@ -608,6 +608,7 @@ namespace WeChatAuto.Components
             //测试.
             //Mouse.MoveTo(point);
             Mouse.Position = point;
+            RandomWait.Wait(300,900);
             Mouse.LeftClick();
             RandomWait.Wait(100, 800);
         }
