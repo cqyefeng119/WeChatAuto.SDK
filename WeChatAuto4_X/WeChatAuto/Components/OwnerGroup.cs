@@ -23,10 +23,11 @@ using FlaUI.Core.Patterns;
 using System.Drawing;
 using System.Threading.Tasks;
 using WeAutoCommon.Extentions;
-using System.Windows;
 using FlaUI.UIA3.Patterns;
 using FlaUI.UIA3;
 using WeAutoCommon.Models;
+using Emgu.CV;
+using RapidOCRLib.Models;
 
 namespace WeChatAuto.Components
 {
@@ -35,10 +36,11 @@ namespace WeChatAuto.Components
     /// </summary>
     public class OwnerGroup : Group
     {
+        private readonly AutoLogger<OwnerGroup> _Logger;
         internal OwnerGroup(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider) :
             base(client, uiThreadInvoker, serviceProvider)
         {
-
+            _Logger = serviceProvider.GetRequiredService<AutoLogger<OwnerGroup>>();
         }
         /// <summary>
         /// 改变自有群群备注
@@ -80,8 +82,113 @@ namespace WeChatAuto.Components
         /// <param name="groupName">群聊名称</param>
         /// <param name="memberName">成员名称</param>
         /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
-        public async Task<ChatResponse> AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => throw new Exception("待完成");
-        //   => await WxMainWindow.AddOwnerChatGroupMember(groupName, memberName);
+        public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName)
+        {
+            await WeChatInvoker.Call(AddOwnerChatGroupMemberCore, groupName, memberName);
+        }
+
+        private void AddOwnerChatGroupMemberCore(UIA3Automation automation, string groupName, OneOf<string, string[]> memberName)
+        {
+            if (!CheckGroup(automation, groupName))
+                return;
+            var paneRoot = PaneRoot;
+            var point = this._Client.OcrEngee.OCRVerticalDetect(paneRoot, 0.5f, "添加");
+            if (point.IsEmpty)
+                return;
+            this._Client.MainWindow.Focus();
+            Mouse.Position = paneRoot.BoundingRectangle.Center();
+            RandomWait.Wait(600, 1200);
+            var point2 = (new Point(point.X, point.Y - 30)).Confusion(10, 5);
+            Mouse.MoveTo(point2);
+            RandomWait.Wait(300, 1200);
+            Mouse.Click();
+            //处理拉人事宜
+            ProcessInviteMembers(memberName, automation);
+        }
+
+        internal void ProcessInviteMembers(OneOf<string, string[]> memberName, UIA3Automation automation)
+        {
+            var memberList = memberName.IsT0 ? new List<string> { memberName.AsT0.Trim() } : memberName.AsT1.ToList().Select(x => x.Trim()).ToList();
+            var winRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstChild(cf => cf.ByName("微信添加群成员").And(cf.ByClassName("mmui::SessionPickerWindow")).And(cf.ByControlType(ControlType.Window))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (!winRetry.Success)
+                return;
+            var win = winRetry.Result.AsWindow();
+            try
+            {
+                var root = () => win.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByName("请勾选需要添加的联系人")).And(cf.ByAutomationId("sp_to_select_contact_list"))).AsListBox();
+                int index = 0;
+                var oldSnap = new List<string>();
+                var scrollPoint = root().BoundingRectangle.SafeRandomPoint();
+                var rootBoundingRectangle = root().BoundingRectangle;
+                while (index < 2)
+                {
+                    var allItem = root().FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox)).ToList().Select(x => x.Name.Trim()).ToList();
+                    var items = root().FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox)).ToList().Where(u => !string.IsNullOrWhiteSpace(u.Name));
+                    foreach (var item in items)
+                    {
+                        if (memberList.Contains(item.Name.Trim()))
+                        {
+                            if (item.BoundingRectangle.Y >= rootBoundingRectangle.Y && item.BoundingRectangle.Y + item.BoundingRectangle.Height <= rootBoundingRectangle.Y + rootBoundingRectangle.Height)
+                            {
+                                if (item.IsPatternSupported(item.Automation.PatternLibrary.TogglePattern))
+                                {
+                                    var point = item.BoundingRectangle.SafeRandomPoint();
+                                    Mouse.MoveTo(point);
+                                    RandomWait.Wait(200, 900);
+                                    Mouse.Click();
+                                    scrollPoint = point;
+                                    RandomWait.Wait(600, 1200);
+                                    memberList.Remove(item.Name.Trim());
+                                }
+                                else
+                                {
+                                    memberList.Remove(item.Name.Trim());
+                                }
+                            }
+                        }
+                    }
+                    if (memberList.Count == 0)
+                    {
+                        break;
+                    }
+                    var exceptList = allItem.Except(oldSnap);
+                    if (exceptList.Count() > 0)
+                    {
+                        index = 0;
+                        oldSnap = allItem;
+                    }
+                    else
+                    {
+                        index++;
+                    }
+                    MouseScrollHelper.DownStep(scrollPoint, 2);
+                }
+                var selectRoot = win.FindFirstDescendant(cf => cf.ByAutomationId("sp_choice_contact_list.qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group)));
+                var selectItem = selectRoot.FindAllDescendants(cf => cf.ByControlType(ControlType.Button));
+                if (selectItem.Length == 0)
+                {
+                    RandomWait.Wait(1000,3000);
+                    win.Close();
+                }
+                else
+                {
+                    var button = win.FindFirstDescendant(cf => cf.ByAutomationId("confirm_btn").And(cf.ByControlType(ControlType.Button)));
+                    if (button != null)
+                    {
+                        button.ClickEnhance(win);
+                        RandomWait.Wait(1000, 3000);
+                    }
+                    this._Client.ChatContent.Sender.FcouseSenderCore(automation);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _Logger.Error(ex.ToString());
+                win.Close();
+            }
+        }
+
         /// <summary>
         /// 删除群聊，适用于自有群,与退出群聊不同，退出群聊是退出群聊，删除群聊会删除自有群的所有好友，然后退出群聊
         /// willdo: 这里有一个问题，如果删除群的好友很多，则需要滚屏才能全部选中。

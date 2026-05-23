@@ -50,4 +50,16 @@ public class GroupTests
         var groupOwner = await client.GetGroupOwner(name);
         Assert.True((groupOwner == client.NickName) == result);
     }
+    [Theory(DisplayName = "测试拉好友加群")]
+    [InlineData("DroidMirror官方技术支持")]
+    [InlineData("WeChatAuto.SDK官方技术支持")]
+    [InlineData("人工智能自动化技术讨论群")]
+    public async Task Test_AddOwnerChatGroupMember(string name)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.AddOwnerChatGroupMember(name, new string[] {"AI.Net_test","秋歌","智影工坊_test","khcgb"});
+        Assert.True(true);
+    }
+
 }

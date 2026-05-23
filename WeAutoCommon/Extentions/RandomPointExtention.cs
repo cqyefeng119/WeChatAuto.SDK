@@ -50,5 +50,18 @@ namespace WeAutoCommon.Extentions
 
             return DirectionInfoInfo.None;
         }
+
+        /// <summary>
+        /// 以此点为中心，指定长度与高度的混淆
+        /// </summary>
+        /// <param name="point">被混淆的点</param>
+        /// <param name="widthStep"></param>
+        /// <param name="heightStep"></param>
+        /// <returns></returns>
+        public static Point Confusion(this Point point, int widthStep, int heightStep)
+        {
+            Random random = new Random((int)DateTime.Now.Ticks);
+            return new Point(point.X + random.Next(0, widthStep), point.Y + random.Next(0, heightStep));
+        }
     }
 }

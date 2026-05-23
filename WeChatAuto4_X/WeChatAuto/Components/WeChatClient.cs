@@ -145,7 +145,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 得到OCR引擎
         /// </summary>
-        public OcrLite OcrEngee => serviceProvider.GetRequiredService<OCRService>().OcrEngin;
+        public OCRService OcrEngee => serviceProvider.GetRequiredService<OCRService>();
         /// <summary>
         /// 自有群
         /// </summary>
@@ -526,6 +526,14 @@ namespace WeChatAuto.Components
         /// <param name="groupName">群聊名称</param>
         /// <returns>群主昵称</returns>
         public async Task<string> GetGroupOwner(string groupName) => await OwnerGroup.GetGroupOwner(groupName);
+
+        /// <summary>
+        /// 添加群聊成员，适用于自有群
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <param name="memberName">成员名称</param>
+        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
+        public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(groupName, memberName);
 
         #endregion
 
