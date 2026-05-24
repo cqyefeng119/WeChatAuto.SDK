@@ -107,7 +107,7 @@ namespace WeAutoCommon.Configs
         /// 启用后，键盘鼠标操作会通过模拟器进行操作，而不是通过windows automation进行操作。
         /// 注意：需要购买键鼠模拟器，并在此处启用。
         /// </summary>
-        public bool EnableMouseKeyboardSimulator { get; set; } = true;
+        public bool EnableMouseKeyboardSimulator { get; set; } = false;
         /// <summary>
         /// 键鼠模拟器设备VID
         /// </summary>
