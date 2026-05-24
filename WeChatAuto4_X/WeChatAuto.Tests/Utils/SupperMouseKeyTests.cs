@@ -18,10 +18,24 @@ public class SupperMouseKeyTests
     public void Test_Ctrl_A_Back()
     {
         //请把焦点放到位置上
-        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL,VirtualKeyShort.KEY_A);
+        // SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
 
-        RandomWait.Wait(100,300);
-                SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+        // RandomWait.Wait(100, 300);
+        // SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
+        SupperMouseKey.Scroll(-3);
+        RandomWait.Wait(100, 300);
 
         Assert.True(true);
     }

@@ -99,9 +99,9 @@ namespace WeChatAuto.Components
             Mouse.Position = paneRoot.BoundingRectangle.Center();
             RandomWait.Wait(600, 1200);
             var point2 = (new Point(point.X, point.Y - 30)).Confusion(10, 5);
-            Mouse.MoveTo(point2);
+            SupperMouseKey.MoveTo(point2);
             RandomWait.Wait(300, 1200);
-            Mouse.Click();
+            SupperMouseKey.LeftClick();
             //处理拉人事宜
             ProcessInviteMembers(memberName, automation);
         }
@@ -142,9 +142,11 @@ namespace WeChatAuto.Components
                                 if (item.IsPatternSupported(item.Automation.PatternLibrary.TogglePattern))
                                 {
                                     var point = item.BoundingRectangle.SafeRandomPoint();
-                                    Mouse.MoveTo(point);
+                                    // Mouse.MoveTo(point);
+                                    SupperMouseKey.MoveTo(point);
                                     RandomWait.Wait(200, 900);
-                                    Mouse.Click();
+                                    // Mouse.Click();
+                                    SupperMouseKey.LeftClick();
                                     RandomWait.Wait(300, 900);
                                     memberList.Remove(item.Name.Trim());
                                     index = 2;
@@ -175,7 +177,10 @@ namespace WeChatAuto.Components
                     {
                         index++;
                     }
-                    MouseScrollHelper.DownStep(scrollPoint, 2);
+                    // MouseScrollHelper.DownStep(scrollPoint, 2);
+                    SupperMouseKey.MoveTo(scrollPoint.Confusion(5,5));
+                    RandomWait.Wait(300, 600);
+                    SupperMouseKey.Scroll(-3);
                     RandomWait.Wait(300, 600);
                 }
                 //第二个，从筛选框选中
@@ -186,17 +191,19 @@ namespace WeChatAuto.Components
                     var searchPoint = search.BoundingRectangle.SafeRandomPoint();
                     foreach (var item in memberList.ToList())
                     {
-                        Mouse.MoveTo(searchPoint);
+                        SupperMouseKey.MoveTo(searchPoint);
                         RandomWait.Wait(500, 1500);
-                        Mouse.Click();
+                        SupperMouseKey.LeftClick();
                         RandomWait.Wait(100, 500);
-                        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
                         RandomWait.Wait(100, 500);
-                        Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
                         RandomWait.Wait(100, 500);
-                        System.Windows.Clipboard.SetText(item);
-                        RandomWait.Wait(100, 500);
-                        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                        // System.Windows.Clipboard.SetText(item);
+                        // RandomWait.Wait(100, 500);
+                        // // Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                        // SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                        SupperMouseKey.Type(item);
                         RandomWait.Wait(1200, 2500);
                         //有风控，换成OCR方案
                         if (rectangle == Rectangle.Empty)
@@ -216,7 +223,8 @@ namespace WeChatAuto.Components
                         var point = this._Client.OcrEngee.OCRVerticalLeftCuttingDetect(rectangle, 0.5f, 100, item, false);
                         if (!point.IsEmpty)
                         {
-                            Mouse.Click(point.Confusion(5, 5));
+                            // Mouse.Click(point.Confusion(5, 5));
+                            SupperMouseKey.LeftClick(point.Confusion(5,5));
                         }
 
                         #region UI Tree方案
@@ -258,9 +266,9 @@ namespace WeChatAuto.Components
                     var button = win.FindFirstDescendant(cf => cf.ByAutomationId("confirm_btn").And(cf.ByControlType(ControlType.Button)));
                     if (button != null)
                     {
-                        RandomWait.Wait(800, 2000);
+                        RandomWait.Wait(600, 1500);
                         button.ClickEnhance(win);
-                        RandomWait.Wait(1000, 3000);
+                        RandomWait.Wait(1000, 2000);
                         //人数多时，可能会出现弹窗提示
                         var path = "/Window/Group/Group/Group/Button[@Name='邀请'][@ClassName='mmui::XOutlineButton']";
                         var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(200));
@@ -268,7 +276,8 @@ namespace WeChatAuto.Components
                         {
                             var qryButton = buttonRetry.Result;
                             var point = qryButton.BoundingRectangle.SafeRandomPoint();
-                            Mouse.Click(point);
+                            // Mouse.Click(point);
+                            SupperMouseKey.LeftClick(point);
                             RandomWait.Wait(1000, 3000);
                         }
                     }
