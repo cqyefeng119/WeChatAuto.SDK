@@ -17,6 +17,7 @@ using WeChatAuto.Utils;
 using System.Linq;
 using FlaUI.Core.Input;
 using WeAutoCommon.Utils;
+using System.Drawing.Imaging;
 
 namespace WeChatAuto.Services
 {
@@ -99,6 +100,153 @@ namespace WeChatAuto.Services
             }
             return Point.Empty;
         }
+
+        /// <summary>
+        /// OCR识别，找出特定文字的中心坐标,此坐标针对屏幕
+        /// 仅支持竖向方向的截取
+        /// </summary>
+        /// <param name="rootRect">基础自动化元素的Rectangle</param>
+        /// <param name="rioRadio">坚向方向的截取比例，如0.5,只取原因上半部分</param>
+        /// <param name="findStr">找寻的字符串</param>
+        /// <param name="isTest">是否测试</param>
+        /// <param name="Index">索引，如果返回字符串有多个,以第几个为准</param>
+        /// <param name="retryNumber">如果没有找到，重试次数</param>
+        /// <returns></returns>
+        public Point OCRVerticalDetect(Rectangle rootRect, float rioRadio, string findStr, bool isTest = false, int Index = 0, int retryNumber = 2)
+        {
+            using Bitmap rootBitmap = CaptureRect(rootRect);
+            using Mat mat1 = rootBitmap.ToMat();
+            Rectangle rio = new Rectangle(0, 0, mat1.Width, (int)(mat1.Height * rioRadio));
+            using Mat mat2 = new Mat(mat1, rio);
+            using Bitmap bitmap = mat2.ToBitmap();
+            var index = 0;
+            while (index < retryNumber)
+            {
+                OcrResult result = Detect(bitmap, 0, mat2.Width > mat2.Height ? mat2.Width : mat2.Height, 0.5f, 0.5f, 1.6f, false, false);
+                var blockTexts = result.TextBlocks.Where(x => !string.IsNullOrWhiteSpace(x.Text) && (x.Text.Contains(findStr) || findStr.Contains(x.Text)));
+                if (blockTexts.Count() > 0)
+                {
+                    var count = 0;
+                    foreach (var item in blockTexts)
+                    {
+                        if (count == index)
+                        {
+                            var pointList = item.BoxPoints;
+                            var point = new Point(((pointList[2].X - pointList[0].X) / 2 + pointList[0].X), ((pointList[2].Y - pointList[0].Y) / 2) + pointList[0].Y);
+                            if (isTest)
+                            {
+                                CvInvoke.Imshow("wechatauto.sdk", result.BoxImg);
+                                CvInvoke.WaitKey();
+                            }
+                            return new Point(rootRect.X + point.X, rootRect.Y + point.Y);
+                        }
+                        count++;
+                    }
+                }
+                else
+                {
+                    index++;
+                }
+            }
+            return Point.Empty;
+        }
+
+        public Point OCRVerticalLeftCuttingDetect(AutomationElement rootElement, float rioRadio, int leftCutting, string findStr, bool isTest = false, int Index = 0, int retryNumber = 2)
+        {
+            using Mat mat1 = GetMatFromElement(rootElement);
+            Rectangle rio = new Rectangle(leftCutting, 0, mat1.Width - leftCutting, (int)(mat1.Height * rioRadio));
+            using Mat mat2 = new Mat(mat1, rio);
+            using Bitmap bitmap = mat2.ToBitmap();
+            var index = 0;
+            while (index < retryNumber)
+            {
+                OcrResult result = Detect(bitmap, 0, mat2.Width > mat2.Height ? mat2.Width : mat2.Height, 0.5f, 0.5f, 1.6f, false, false);
+                var blockTexts = result.TextBlocks.Where(x => !string.IsNullOrWhiteSpace(x.Text) && (x.Text.Contains(findStr) || findStr.Contains(x.Text)));
+                if (blockTexts.Count() > 0)
+                {
+                    var count = 0;
+                    foreach (var item in blockTexts)
+                    {
+                        if (count == index)
+                        {
+                            var pointList = item.BoxPoints;
+                            var point = new Point(((pointList[2].X - pointList[0].X) / 2 + pointList[0].X), ((pointList[2].Y - pointList[0].Y) / 2) + pointList[0].Y);
+                            if (isTest)
+                            {
+                                CvInvoke.Imshow("wechatauto.sdk", result.BoxImg);
+                                CvInvoke.WaitKey();
+                            }
+                            return new Point(rootElement.BoundingRectangle.X + point.X + leftCutting, rootElement.BoundingRectangle.Y + point.Y);
+                        }
+                        count++;
+                    }
+                }
+                else
+                {
+                    index++;
+                }
+            }
+            return Point.Empty;
+        }
+
+        public Point OCRVerticalLeftCuttingDetect(Rectangle rootRect, float rioRadio, int leftCutting, string findStr, bool isTest = false, int Index = 0, int retryNumber = 2)
+        {
+            using Bitmap rootBitmap = CaptureRect(rootRect);
+            using Mat mat1 = rootBitmap.ToMat();
+            Rectangle rio = new Rectangle(leftCutting, 0, mat1.Width - leftCutting, (int)(mat1.Height * rioRadio));
+            using Mat mat2 = new Mat(mat1, rio);
+            using Bitmap bitmap = mat2.ToBitmap();
+            var index = 0;
+            while (index < retryNumber)
+            {
+                OcrResult result = Detect(bitmap, 0, mat2.Width > mat2.Height ? mat2.Width : mat2.Height, 0.5f, 0.5f, 1.6f, false, false);
+                var blockTexts = result.TextBlocks.Where(x => !string.IsNullOrWhiteSpace(x.Text) && (x.Text.Contains(findStr) || findStr.Contains(x.Text)));
+                if (blockTexts.Count() > 0)
+                {
+                    var count = 0;
+                    foreach (var item in blockTexts)
+                    {
+                        if (count == index)
+                        {
+                            var pointList = item.BoxPoints;
+                            var point = new Point(((pointList[2].X - pointList[0].X) / 2 + pointList[0].X), ((pointList[2].Y - pointList[0].Y) / 2) + pointList[0].Y);
+                            if (isTest)
+                            {
+                                CvInvoke.Imshow("wechatauto.sdk", result.BoxImg);
+                                CvInvoke.WaitKey();
+                            }
+                            return new Point(rootRect.X + point.X + leftCutting, rootRect.Y + point.Y);
+                        }
+                        count++;
+                    }
+                }
+                else
+                {
+                    index++;
+                }
+            }
+            return Point.Empty;
+        }
+
+        //从屏幕剪切一个区域.
+        public static Bitmap CaptureRect(Rectangle rect)
+        {
+            Bitmap bmp = new Bitmap(rect.Width, rect.Height, PixelFormat.Format24bppRgb);
+
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.CopyFromScreen(
+                    rect.Left,
+                    rect.Top,
+                    0,
+                    0,
+                    rect.Size,
+                    CopyPixelOperation.SourceCopy);
+            }
+
+            return bmp;
+        }
+
 
         //屏步进行ocr识别
         public async Task<OcrResult> DetectAsync(Bitmap bitmap, int padding = 0, int maxSideLen = 1024, float boxScoreThresh = 0.5f, float boxThresh = 0.3f,

@@ -17,7 +17,7 @@ namespace WeChatAuto.Services
         private static IntPtr _deviceData = IntPtr.Zero;
         public static IntPtr DeviceData => _deviceData;
         #region 设备初始化
-        public static void Init(int deviceVID, int devicePID, string verifyUserData,int outputStringType=4)
+        public static void Init(int deviceVID, int devicePID, string verifyUserData, int outputStringType = 4)
         {
             CopyDllToCurrentDirectory();
             Thread.Sleep(600);
@@ -95,7 +95,7 @@ namespace WeChatAuto.Services
         /// <summary>
         /// 设置鼠标移动模式
         /// </summary>
-        private static void SetOutputMode(int outputStringType=4)
+        private static void SetOutputMode(int outputStringType = 4)
         {
             Skm.HKMSetMode(_deviceData, 4, (uint)outputStringType);
         }
@@ -158,9 +158,7 @@ namespace WeChatAuto.Services
         /// <summary>
         /// 按下回车键
         /// </summary>
-        /// <param name="window">窗口</param>
-        /// <param name="element">元素</param>
-        public static void Enter(Window window, AutomationElement element)
+        public static void Enter()
         {
             Delay(500, 1000);
             KeyPress("Enter");
@@ -225,6 +223,8 @@ namespace WeChatAuto.Services
         /// <param name="point">坐标</param>
         public static void LeftClick(Point point)
         {
+            MoveTo(point.X, point.Y);
+            Skm.HKMDelayRnd(_deviceData, 100, 150);
             LeftClick((int)point.X, (int)point.Y);
         }
         /// <summary>
@@ -473,6 +473,22 @@ namespace WeChatAuto.Services
         public static void LeftDoubleClick(int x, int y)
         {
             LeftDoubleClick(new Point(x, y));
+        }
+        public static void LeftDoubleClick()
+        {
+            Skm.HKMLeftDoubleClick(_deviceData);
+        }
+        /// <summary>
+        /// 鼠标按下
+        /// 一定要记得up
+        /// </summary>
+        public static void LeftDown()
+        {
+            Skm.HKMLeftDown(_deviceData);
+        }
+        public static void LeftUp()
+        {
+            Skm.HKMLeftUp(_deviceData);
         }
         #endregion
 

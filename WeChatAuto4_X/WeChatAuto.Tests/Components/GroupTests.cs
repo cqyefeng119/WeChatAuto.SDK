@@ -58,7 +58,7 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.AddOwnerChatGroupMember(name, new string[] {"AI.Net_test","秋歌","智影工坊_test","khcgb"});
+        await client.AddOwnerChatGroupMember(name, new string[] { "AI.Net_test", "秋歌", "智影工坊_test", "khcgb" });
         Assert.True(true);
     }
 

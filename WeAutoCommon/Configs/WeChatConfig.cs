@@ -107,15 +107,15 @@ namespace WeAutoCommon.Configs
         /// 启用后，键盘鼠标操作会通过模拟器进行操作，而不是通过windows automation进行操作。
         /// 注意：需要购买键鼠模拟器，并在此处启用。
         /// </summary>
-        public bool EnableMouseKeyboardSimulator { get; set; } = false;
+        public bool EnableMouseKeyboardSimulator { get; set; } = true;
         /// <summary>
         /// 键鼠模拟器设备VID
         /// </summary>
-        public int KMDeviceVID { get; set; } = 0x2612;
+        public int KMDeviceVID { get; set; } = 0x1701;
         /// <summary>
         /// 键鼠模拟器设备PID
         /// </summary>
-        public int KMDevicePID { get; set; } = 0x1701;
+        public int KMDevicePID { get; set; } = 0x2612;
         /// <summary>
         /// 键鼠模拟器校验数据
         /// </summary>
@@ -126,9 +126,14 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public int KMOffsetOfClick { get; set; } = 5;
         /// <summary>
-        /// 配置键鼠模拟器输出字符串编码类型,默认使用剪贴板粘贴输出字符串。优点是输出字符多时速度更快且不受输入法影响
+        /// 配置键鼠模拟器输出字符串编码类型
+        /// 0: 输出ANSI字符串
+        /// 1：输出Unicode字符串
+        /// 2: 输出ANSI字符串，速度更快，但受输入法影响更大
+        /// 3: 输出UNICODE字符串，速度更快，但受输入法影响更磊
+        /// 4: 使用剪贴板粘贴输出字符串。优点是输出字符多时速度更快且不受输入法影响
         /// </summary>
-        public int KMOutputStringType { get; set; } = 4;
+        public int KMOutputStringType { get; set; } = 0;
         /// <summary>
         /// 配置键鼠模拟器鼠标移动模式
         /// </summary>
