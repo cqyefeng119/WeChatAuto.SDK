@@ -1,4 +1,4 @@
-﻿using WeChatAuto.Services;
+using WeChatAuto.Services;
 using WeChatAuto.Components;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;

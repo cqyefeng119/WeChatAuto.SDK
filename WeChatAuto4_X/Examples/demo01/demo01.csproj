@@ -2,9 +2,34 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\WeChatAuto\WeChatAuto.csproj" />
+    <ProjectReference Include="..\..\..\WeAutoCommon\WeAutoCommon.csproj" />
+  </ItemGroup>
+
+  
+  <ItemGroup>
+    <None Include="Images\1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+       <TargetPath>Images\1.png</TargetPath>
+    </None>
+    <None Include="Videos\1.mp4">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+       <TargetPath>Videos\1.mp4</TargetPath>
+    </None>
+    <None Include="Images\wechatauto_code.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+       <TargetPath>Images\wechatauto_code.txt</TargetPath>
+    </None>    
+  </ItemGroup>  
 
 </Project>
