@@ -49,11 +49,12 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
         {
             if (item.FromKeyword.Equals("wechatauto"))
             {
-                //用户通过打招呼:wechatauto而来
+                //处理好友通过打招呼"wechatauto"而来
                 await client.SendMessage(item.Who, "Hi,你要咨询WeChatAuto.SDK的技术问题还是VIP相关问题哩？");
             }
             if (item.FromKeyword.Equals("test"))
             {
+                //处理好友通过打招呼"test"而来
                 await client.SendMessage(item.Who, "亲，终于盼到你了，我是基于微信4.1.9.55的wechatauto.sdk测试导航机器人，很高兴认识你！现在让我带你体验一下wechatauto.sdk的部分功能..大概1分钟时间..咱们开始咯....");
                 await RandomWait.WaitAsync(1000, 2500);
                 await client.SendMessage(item.Who, "~~嘘~~,别作声，我准备给你发图片消息 - 也是作者 Alex 的头像:");
