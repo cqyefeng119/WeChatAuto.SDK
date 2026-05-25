@@ -2,26 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using OneOf;
 using WeChatAuto.Components;
+using WeChatAuto.Models;
 
 namespace WeChatAuto.Options
 {
     public class FriendRequestAutoAcceptOptions
     {
         /// <summary>
-        /// 通过后的回调
-        /// </summary>
-
-        public Func<List<string>, WeChatClient, IServiceProvider,Task> PassedCallBack { get; set; }
+        /// 通过后的回调,返回给调用者三个信息:
+        /// - 通过的好友昵称列表
+        /// - WeChatClient对象，可以通过此对象发送消息等
+        /// - 依赖注入 - 调用者可以通过依赖注入容器取出自己注入的对象，执行自己的业务逻辑;
+        /// </summary>    
+        public Func<List<NewFriendBackItem>, WeChatClient, IServiceProvider, Task> PassedCallBack { get; set; }
         /// <summary>
         /// 通过后是否删除申请记录
         /// </summary>
         public bool PassedDelete { get; set; } = true;
 
         /// <summary>
-        /// 打招呼关键词过滤
+        /// 打招呼关键词过滤,可以设置多个，回调的时候会携带此KeyWord的信息返回给调用者，调用者应该根据关键词做相应的处理.
         /// </summary>
-        public string KeyWord { get; set; }
+        public OneOf<string, string[], List<string>> KeyWord { get; set; }
 
         /// <summary>
         /// 好友备注后缀

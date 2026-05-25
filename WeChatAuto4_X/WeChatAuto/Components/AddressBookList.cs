@@ -24,6 +24,7 @@ using MessagePack;
 using System.Net.Http;
 using System.Drawing;
 using WeChatAuto.Options;
+using WeChatAuto.Models;
 
 
 namespace WeChatAuto.Components
@@ -674,23 +675,24 @@ namespace WeChatAuto.Components
 		/// <param name="options">配置对象，具体参见<see cref="FriendRequestAutoAcceptOptions"/></param>
 		/// <param name="token">取消今牌</param>
 		/// <returns>返回加成功的好友昵称</returns>
-		public async Task<List<string>> PassedAllNewFriend(FriendRequestAutoAcceptOptions options, CancellationToken token)
+		public async Task<List<NewFriendBackItem>> PassedAllNewFriend(FriendRequestAutoAcceptOptions options, CancellationToken token)
 		{
 			var list = await WeChatInvoker.Call(PassedAllNewFriendCore, options, token);
 			if (list.Count > 0)
 			{
-				await options?.PassedCallBack(list, this._Client, this._serviceProvider);
+				await options?.PassedCallBack(list, this._Client,this._serviceProvider);
 			}
 			return list;
 		}
 
-		internal List<string> PassedAllNewFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
+
+		internal List<NewFriendBackItem> PassedAllNewFriendCore(UIA3Automation automation, FriendRequestAutoAcceptOptions options, CancellationToken token)
 		{
 			this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.通讯录);
 			try
 			{
 				token.ThrowIfCancellationRequested();
-				var result = new List<string>();
+				var result = new List<NewFriendBackItem>();
 				if (Root == null)
 					return result;
 				this._Client.MainWindow.Focus();
@@ -723,22 +725,22 @@ namespace WeChatAuto.Components
 					Mouse.Position = scrollPoint;
 					Mouse.Scroll(-3);
 				}
-				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.聊天);
+				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.微信);
 				return result;
 			}
 			catch (Exception ex)
 			{
 				_logger.Error($"通过好友申请时发生错误，错误原因:{ex.ToString()}");
-				return new List<string>();
+				return new List<NewFriendBackItem>();
 			}
 			finally
 			{
-				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.聊天);
+				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.微信);
 			}
 		}
 
 		//反复处理本页
-		private (bool scroll, List<string> snapList) _ProcessThisPage(FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<string> resultList)
+		private (bool scroll, List<string> snapList) _ProcessThisPage(FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<NewFriendBackItem> resultList)
 		{
 			bool change = false;
 			while (true)
@@ -779,7 +781,7 @@ namespace WeChatAuto.Components
 			return (true, Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem))).Select(u => u.Name).ToList());
 		}
 
-		private bool _ProcessThisItem(AutomationElement item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<string> resultList)
+		private bool _ProcessThisItem(AutomationElement item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<NewFriendBackItem> resultList)
 		{
 			if (!item.Name.EndsWith("等待验证"))
 			{
@@ -795,7 +797,7 @@ namespace WeChatAuto.Components
 			{
 				var validButton = validButtonRetry.Result.AsButton();
 				var root = validButton.GetParent();
-				(bool flowControl, bool value) = __CheckKeyword__(options, root);  //关键词检查，控制是否继续往下走
+				(bool flowControl, bool value, string keyword) = __CheckKeyword__(options, root);  //关键词检查，控制是否继续往下走
 				if (!flowControl)
 				{
 					return value;
@@ -808,7 +810,7 @@ namespace WeChatAuto.Components
 				if (windowRetry.Success)
 				{
 					var win = windowRetry.Result.AsWindow();  //通过朋友验证窗口
-					win.Move(this._Client.MainWindow.BoundingRectangle.X +(this._Client.MainWindow.BoundingRectangle.Width - win.BoundingRectangle.Width) / 2, this._Client.MainWindow.BoundingRectangle.Y + (this._Client.MainWindow.BoundingRectangle.Height - win.BoundingRectangle.Height) / 2);
+					win.Move(this._Client.MainWindow.BoundingRectangle.X + (this._Client.MainWindow.BoundingRectangle.Width - win.BoundingRectangle.Width) / 2, this._Client.MainWindow.BoundingRectangle.Y + (this._Client.MainWindow.BoundingRectangle.Height - win.BoundingRectangle.Height) / 2);
 					try
 					{
 						var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group))));
@@ -820,7 +822,7 @@ namespace WeChatAuto.Components
 						var lableItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("修改标签")).And(cf.ByAutomationId("button")));
 						__ProcessLabelItem(lableItem, token, options, automation, win);
 						RandomWait.Wait(1200, 3000);
-						__ProcessOk(passedFriendRoot, win, token, options, resultList);
+						__ProcessOk(passedFriendRoot, win, token, options, resultList, keyword);
 						//其实上面已经关闭了win,但是为了保险，再检查一遍.
 						win = automation.GetDesktop().FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByName("通过朋友验证")).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))).AsWindow();
 						if (win != null)
@@ -838,30 +840,41 @@ namespace WeChatAuto.Components
 			return false;
 		}
 
-		private static (bool flowControl, bool value) __CheckKeyword__(FriendRequestAutoAcceptOptions options, AutomationElement root)
+		private static (bool flowControl, bool value, string keyword) __CheckKeyword__(FriendRequestAutoAcceptOptions options, AutomationElement root)
 		{
-			if (!string.IsNullOrWhiteSpace(options.KeyWord))  //如果设定关键词，检查是否包含关键词
+			var kw = options.KeyWord.IsT0 ? new List<string> { options.KeyWord.AsT0 } : options.KeyWord.IsT1 ? options.KeyWord.AsT1.ToList() : options.KeyWord.AsT2;
+			kw = kw.Where(item => !string.IsNullOrEmpty(item)).Select(item => item.Trim()).ToList();
+			var currentKeyword = "";
+			if (kw.Count() > 0)  //如果设定关键词，检查是否包含关键词
 			{
 				var textGroup = root.FindFirstDescendant(cf => cf.ByControlType(ControlType.Group).And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByClassName("QWidget"))));
 				if (textGroup == null)
-					return (flowControl: false, value: false);
+					return (flowControl: false, value: false, "");
 				var texts = textGroup.FindAllChildren(cf => cf.ByControlType(ControlType.Text));
 				if (texts.Length == 0)
-					return (flowControl: false, value: false);
+					return (flowControl: false, value: false, "");
 				var checkTag = false;
 				foreach (var text in texts)
 				{
-					if (text.Name.ToUpper().Contains(options.KeyWord.ToUpper()))
+					foreach (var item in kw)
 					{
-						checkTag = true;
+						if (text.Name.ToUpper().Contains(item.ToUpper()))
+						{
+							checkTag = true;
+							currentKeyword = item;
+							break;
+						}
+					}
+					if (checkTag)
+					{
 						break;
 					}
 				}
 				if (!checkTag)
-					return (flowControl: false, value: false);
+					return (flowControl: false, value: false, "");
 			}
 
-			return (flowControl: true, value: default);
+			return (flowControl: true, value: default, currentKeyword);
 		}
 
 		private bool __DeletePassedItem(UIA3Automation automation, AutomationElement el, CancellationToken token, FriendRequestAutoAcceptOptions options)
@@ -877,11 +890,11 @@ namespace WeChatAuto.Components
 			{
 				//删除
 				var point = el.BoundingRectangle.Center();
-				Mouse.Position = new System.Drawing.Point((int)point.X+Random.Shared.Next(-10,10), (int)point.Y);
+				Mouse.Position = new System.Drawing.Point((int)point.X + Random.Shared.Next(-10, 10), (int)point.Y);
 				RandomWait.Wait(300, 800);
 				Mouse.Click();
 				RandomWait.Wait(800, 2000);
-				var point2 = new System.Drawing.Point((int)point.X+Random.Shared.Next(-10,10), (int)point.Y);
+				var point2 = new System.Drawing.Point((int)point.X + Random.Shared.Next(-10, 10), (int)point.Y);
 				Mouse.MoveTo(point2);
 				RandomWait.Wait(300, 800);
 				Mouse.RightClick();
@@ -894,7 +907,7 @@ namespace WeChatAuto.Components
 				{
 					var menu = win.Result.FindFirstChild(cf => cf.ByName("删除").And(cf.ByAutomationId("XMenuItem")));
 					point = menu.BoundingRectangle.Center();
-					point2 = new System.Drawing.Point((int)point.X+Random.Shared.Next(-10,10), (int)point.Y);
+					point2 = new System.Drawing.Point((int)point.X + Random.Shared.Next(-10, 10), (int)point.Y);
 					Mouse.MoveTo(point2);
 					RandomWait.Wait(300, 800);
 					menu?.Click();
@@ -907,7 +920,7 @@ namespace WeChatAuto.Components
 			return false;
 		}
 
-		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options, List<string> resultList)
+		private void __ProcessOk(AutomationElement passedFriendRoot, FlaUI.Core.AutomationElements.Window win, CancellationToken token, FriendRequestAutoAcceptOptions options, List<NewFriendBackItem> resultList, string keyword)
 		{
 			//点击确定按钮
 			var button = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("确定")).And(cf.ByClassName("mmui::XOutlineButton")));
@@ -1051,8 +1064,12 @@ namespace WeChatAuto.Components
 				friendInfo.AvatarPath = path;
 				label.CaptureToFile(path);
 				RandomWait.Wait(300, 600);
+				resultList.Add(new NewFriendBackItem()
+				{
+					Who = friendInfo.MemoName,
+					FromKeyword = keyword,
+				});
 				//保存进缓存文件
-				resultList.Add(friendInfo.MemoName);
 				__SaveToCacheFile(friendInfo);
 			}
 		}
@@ -1073,8 +1090,8 @@ namespace WeChatAuto.Components
 				var window = winResult.Result;
 				//标签名可能已经存在，或者不存在，需要新建.
 				var list = window.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
-				var items = list.FindAllChildren(cf=>cf.ByControlType(ControlType.CheckBox));
-				if (items.Select(x=>x.Name).Where(x => x.Equals(options.Label)).Count() > 0)
+				var items = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+				if (items.Select(x => x.Name).Where(x => x.Equals(options.Label)).Count() > 0)
 				{
 					//已经有标签
 					var selectItem = items.FirstOrDefault(x => x.Name.Equals(options.Label));

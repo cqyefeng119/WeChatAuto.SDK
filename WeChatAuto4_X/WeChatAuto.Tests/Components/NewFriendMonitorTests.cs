@@ -32,7 +32,7 @@ public class NewFriendMonitorTests
             {
                 foreach(var item in list)
                 {
-                    await _client.SendMessage(item,$"你好 {item} :我已经通过你的申请，请问有什么可以帮到您？");
+                    await _client.SendMessage(item.Who,$"你好 {item} :我已经通过你的申请，请问有什么可以帮到您？");
                     await RandomWait.WaitAsync(1000,2500);
                 }
             }

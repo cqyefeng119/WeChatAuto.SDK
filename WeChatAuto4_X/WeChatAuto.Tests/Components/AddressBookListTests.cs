@@ -63,9 +63,9 @@ public class AddressBookListTests
         {
             PassedCallBack = async (whos, client, serviceProvider) =>
             {
-                foreach (var who in whos)
+                foreach (var item in whos)
                 {
-                    await client.SendMessage(who, $"你好，我已经知道你是{who}");
+                    await client.SendMessage(item.Who, $"你好，我已经知道你是{item.Who}");
                     await RandomWait.WaitAsync(500, 1200);
                 }
                 _output.WriteLine(string.Join(",", whos));
@@ -85,9 +85,9 @@ public class AddressBookListTests
         {
             PassedCallBack = async (whos, client, serviceProvider) =>
             {
-                foreach (var who in whos)
+                foreach (var item in whos)
                 {
-                    await client.SendMessage(who, $"你好，我已经知道你是{who}");
+                    await client.SendMessage(item.Who, $"你好，我已经知道你是{item.Who}");
                     await RandomWait.WaitAsync(500, 1200);
                 }
                 _output.WriteLine(string.Join(",", whos));
@@ -109,9 +109,9 @@ public class AddressBookListTests
         {
             PassedCallBack = async (whos, client, serviceProvider) =>
             {
-                foreach (var who in whos)
+                foreach (var item in whos)
                 {
-                    await client.SendMessage(who, $"你好，我已经知道你是{who}");
+                    await client.SendMessage(item.Who, $"你好，我已经知道你是{item.Who}");
                     await RandomWait.WaitAsync(500, 1200);
                 }
                 _output.WriteLine(string.Join(",", whos));

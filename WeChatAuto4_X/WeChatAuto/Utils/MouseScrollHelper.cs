@@ -1,5 +1,6 @@
 
 using System;
+using Emgu.CV.XImgproc;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Input;
 using WeAutoCommon.Configs;
@@ -26,11 +27,13 @@ namespace WeChatAuto.Utils
                 RandomWait.Wait(5, 50);
                 if (i == 0)
                 {
-                    Mouse.Scroll(-1 * random.Next(1, 3));
+                    // Mouse.Scroll(-1 * random.Next(1, 3));
+                    SupperMouseKey.Scroll(-1 * random.Next(1, 3));
                 }
                 if (i == maxStep - 1)
                 {
-                    Mouse.Scroll(-1 * random.Next(3, 5));
+                    //Mouse.Scroll(-1 * random.Next(3, 5));
+                    SupperMouseKey.Scroll(-1 * random.Next(3, 5));
                 }
                 RandomWait.Wait(30, 50);
             }
@@ -49,16 +52,18 @@ namespace WeChatAuto.Utils
                 RandomWait.Wait(30, 150);
                 if (i == 0)
                 {
-                    Mouse.Scroll(random.Next(1, 3));
+                    // Mouse.Scroll(random.Next(1, 3));
+                    SupperMouseKey.Scroll(random.Next(1, 3));
                 }
                 if (i == maxStep - 1)
                 {
-                    Mouse.Scroll(random.Next(3, 5));
+                    // Mouse.Scroll(random.Next(3, 5));
+                    SupperMouseKey.Scroll(random.Next(3,5));
                 }
                 RandomWait.Wait(30, 150);
             }
         }
 
-        
+
     }
 }
