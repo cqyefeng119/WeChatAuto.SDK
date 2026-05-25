@@ -15,7 +15,7 @@ using WeAutoCommon.Utils;
 - 发送图片信息;
 - 发送emoji信息;
 - 发送视频信息;
-- 自动将新增好友拉入“DroidMirror官方技术支持”;
+- 自动将新增好友拉入“人工智能自动化技术讨论群”;
 - 在群中发送消息，并且@好友;
 - 持续监听;
 
@@ -35,8 +35,7 @@ var serviceProvider = WeAutomation.Initialize(options =>
 
 using var clientFactory = serviceProvider.GetRequiredService<WeChatClientFactory>();
 // 请修改为你的微信昵称
-// var client = clientFactory.GetWeChatClient("AI.Net");
-var client = clientFactory.GetWeChatClient("Alex");
+var client = clientFactory.GetWeChatClient("AI.Net");
 await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendRequestAutoAcceptOptions
 {
     KeyWord = new string[] {"test","wechatauto"},
@@ -56,24 +55,24 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
             {
                 //处理好友通过打招呼"test"而来
                 await client.SendMessage(item.Who, "亲，终于盼到你了，我是基于微信4.1.9.55的wechatauto.sdk测试导航机器人，很高兴认识你！现在让我带你体验一下wechatauto.sdk的部分功能..大概1分钟时间..咱们开始咯....");
-                await RandomWait.WaitAsync(1000, 2500);
+                await RandomWait.WaitAsync(2000, 2500);
                 await client.SendMessage(item.Who, "~~嘘~~,别作声，我准备给你发图片消息 - 也是作者 Alex 的头像:");
                 await RandomWait.WaitAsync(600, 2000);
                 await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Images/1.png" });
-                await RandomWait.WaitAsync(1000, 3000);
+                await RandomWait.WaitAsync(1500, 3000);
                 await client.SendMessage(item.Who, "我准备发送表情消息:");
                 await client.SendEmoji(item.Who, 1);
-                await RandomWait.WaitAsync(1000, 3000);
+                await RandomWait.WaitAsync(2000, 3000);
                 await client.SendMessage(item.Who, "我准备发送视频...文件比较大，请稍候:");
                 await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Videos/1.mp4" });
                 await RandomWait.WaitAsync(10000, 15000);
-                await client.SendMessage(item.Who, "Now...我准备拉你到一个DroidMirror官方技术支持（非VIP群），请稍候...");
-                await RandomWait.WaitAsync(1000, 3000);
-                await client.AddOwnerChatGroupMember("DroidMirror官方技术支持", item.Who);
+                await client.SendMessage(item.Who, "Now...我准备拉你到一个人工智能自动化技术讨论群（非VIP群），请稍候...");
                 await RandomWait.WaitAsync(2000, 4000);
-                await client.SendMessage("DroidMirror官方技术支持", $"欢迎🎉🎉 {item} 🎉🎉来到本群- “ {item} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
+                await client.AddOwnerChatGroupMember("人工智能自动化技术讨论群", item.Who);
+                await RandomWait.WaitAsync(2000, 4000);
+                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item} 🎉🎉来到本群- “ {item} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
                 await RandomWait.WaitAsync(1000, 3000);
-                await client.SendMessage("DroidMirror官方技术支持",
+                await client.SendMessage("人工智能自动化技术讨论群",
     """
 
 群规（请务必阅读）
@@ -97,9 +96,9 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
 🎉 理性讨论，观点自由；聚焦技术，拒绝灌水。祝你在本群玩得开心😊
 """, item.Who);
                 await RandomWait.WaitAsync(1000, 3000);
-                await client.SendMessage("DroidMirror官方技术支持", "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
+                await client.SendMessage("人工智能自动化技术讨论群", "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
                 await RandomWait.WaitAsync(1000, 3000);
-                await client.SendFile("DroidMirror官方技术支持", new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
+                await client.SendFile("人工智能自动化技术讨论群", new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
                 await RandomWait.WaitAsync(1000, 5000);
                 await client.SendMessage(item.Who, "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
                 await RandomWait.WaitAsync(1000, 3000);
