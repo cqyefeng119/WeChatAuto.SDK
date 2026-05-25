@@ -38,34 +38,42 @@ using var clientFactory = serviceProvider.GetRequiredService<WeChatClientFactory
 var client = clientFactory.GetWeChatClient("AI.Net");
 await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendRequestAutoAcceptOptions
 {
-    KeyWord = "test",
+    KeyWord = new string[] {"test","wechatauto"},
     Suffix = "test",
     Label = "wechatauto",
     PassedDelete = true,
     PassedCallBack = async (whos, client, serviceProvider) =>
     {
-        foreach (var who in whos)
+        foreach (var item in whos)
         {
-            await client.SendMessage(who, "亲，终于盼到你了，我是基于微信4.1.9.55的wechatauto.sdk测试导航机器人，很高兴认识你！现在让我带你体验一下wechatauto.sdk的部分功能..大概1分钟时间..咱们开始咯....");
-            await RandomWait.WaitAsync(1000, 2500);
-            await client.SendMessage(who, "~~嘘~~,别作声，我准备给你发图片消息 - 也是作者 Alex 的头像:");
-            await RandomWait.WaitAsync(600, 2000);
-            await client.SendFile(who, new string[] { $"{AppContext.BaseDirectory}/Images/1.png" });
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.SendMessage(who, "我准备发送表情消息:");
-            await client.SendEmoji(who, 1);
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.SendMessage(who, "我准备发送视频...文件比较大，请稍候:");
-            await client.SendFile(who, new string[] { $"{AppContext.BaseDirectory}/Videos/1.mp4" });
-            await RandomWait.WaitAsync(8000, 12000);
-            await client.SendMessage(who, "Now...我准备拉你到一个人工智能自动化技术讨论群（非VIP群），请稍候...");
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.AddOwnerChatGroupMember("人工智能自动化技术讨论群", who);
-            await RandomWait.WaitAsync(2000, 4000);
-            await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {who} 🎉🎉来到本群- “ {who} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.SendMessage("人工智能自动化技术讨论群",
-"""
+            if (item.FromKeyword.Equals("wechatauto"))
+            {
+                //处理好友通过打招呼"wechatauto"而来
+                await client.SendMessage(item.Who, "Hi,你要咨询WeChatAuto.SDK的技术问题还是VIP相关问题哩？");
+            }
+            if (item.FromKeyword.Equals("test"))
+            {
+                //处理好友通过打招呼"test"而来
+                await client.SendMessage(item.Who, "亲，终于盼到你了，我是基于微信4.1.9.55的wechatauto.sdk测试导航机器人，很高兴认识你！现在让我带你体验一下wechatauto.sdk的部分功能..大概1分钟时间..咱们开始咯....");
+                await RandomWait.WaitAsync(2000, 2500);
+                await client.SendMessage(item.Who, "~~嘘~~,别作声，我准备给你发图片消息 - 也是作者 Alex 的头像:");
+                await RandomWait.WaitAsync(600, 2000);
+                await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Images/1.png" });
+                await RandomWait.WaitAsync(1500, 3000);
+                await client.SendMessage(item.Who, "我准备发送表情消息:");
+                await client.SendEmoji(item.Who, 1);
+                await RandomWait.WaitAsync(2000, 3000);
+                await client.SendMessage(item.Who, "我准备发送视频...文件比较大，请稍候:");
+                await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Videos/1.mp4" });
+                await RandomWait.WaitAsync(10000, 15000);
+                await client.SendMessage(item.Who, "Now...我准备拉你到一个人工智能自动化技术讨论群（非VIP群），请稍候...");
+                await RandomWait.WaitAsync(2000, 4000);
+                await client.AddOwnerChatGroupMember("人工智能自动化技术讨论群", item.Who);
+                await RandomWait.WaitAsync(2000, 4000);
+                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item} 🎉🎉来到本群- “ {item} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
+                await RandomWait.WaitAsync(1000, 3000);
+                await client.SendMessage("人工智能自动化技术讨论群",
+    """
 
 群规（请务必阅读）
 
@@ -85,20 +93,21 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
  架构设计、实现思路、踩坑总结
  对 AI + 自动化 的独立思考与专业见解
 
-🎉 理性讨论，观点自由；聚焦技术，拒绝灌水。祝您在本群玩得开心😊
-""", who);
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.SendMessage("人工智能自动化技术讨论群", "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给您看看优美的API设计，呵呵，另外您接入LLM大模型后将更智能哦🎉🎉🚀🚀");
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.SendFile("人工智能自动化技术讨论群", new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
-            await RandomWait.WaitAsync(1000, 5000);
-            await client.SendMessage(who, "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给您看看优美的API设计，呵呵，另外您接入LLM大模型后将更智能哦🎉🎉🚀🚀");
-            await RandomWait.WaitAsync(1000, 3000);
-            await client.SendFile(who, new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
-            await RandomWait.WaitAsync(2000, 5000);
-            await client.SendMessage(who, "感谢您的体验，如果您有任何问题，可以随时联系作者，或者加入VIP群进行更深入的学习交流，祝您生活愉快,我做为测试导航机器人将暂时陪您到这，下次回复的会是人类😊。。。不过，如果是技术问题请在群里聊，因为这个微信号是挂我的，挂我的，挂我的...😊");
-            await RandomWait.WaitAsync(1000, 2000);
-            await client.SendMessage(who, "~~再见~~");
+🎉 理性讨论，观点自由；聚焦技术，拒绝灌水。祝你在本群玩得开心😊
+""", item.Who);
+                await RandomWait.WaitAsync(1000, 3000);
+                await client.SendMessage("人工智能自动化技术讨论群", "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
+                await RandomWait.WaitAsync(1000, 3000);
+                await client.SendFile("人工智能自动化技术讨论群", new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
+                await RandomWait.WaitAsync(1000, 5000);
+                await client.SendMessage(item.Who, "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
+                await RandomWait.WaitAsync(1000, 3000);
+                await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
+                await RandomWait.WaitAsync(2000, 5000);
+                await client.SendMessage(item.Who, "感谢你的体验，如果你有任何问题，可以随时联系作者，或者加入VIP群进行更深入的学习交流，祝你生活愉快,我做为测试导航机器人将暂时陪你到这，下次回复的会是人类😊。。。不过，如果是技术问题请在群里聊，因为这个微信号是挂我的，挂我的，挂我的...😊");
+                await RandomWait.WaitAsync(1000, 2000);
+                await client.SendMessage(item.Who, "~~再见~~");
+            }
         }
     },
 });

@@ -70,7 +70,7 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
                 await RandomWait.WaitAsync(2000, 4000);
                 await client.AddOwnerChatGroupMember("人工智能自动化技术讨论群", item.Who);
                 await RandomWait.WaitAsync(2000, 4000);
-                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item} 🎉🎉来到本群- “ {item} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
+                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item.Who} 🎉🎉来到本群- “ {item.Who} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
                 await RandomWait.WaitAsync(1000, 3000);
                 await client.SendMessage("人工智能自动化技术讨论群",
     """

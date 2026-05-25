@@ -680,7 +680,7 @@ namespace WeChatAuto.Components
 			var list = await WeChatInvoker.Call(PassedAllNewFriendCore, options, token);
 			if (list.Count > 0)
 			{
-				await options?.PassedCallBack(list, this._Client,this._serviceProvider);
+				await options?.PassedCallBack(list, this._Client, this._serviceProvider);
 			}
 			return list;
 		}

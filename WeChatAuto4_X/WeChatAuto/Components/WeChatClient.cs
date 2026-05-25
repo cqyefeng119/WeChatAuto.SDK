@@ -513,6 +513,31 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 好友/群聊管理
+        #region 缓存中好友信息管理
+        /// <summary>
+        /// 显示缓存中存储的好友信息.
+        /// </summary>
+        /// <returns>好友信息列表，请参考<see cref="FriendInfo"/></returns>
+        public List<FriendInfo> GetFriendsFromCache() => OwnerGroup.GetFriendsFromCache();
+        /// <summary>
+        /// 显示缓存中存储的好友信息,异步方法
+        /// </summary>
+        /// <returns>好友信息列表，请参考<see cref="FriendInfo"/></returns>
+        public async Task<List<FriendInfo>> GetFriendsFromCacheAsync() => await OwnerGroup.GetFriendsFromCacheAsync();
+        /// <summary>
+        /// 从缓存中得到一个好友的信息
+        /// </summary>
+        /// <param name="who">好友名称</param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public FriendInfo GetFriendFromCache(string who) => OwnerGroup.GetFriendFromCache(who);
+
+        /// <summary>
+        /// 从缓存中得到一个好友的信息
+        /// </summary>
+        /// <param name="who">好友名称</param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public async Task<FriendInfo> GetFriendFromCacheAsync(string who) => await OwnerGroup.GetFriendFromCacheAsync(who);
+        #endregion
         /// <summary>
         /// 是否是自有群
         /// </summary>

@@ -28,6 +28,8 @@ using FlaUI.UIA3;
 using WeAutoCommon.Models;
 using Emgu.CV;
 using RapidOCRLib.Models;
+using System.IO;
+using MessagePack;
 
 namespace WeChatAuto.Components
 {
@@ -41,6 +43,57 @@ namespace WeChatAuto.Components
             base(client, uiThreadInvoker, serviceProvider)
         {
             _Logger = serviceProvider.GetRequiredService<AutoLogger<OwnerGroup>>();
+        }
+        /// <summary>
+        /// 显示缓存中存储的好友信息.
+        /// </summary>
+        /// <returns></returns>
+        public List<FriendInfo> GetFriendsFromCache()
+        {
+            List<FriendInfo> list = new List<FriendInfo>();
+            var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+            if (File.Exists(path))
+            {
+                byte[] bytes = File.ReadAllBytes(path);
+                return MessagePackSerializer.Deserialize<List<FriendInfo>>(bytes);
+            }
+            return list;
+        }
+        /// <summary>
+        /// 显示缓存中存储的好友信息.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<FriendInfo>> GetFriendsFromCacheAsync()
+        {
+            List<FriendInfo> list = new List<FriendInfo>();
+            var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+            if (File.Exists(path))
+            {
+                byte[] bytes = File.ReadAllBytes(path);
+                using MemoryStream ms = new MemoryStream(bytes);
+                return await MessagePackSerializer.DeserializeAsync<List<FriendInfo>>(ms);
+            }
+            return list;
+        }
+        /// <summary>
+        /// 从缓存中得到一个好友的信息
+        /// </summary>
+        /// <param name="who"></param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public FriendInfo GetFriendFromCache(string who)
+        {
+            List<FriendInfo> list = GetFriendsFromCache();
+            return list.Find(x => x.Name.Equals(who));
+        }
+        /// <summary>
+        /// 从缓存中得到一个好友的信息
+        /// </summary>
+        /// <param name="who"></param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public async Task<FriendInfo> GetFriendFromCacheAsync(string who)
+        {
+            List<FriendInfo> list = await GetFriendsFromCacheAsync();
+            return list.Find(x => x.Name.Equals(who));
         }
         /// <summary>
         /// 改变自有群群备注
@@ -178,7 +231,7 @@ namespace WeChatAuto.Components
                         index++;
                     }
                     // MouseScrollHelper.DownStep(scrollPoint, 2);
-                    SupperMouseKey.MoveTo(scrollPoint.Confusion(5,5));
+                    SupperMouseKey.MoveTo(scrollPoint.Confusion(5, 5));
                     RandomWait.Wait(300, 600);
                     SupperMouseKey.Scroll(-3);
                     RandomWait.Wait(300, 600);
@@ -224,7 +277,7 @@ namespace WeChatAuto.Components
                         if (!point.IsEmpty)
                         {
                             // Mouse.Click(point.Confusion(5, 5));
-                            SupperMouseKey.LeftClick(point.Confusion(5,5));
+                            SupperMouseKey.LeftClick(point.Confusion(5, 5));
                         }
 
                         #region UI Tree方案
