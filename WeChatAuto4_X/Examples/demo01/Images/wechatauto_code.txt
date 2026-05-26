@@ -70,7 +70,7 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
                 await RandomWait.WaitAsync(2000, 4000);
                 await client.AddOwnerChatGroupMember("人工智能自动化技术讨论群", item.Who);
                 await RandomWait.WaitAsync(2000, 4000);
-                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item} 🎉🎉来到本群- “ {item} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
+                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item.Who} 🎉🎉来到本群- “ {item.Who} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
                 await RandomWait.WaitAsync(1000, 3000);
                 await client.SendMessage("人工智能自动化技术讨论群",
     """
@@ -95,17 +95,13 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
 
 🎉 理性讨论，观点自由；聚焦技术，拒绝灌水。祝你在本群玩得开心😊
 """, item.Who);
-                await RandomWait.WaitAsync(1000, 3000);
-                await client.SendMessage("人工智能自动化技术讨论群", "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
-                await RandomWait.WaitAsync(1000, 3000);
-                await client.SendFile("人工智能自动化技术讨论群", new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
-                await RandomWait.WaitAsync(1000, 5000);
+                await RandomWait.WaitAsync(3000, 5000);
                 await client.SendMessage(item.Who, "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
                 await RandomWait.WaitAsync(1000, 3000);
                 await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
-                await RandomWait.WaitAsync(2000, 5000);
+                await RandomWait.WaitAsync(2000, 8000);
                 await client.SendMessage(item.Who, "感谢你的体验，如果你有任何问题，可以随时联系作者，或者加入VIP群进行更深入的学习交流，祝你生活愉快,我做为测试导航机器人将暂时陪你到这，下次回复的会是人类😊。。。不过，如果是技术问题请在群里聊，因为这个微信号是挂我的，挂我的，挂我的...😊");
-                await RandomWait.WaitAsync(1000, 2000);
+                await RandomWait.WaitAsync(1000, 3000);
                 await client.SendMessage(item.Who, "~~再见~~");
             }
         }

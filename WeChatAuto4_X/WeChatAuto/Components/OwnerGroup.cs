@@ -82,6 +82,8 @@ namespace WeChatAuto.Components
         /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
         public FriendInfo GetFriendFromCache(string who)
         {
+            if (string.IsNullOrWhiteSpace(who))
+                return null;
             List<FriendInfo> list = GetFriendsFromCache();
             return list.Find(x => x.Name.Equals(who));
         }
@@ -92,8 +94,106 @@ namespace WeChatAuto.Components
         /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
         public async Task<FriendInfo> GetFriendFromCacheAsync(string who)
         {
+            if (string.IsNullOrWhiteSpace(who))
+                return null;
             List<FriendInfo> list = await GetFriendsFromCacheAsync();
             return list.Find(x => x.Name.Equals(who));
+        }
+        /// <summary>
+        /// 从缓存中移除一个好友
+        /// </summary>
+        /// <param name="who"></param>
+        public void RemoveFriendFromCache(string who)
+        {
+            if (string.IsNullOrWhiteSpace(who))
+                return;
+            List<FriendInfo> friendInfos = GetFriendsFromCache();
+            friendInfos = friendInfos.Where(u => !u.Name.Equals(who)).ToList();
+            byte[] bytes = MessagePack.MessagePackSerializer.Serialize<List<FriendInfo>>(friendInfos);
+            var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+            File.WriteAllBytes(path, bytes);
+        }
+        /// <summary>
+        /// 从缓存中移除一个好友
+        /// </summary>
+        /// <param name="who"></param>
+        public async Task RemoveFriendFromCacheAsync(string who)
+        {
+            if (string.IsNullOrWhiteSpace(who))
+                return;
+            List<FriendInfo> friendInfos = await GetFriendsFromCacheAsync();
+            friendInfos = friendInfos.Where(u => !u.Name.Equals(who)).ToList();
+            using MemoryStream ms = new MemoryStream();
+            await MessagePack.MessagePackSerializer.SerializeAsync<List<FriendInfo>>(ms, friendInfos);
+            var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+            await File.WriteAllBytesAsync(path, ms.ToArray());
+        }
+        /// <summary>
+        /// 手动增加或者修改一个好友对象
+        /// </summary>
+        /// <param name="friend">好友对象，请参考<see cref="FriendInfo"/></param>
+        public void AddOrUpdateFriendFromCache(FriendInfo friend)
+        {
+            if (friend == null || string.IsNullOrWhiteSpace(friend.MemoName) || string.IsNullOrWhiteSpace(friend.WxId))
+                return;
+            List<FriendInfo> friendInfos = GetFriendsFromCache();
+            if (friendInfos.Where(u => u.Name.Equals(friend.Name)).Count() > 0)
+            {
+                //修改
+                var old = friendInfos.Find(u => u.Name.Equals(friend.Name));
+                old.NickName = friend.NickName;
+                old.MemoName = friend.MemoName;
+                old.Area = friend.Area;
+                old.Lable = friend.Lable;
+                old.SameGroupNumber = friend.SameGroupNumber;
+                old.Signature = friend.Signature;
+                old.Source = friend.Source;
+                old.WxId = string.IsNullOrWhiteSpace(friend.WxId) ? old.WxId : friend.WxId;
+                old.AvatarPath = friend.AvatarPath;
+                old.ChatType = friend.ChatType;
+                old.AddDateTime = friend.AddDateTime;
+            }
+            else
+            {
+                friendInfos.Add(friend);
+            }
+            byte[] bytes = MessagePack.MessagePackSerializer.Serialize<List<FriendInfo>>(friendInfos);
+            var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+            MessagePackSerializer.Deserialize<List<FriendInfo>>(bytes);
+        }
+        /// <summary>
+        /// 手动增加或者修改一个好友对象，使用异步方法
+        /// </summary>
+        /// <param name="friend">好友对象，请参考<see cref="FriendInfo"/></param>
+        public async Task AddOrUpdateFriendFromCacheAsync(FriendInfo friend)
+        {
+            if (friend == null || string.IsNullOrWhiteSpace(friend.MemoName) || string.IsNullOrWhiteSpace(friend.WxId))
+                return;
+            List<FriendInfo> friendInfos = await GetFriendsFromCacheAsync();
+            if (friendInfos.Where(u => u.Name.Equals(friend.Name)).Count() > 0)
+            {
+                //修改
+                var old = friendInfos.Find(u => u.Name.Equals(friend.Name));
+                old.NickName = friend.NickName;
+                old.MemoName = friend.MemoName;
+                old.Area = friend.Area;
+                old.Lable = friend.Lable;
+                old.SameGroupNumber = friend.SameGroupNumber;
+                old.Signature = friend.Signature;
+                old.Source = friend.Source;
+                old.WxId = string.IsNullOrWhiteSpace(friend.WxId) ? old.WxId : friend.WxId;
+                old.AvatarPath = friend.AvatarPath;
+                old.ChatType = friend.ChatType;
+                old.AddDateTime = friend.AddDateTime;
+            }
+            else
+            {
+                friendInfos.Add(friend);
+            }
+            var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+            using FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true);
+            await MessagePack.MessagePackSerializer.SerializeAsync(fs, friendInfos);
+            await MessagePack.MessagePackSerializer.DeserializeAsync<List<FriendInfo>>(fs);
         }
         /// <summary>
         /// 改变自有群群备注
