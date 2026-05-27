@@ -26,6 +26,7 @@ using WeAutoCommon.Extentions;
 using System.Windows;
 using FlaUI.UIA3.Patterns;
 using FlaUI.UIA3;
+using WeChatAuto.Models;
 
 namespace WeChatAuto.Components
 {
@@ -304,12 +305,28 @@ namespace WeChatAuto.Components
         /// <param name="who">被发送消息的好友名称/群聊名称</param>
         /// <param name="message">文本消息内容</param>
         /// <param name="atUser">@的好友，可以多个，在群聊中使用</param>
+        /// <param name="refer">引用的对话内容,请参考<see cref="ChatRefer"/></param>
         /// <returns></returns>
-        public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default)
+        public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default, ChatRefer refer = null)
         {
-            await WeChatInvoker.Call(SendMessageExt, who, message, atUser);
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+            await WeChatInvoker.Call(SendMessageExt, who, message, atUser, refer);
         }
-        private void SendMessageExt(UIA3Automation automation, string who, string message, OneOf<string, string[], List<string>> atUser = default)
+        /// <summary>
+        /// 发送消息,给当前窗口发送消息
+        /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="atUser">被@的好友</param>
+        /// <param name="refer">引用的对话内容,请参考<see cref="ChatRefer"/></param>
+        public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser = default, ChatRefer refer = null)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+            await WeChatInvoker.Call(SendMessageCore, message, atUser, refer);
+        }
+
+        private void SendMessageExt(UIA3Automation automation, string who, string message, OneOf<string, string[], List<string>> atUser = default, ChatRefer refer = null)
         {
             if (string.IsNullOrWhiteSpace(who))
             {
@@ -327,10 +344,12 @@ namespace WeChatAuto.Components
                 _Client.Conversations.SearchWhoCore(automation, who);
             }
             RandomWait.Wait(300, 1200);
-            SendMessageCore(automation, message, atUser);
+            SendMessageCore(automation, message, atUser, refer);
         }
         public async Task SendFile(string who, string[] files)
         {
+            if (string.IsNullOrWhiteSpace(who) || files.Length == 0)
+                return;
             await WeChatInvoker.Call(SendFileExt, who, files);
         }
         private void SendFileExt(UIA3Automation automation, string who, string[] files)
@@ -359,25 +378,8 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         internal bool unSelectChatItem() => !this._Client.Conversations.CheckSelectState();
 
-        /// <summary>
-        /// 发送消息,给当前窗口发送消息
-        /// </summary>
-        /// <param name="message">消息内容</param>
-        /// <param name="atUser">被@的好友</param>
-        public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser = default)
-        {
-            await WeChatInvoker.Call(SendMessageCore, message, atUser,(Action)null);
-        }
 
-        public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser, DateOnly date, string chatGuid)
-        {
-            await WeChatInvoker.Call(SendMessageCore,message,atUser,()=>
-            {
-                
-            });
-        }
-
-        internal void SendMessageCore(UIA3Automation automation, string message, OneOf<string, string[], List<string>> atUser, Action refAction = null)
+        internal void SendMessageCore(UIA3Automation automation, string message, OneOf<string, string[], List<string>> atUser, ChatRefer refAction = null)
         {
             if (string.IsNullOrWhiteSpace(message))
                 return;
@@ -389,7 +391,6 @@ namespace WeChatAuto.Components
             if (ContentArea == null)
                 return;
             ContentArea.DrawHighlightExt();
-
 
             if (atUser.Value == default)
             {
@@ -513,6 +514,8 @@ namespace WeChatAuto.Components
         /// <param name="files">文件路径列表</param>
         public async Task SendFile(string[] files)
         {
+            if (files.Length == 0)
+                return;
             await WeChatInvoker.Call(SendFileCore, files);
         }
 
@@ -608,7 +611,7 @@ namespace WeChatAuto.Components
             //测试.
             //Mouse.MoveTo(point);
             Mouse.Position = point;
-            RandomWait.Wait(300,900);
+            RandomWait.Wait(300, 900);
             Mouse.LeftClick();
             RandomWait.Wait(100, 800);
         }

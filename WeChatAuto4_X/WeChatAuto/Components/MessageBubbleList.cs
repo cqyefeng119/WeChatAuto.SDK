@@ -93,11 +93,11 @@ namespace WeChatAuto.Components
             return await GetChatHistory((new List<DateTime>() { date }).Select(x => x.Date).ToList());
         }
         /// <summary>
-        /// 获取一段时间的聊天历史记录
+        /// 获取一段时间的聊天历史记录，包括日期-时间，其他的获取消息历史的api仅支持日期
         /// </summary>
         /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
-        /// <param name="startDate">开始日期</param>
-        /// <param name="endDate">结束日期</param>
+        /// <param name="startDate">开始日期,包括日期与时间</param>
+        /// <param name="endDate">结束日期，包括日期与时间</param>
         /// <returns></returns>
         public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime startDate, DateTime endDate)
         {
@@ -120,7 +120,7 @@ namespace WeChatAuto.Components
                 await _Client.Conversations.Search(who);
             }
             RandomWait.Wait(300, 1200);
-            return await GetChatHistory(result.Select(x => x.Date).ToList());
+            return await GetChatHistory(result);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace WeChatAuto.Components
                 subWin.Focus();
                 int targetX = _Client.MainWindow.BoundingRectangle.X + (int)((_Client.MainWindow.BoundingRectangle.Width - subWin.BoundingRectangle.Width) / 2);
                 int targetY = _Client.MainWindow.BoundingRectangle.Y + (int)((_Client.MainWindow.BoundingRectangle.Height - subWin.BoundingRectangle.Height) / 2);
-                subWin.Move(targetX, targetY);
+                subWin.Move(targetX, targetY);  //移动子窗口至主窗口中间
                 RandomWait.Wait(100, 600);
                 subWin.DrawHighlightExt();
                 try
@@ -232,7 +232,7 @@ namespace WeChatAuto.Components
                     Mouse.Position = point;
                     RandomWait.Wait(100, 400);
 
-                    Mouse.RightClick();
+                    Mouse.RightClick();  //得到完整的UI Tree列表
                     RandomWait.Wait(100, 300);
                     var menuWinRetry = Retry.WhileNull(() => subWin.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin").And(cf.ByClassName("mmui::XMenu")))).AsWindow(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
                     if (menuWinRetry.Success)
@@ -269,7 +269,7 @@ namespace WeChatAuto.Components
                 return new List<ChatSimpleMessage>();
             }
         }
-
+        //往下翻页，得到所有日期的字段.
         private List<ChatSimpleMessage> __FetchChatHistoryListCore(ListBox root, List<DateTime> dates)
         {
             var list = new List<ChatSimpleMessage>();
@@ -298,7 +298,7 @@ namespace WeChatAuto.Components
                     if (items.Count() == 1)
                     {
                         var longIndex = 0;
-                        while(longIndex < 20)
+                        while (longIndex < 20)
                         {
                             MouseScrollHelper.DownStep(scollPoint, 2);
                             longIndex++;
@@ -306,7 +306,8 @@ namespace WeChatAuto.Components
                             if (items.Count() == 1)
                             {
                                 continue;
-                            }else
+                            }
+                            else
                             {
                                 break;
                             }
@@ -328,7 +329,6 @@ namespace WeChatAuto.Components
                     RandomWait.Wait(30, 80);
                     item.DrawHighlightExt();
 
-
                     exit = __AddToList(list, item.Name, dates);
                     if (exit)
                         break;
@@ -343,6 +343,51 @@ namespace WeChatAuto.Components
         }
 
         private bool __AddToList(List<ChatSimpleMessage> list, string input, List<DateTime> dates)
+        {
+            if (dates.Count == 2)
+            {
+                if (dates[0].TimeOfDay > TimeSpan.MinValue || dates[1].TimeOfDay > TimeSpan.MinValue)
+                {
+                    return __ProcessWithTime(list, input, dates);
+                }
+            }
+            return __ProcessNoneTime(list, input, dates);
+        }
+
+        private bool __ProcessWithTime(List<ChatSimpleMessage> list, string input, List<DateTime> dates)
+        {
+            var minDate = dates.Min();  //最小日期-时间
+            var maxDate = dates.Max();  //最大日期-时间
+            var pattern = @"^(.+?)\s(.*?)\s(\d{4}年\d{1,2}月\d{1,2}日\s\d{1,2}:\d{2})$";
+            var match = Regex.Match(input, pattern, RegexOptions.Singleline);
+            if (match.Success)
+            {
+                var fullDateStr = match.Groups[3].Value;
+                pattern = @"(\d{4}年\d{1,2}月\d{1,2}日\s\d{1,2}:\d{2})";
+                var dateStr = Regex.Match(fullDateStr, pattern).Groups[1].Value;
+                var date = DateTime.ParseExact(dateStr, "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture);
+                if (date < minDate)
+                    return true;
+
+                if (date >= minDate && date <= maxDate)
+                {
+                    ChatSimpleMessage item = new ChatSimpleMessage();
+                    item.Who = match.Groups[1].Value;
+                    item.Message = match.Groups[2].Value;
+                    item.SendDateTime = match.Groups[3].Value;
+                    item.UniqueString = GetMd5(input);
+                    list.Add(item);
+                }
+            }
+            else
+            {
+                _logger.Error($"格式分析错误，未能加进消息列表，input={input}");
+            }
+            return false;
+        }
+
+        //处理没有日期-时间格式的.
+        private bool __ProcessNoneTime(List<ChatSimpleMessage> list, string input, List<DateTime> dates)
         {
             var minDate = dates.Min();  //最小日期
             var pattern = @"^(.+?)\s(.*?)\s(\d{4}年\d{1,2}月\d{1,2}日\s\d{1,2}:\d{2})$";
@@ -625,17 +670,20 @@ namespace WeChatAuto.Components
             var result = new List<DateTime>();
 
             // 只保留日期部分
-            startDate = startDate.Date;
-            endDate = endDate.Date;
+            var checkStartDate = startDate.Date;
+            var checkEndDate = endDate.Date;
 
             // 防止开始日期大于结束日期
-            if (startDate > endDate)
+            if (checkStartDate > checkEndDate)
                 return result;
+            result.Add(startDate);
+            result.Add(endDate);
 
-            for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
-            {
-                result.Add(date);
-            }
+            // for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
+            // {
+            //     result.Add(date);
+            // }
+
 
             return result;
         }
