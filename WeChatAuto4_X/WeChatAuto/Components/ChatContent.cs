@@ -17,6 +17,8 @@ using OneOf;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WeChatAuto.Models;
+using FlaUI.UIA3;
+using FlaUI.Core.WindowsAPI;
 
 namespace WeChatAuto.Components
 {
@@ -60,6 +62,46 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <returns></returns>
         public async Task FcouseSenderInput() => await this.Sender.FcouseSenderInput();
+
+        /// <summary>
+        /// 关闭查询窗口,如果查询窗口打开则关闭，如果查询窗口没有打开，则不作动作
+        /// </summary>
+        /// <param name="who">关闭谁的查询窗口</param>
+        /// <returns></returns>
+        public async Task CloseSearchWindow(string who)
+        {
+            await WeChatInvoker.Call(CloseSearchWindowCore, who);
+        }
+
+        internal void CloseSearchWindowCore(UIA3Automation automation, string who)
+        {
+            var desktop = automation.GetDesktop();
+            Window subWin = null;
+            var winResult = Retry.WhileNull(() => desktop.FindAllChildren(cf => cf.ByClassName("mmui::SearchMsgUniqueChatWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByProcessId(_Client.MainWindow.Properties.ProcessId)))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (winResult.Success && winResult.Result.Length > 0)
+            {
+                //发现窗口，但不确定是否是本窗口
+                var subWins = winResult.Result;
+                subWin = subWins.FirstOrDefault(u =>
+                {
+                    var name = u.Name.Replace("“", "").Replace("”", "");
+                    if (name.Contains($"{who}"))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }).AsWindow();
+                if (subWin != null)
+                {
+                    subWin.Focus();
+                    SupperMouseKey.TypeSimultaneously(virtualKeys: VirtualKeyShort.ESC);
+                }
+            }
+        }
+
         /// <summary>
         /// 发送消息
         /// </summary>

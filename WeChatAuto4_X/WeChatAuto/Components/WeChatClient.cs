@@ -213,6 +213,13 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task UnPinned() => await ToolBar.Top(false);
 
+        /// <summary>
+        /// 关闭查询窗口,如果查询窗口打开则关闭，如果查询窗口没有打开，则不作动作
+        /// </summary>
+        /// <param name="who">关闭谁的查询窗口</param>
+        /// <returns></returns>
+        public async Task CloseSearchWindow(string who) => await this.ChatContent.CloseSearchWindow(who);
+
         #endregion
 
         #region Navigator管理

@@ -53,11 +53,32 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendMessage(who, $"我又引用了这句,最后一次测试", default, new Models.ChatRefer()
+        await client.SendMessage(who, $"这个是带日期筛选的引用发言", default, new Models.ChatRefer()
         {
             Date = DateOnly.Parse("2026-05-27"),
             Message = JsonConvert.DeserializeObject<ChatSimpleMessage>("""{"Who":"Alex","Message":"也行。。。。幸好讨论了一下[破涕为笑]","SendDateTime":"2026年5月27日 11:13","DateTime":"2026-05-27T11:13:00","UniqueString":"755d1088ac3b21ceefed8a08079c3c6a"}"""),
         });
+    }
+
+    [Theory(DisplayName = "测试发送文本消息-引用-不进行日期筛选")]
+    [InlineData("苏智明_vip")]
+    public async Task Test_Send_Message_refer_no_dateselect(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendMessage(who, $"不带日期筛选的引用发言....", default, new Models.ChatRefer()
+        {
+            Message = JsonConvert.DeserializeObject<ChatSimpleMessage>("""{"Who":"Alex","Message":"也行。。。。幸好讨论了一下[破涕为笑]","SendDateTime":"2026年5月27日 11:13","DateTime":"2026-05-27T11:13:00","UniqueString":"755d1088ac3b21ceefed8a08079c3c6a"}"""),
+        });
+    }
+
+    [Theory(DisplayName = "关闭查询窗口")]
+    [InlineData("苏智明_vip")]
+    public async Task Test_Close_Search_Windows(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.CloseSearchWindow(who);
     }
 
     [Theory(DisplayName = "测试发送文本消息并@好友")]

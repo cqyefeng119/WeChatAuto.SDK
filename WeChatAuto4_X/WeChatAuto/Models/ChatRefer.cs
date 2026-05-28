@@ -10,9 +10,9 @@ namespace WeChatAuto.Models
     public class ChatRefer
     {
         /// <summary>
-        /// 日期,如果不设置则为当天
+        /// 日期,如果不设置则不进行日期筛选
         /// </summary>
-        public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+        public DateOnly Date { get; set; } = DateOnly.MinValue;
         /// <summary>
         /// 要引入用的内容，具体请参考:<see cref="ChatSimpleMessage"/>
         /// </summary>
@@ -20,6 +20,6 @@ namespace WeChatAuto.Models
         /// <summary>
         /// 是否关闭查找窗口，默认是关闭，如果设置为false,则不关闭查找窗口，速度会略快，但需要自行关闭查找窗口.
         /// </summary>
-        public bool IsCloseSearchWin {get;set;} = true;
+        public bool IsCloseSearchWin { get; set; } = true;
     }
 }

@@ -429,10 +429,12 @@ namespace WeChatAuto.Components
 			int targetY = _Client.MainWindow.BoundingRectangle.Y + (int)((_Client.MainWindow.BoundingRectangle.Height - subWin.BoundingRectangle.Height) / 2);
 			subWin.Move(targetX, targetY);  //移动子窗口至主窗口中间
 			RandomWait.Wait(600, 1200);
-
-			var isSelected = _SelectDate(refer.Date, subWin);
-			if (!isSelected)
-				return;
+			if (refer.Date != DateOnly.MinValue)
+			{
+				var isSelected = _SelectDate(refer.Date, subWin);
+				if (!isSelected)
+					return;
+			}
 			//筛选内容.
 			_FilterContent(refer, subWin);
 			_FindContent(refer, subWin);
@@ -446,7 +448,7 @@ namespace WeChatAuto.Components
 
 		private void _FindContent(ChatRefer refer, Window subWin)
 		{
-			var path = "/Group/Group[1]/Group[4]/Group/List[@AutomationId='search_message_list']";
+			var path = "/Group/Group/Group/Group/List[@AutomationId='search_message_list']";
 			var listRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
 			if (listRetry.Success)
 			{
@@ -505,80 +507,80 @@ namespace WeChatAuto.Components
 			}
 		}
 
-        private void _PopupMenu(ChatRefer refer )
-        {
-            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/List[@AutomationId='chat_message_list'][@Name='消息']";
-			var listRetry = Retry.WhileNull(()=>this._Client.MainWindow.FindFirstByXPath(path),TimeSpan.FromSeconds(1),TimeSpan.FromMilliseconds(200));
+		private void _PopupMenu(ChatRefer refer)
+		{
+			var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/List[@AutomationId='chat_message_list'][@Name='消息']";
+			var listRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
 			if (listRetry.Success)
 			{
 				var list = listRetry.Result.AsListBox();
 				var listItems = list.Items;
-				foreach(var item in listItems)
+				foreach (var item in listItems)
 				{
 					if (item.Name.Equals(refer.Message.Message))
-                    {
-                        var index = 0;
-                        while (item.BoundingRectangle.Y < list.BoundingRectangle.Y && index < 2)
-                        {
-                            SupperMouseKey.Scroll(2);
-                            RandomWait.Wait(200, 800);
-                            index++;
-                        }
-                        var success = LeftRetry(item);
+					{
+						var index = 0;
+						while (item.BoundingRectangle.Y < list.BoundingRectangle.Y && index < 2)
+						{
+							SupperMouseKey.Scroll(2);
+							RandomWait.Wait(200, 800);
+							index++;
+						}
+						var success = LeftRetry(item);
 						if (!success)
 						{
 							success = RightRetry(item);
 						}
-                    }
-                }
+					}
+				}
 			}
-        }
+		}
 
-        private bool LeftRetry(ListBoxItem item)
-        {
-            var point = new Point(item.BoundingRectangle.X + 96 + 8, item.BoundingRectangle.Y + 23 + 8);
-            Mouse.Position = point;
-            RandomWait.Wait(200, 800);
-            SupperMouseKey.RightClick();
-            RandomWait.Wait(500, 1200);
-            string path = "/Window[@Name='Weixin']/MenuItem[@Name='引用']";
-            var menuItemRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            if (menuItemRetry.Success)
-            {
-                point = menuItemRetry.Result.BoundingRectangle.SafeRandomPoint();
-                SupperMouseKey.MoveTo(point);
-                RandomWait.Wait(200, 800);
-                SupperMouseKey.LeftClick();
-                RandomWait.Wait(200, 800);
+		private bool LeftRetry(ListBoxItem item)
+		{
+			var point = new Point(item.BoundingRectangle.X + 96 + 8, item.BoundingRectangle.Y + 23 + 8);
+			Mouse.Position = point;
+			RandomWait.Wait(200, 800);
+			SupperMouseKey.RightClick();
+			RandomWait.Wait(500, 1200);
+			string path = "/Window[@Name='Weixin']/MenuItem[@Name='引用']";
+			var menuItemRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+			if (menuItemRetry.Success)
+			{
+				point = menuItemRetry.Result.BoundingRectangle.SafeRandomPoint();
+				SupperMouseKey.MoveTo(point);
+				RandomWait.Wait(200, 800);
+				SupperMouseKey.LeftClick();
+				RandomWait.Wait(200, 800);
 				return true;
-            }
+			}
 
-            return false;
-        }
+			return false;
+		}
 
 		private bool RightRetry(ListBoxItem item)
-        {
-            var point = new Point(item.BoundingRectangle.X + item.BoundingRectangle.Width - 96 - 8, item.BoundingRectangle.Y + 23 + 8);
-            Mouse.Position = point;
-            RandomWait.Wait(200, 800);
-            SupperMouseKey.RightClick();
-            RandomWait.Wait(500, 1200);
-            string path = "/Window[@Name='Weixin']/MenuItem[@Name='引用']";
-            var menuItemRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            if (menuItemRetry.Success)
-            {
-                point = menuItemRetry.Result.BoundingRectangle.SafeRandomPoint();
-                SupperMouseKey.MoveTo(point);
-                RandomWait.Wait(200, 800);
-                SupperMouseKey.LeftClick();
-                RandomWait.Wait(200, 800);
+		{
+			var point = new Point(item.BoundingRectangle.X + item.BoundingRectangle.Width - 96 - 8, item.BoundingRectangle.Y + 23 + 8);
+			Mouse.Position = point;
+			RandomWait.Wait(200, 800);
+			SupperMouseKey.RightClick();
+			RandomWait.Wait(500, 1200);
+			string path = "/Window[@Name='Weixin']/MenuItem[@Name='引用']";
+			var menuItemRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+			if (menuItemRetry.Success)
+			{
+				point = menuItemRetry.Result.BoundingRectangle.SafeRandomPoint();
+				SupperMouseKey.MoveTo(point);
+				RandomWait.Wait(200, 800);
+				SupperMouseKey.LeftClick();
+				RandomWait.Wait(200, 800);
 				return true;
-            }
+			}
 
-            return false;
-        }
+			return false;
+		}
 
-        private void _FilterContent(ChatRefer refer, Window subWin)
+		private void _FilterContent(ChatRefer refer, Window subWin)
 		{
 			var path = "/Group/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
 			var searchRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path).AsTextBox(), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
