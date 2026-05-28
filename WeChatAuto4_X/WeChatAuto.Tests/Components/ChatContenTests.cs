@@ -53,10 +53,10 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendMessage(who, $"我又引用了这句", default, new Models.ChatRefer()
+        await client.SendMessage(who, $"我又引用了这句,最后一次测试", default, new Models.ChatRefer()
         {
             Date = DateOnly.Parse("2026-05-27"),
-            Message = JsonConvert.DeserializeObject<ChatSimpleMessage>("""{"Who":"苏智明_vip","Message":"哦","SendDateTime":"2026年5月27日 11:14","DateTime":"2026-05-27T11:14:00","UniqueString":"ed6c4cf0031030d404d5b326b5a95842"}"""),
+            Message = JsonConvert.DeserializeObject<ChatSimpleMessage>("""{"Who":"Alex","Message":"也行。。。。幸好讨论了一下[破涕为笑]","SendDateTime":"2026年5月27日 11:13","DateTime":"2026-05-27T11:13:00","UniqueString":"755d1088ac3b21ceefed8a08079c3c6a"}"""),
         });
     }
 

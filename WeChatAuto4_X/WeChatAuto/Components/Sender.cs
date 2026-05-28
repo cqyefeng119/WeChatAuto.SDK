@@ -436,6 +436,12 @@ namespace WeChatAuto.Components
 			//筛选内容.
 			_FilterContent(refer, subWin);
 			_FindContent(refer, subWin);
+			if (refer.IsCloseSearchWin)
+			{
+				subWin.Focus();
+				SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+				this._Client.MainWindow.Focus();
+			}
 		}
 
 		private void _FindContent(ChatRefer refer, Window subWin)
@@ -507,10 +513,9 @@ namespace WeChatAuto.Components
 			{
 				var list = listRetry.Result.AsListBox();
 				var listItems = list.Items;
-				var compareString = refer.Message.Message.Split('\n')[0];
 				foreach(var item in listItems)
 				{
-					if (item.Name.Contains(compareString.Trim()))
+					if (item.Name.Equals(refer.Message.Message))
                     {
                         var index = 0;
                         while (item.BoundingRectangle.Y < list.BoundingRectangle.Y && index < 2)
