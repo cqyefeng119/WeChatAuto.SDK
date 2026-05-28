@@ -4,6 +4,8 @@ using NAudio.Wave;
 using OneOf;
 using Xunit.Abstractions;
 using NAudio.CoreAudioApi;
+using Newtonsoft.Json;
+using WeChatAuto.Models;
 
 
 namespace WeChatAuto.Tests.Components;
@@ -43,6 +45,19 @@ public class ChatContenTests
 
 请将公共讨论资源留给技术话题，踩红线必T
 """);
+    }
+
+    [Theory(DisplayName = "测试发送文本消息-并引用")]
+    [InlineData("苏智明_vip")]
+    public async Task Test_Send_Message_refer(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendMessage(who, $"我又引用了这句", default, new Models.ChatRefer()
+        {
+            Date = DateOnly.Parse("2026-05-27"),
+            Message = JsonConvert.DeserializeObject<ChatSimpleMessage>("""{"Who":"苏智明_vip","Message":"哦","SendDateTime":"2026年5月27日 11:14","DateTime":"2026-05-27T11:14:00","UniqueString":"ed6c4cf0031030d404d5b326b5a95842"}"""),
+        });
     }
 
     [Theory(DisplayName = "测试发送文本消息并@好友")]

@@ -13,6 +13,13 @@ namespace WeChatAuto.Models
         /// 日期,如果不设置则为当天
         /// </summary>
         public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Now);
-        public ChatSimpleMessage Message {get;set;}
+        /// <summary>
+        /// 要引入用的内容，具体请参考:<see cref="ChatSimpleMessage"/>
+        /// </summary>
+        public ChatSimpleMessage Message { get; set; }
+        /// <summary>
+        /// 是否关闭查找窗口，默认是关闭，如果设置为false,则不关闭查找窗口，速度会略快，但需要自行关闭查找窗口.
+        /// </summary>
+        public bool IsCloseSearchWin {get;set;} = true;
     }
 }

@@ -329,7 +329,18 @@ namespace WeChatAuto.Components
         /// <param name="who">好名/群聊的名称,也就是肉眼所见的标题</param>
         /// <param name="message">消息内容，文本消息内容</param>
         /// <param name="atUser">被@的好友,可以多个</param>
-        public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default) => await ChatContent.SendMessage(who, message, atUser);
+        /// <param name="refer">引用的对话内容,请参考<see cref="ChatRefer"/></param>
+        public async Task SendMessage(string who, string message, OneOf<string, string[], List<string>> atUser = default, ChatRefer refer = null)
+            => await ChatContent.SendMessage(who, message, atUser, refer);
+        /// <summary>
+        /// <para>发送消息,给当前窗口发送消息</para>
+        /// <para>注意：仅给当前窗口发送消息，要注意当前聊天窗口可用</para>
+        /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="atUser">被@的好友</param>
+        /// <param name="refer">引用的对话内容,请参考<see cref="ChatRefer"/></param>
+        public async Task SendMessage(string message, OneOf<string, string[], List<string>> atUser = default, ChatRefer refer = null)
+            => await ChatContent.SendMessage(message, atUser, refer);
 
         /// <summary>
         /// 发送文件
