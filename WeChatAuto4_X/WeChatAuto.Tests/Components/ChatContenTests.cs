@@ -183,7 +183,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendVoiceMessage("AI.Net_test",Path.Combine(AppContext.BaseDirectory,"Assets","littlecat.wav"));
+        await client.SendVoiceMessage("秋歌",Path.Combine(AppContext.BaseDirectory,"Assets","littlecat.wav"));
         Assert.True(true);
     }
 

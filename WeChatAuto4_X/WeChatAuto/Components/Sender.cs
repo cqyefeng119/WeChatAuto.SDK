@@ -337,10 +337,13 @@ namespace WeChatAuto.Components
 			}
 			finally
 			{
-				point = point.Confusion(10,2);
+				point = point.Confusion(30,2);
 				Mouse.MoveTo(point);
 				RandomWait.Wait(300, 900);
 				SupperMouseKey.LeftClick();
+				RandomWait.Wait(300, 900);
+				point = point.Confusion(100,100);
+				Mouse.MoveTo(point);
 			}
 		}
 
