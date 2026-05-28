@@ -31,6 +31,8 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using System.Reflection.Metadata.Ecma335;
 using System.Windows.Media.Imaging;
+using NAudio.CoreAudioApi;
+using NAudio.Wave;
 
 namespace WeChatAuto.Components
 {
@@ -277,22 +279,98 @@ namespace WeChatAuto.Components
 		}
 
 		/// <summary>
-		/// 发送语音消息
+		/// 发送语音消息,此功能依赖虚拟声卡：Cable input/Cable output
+		/// 请在声音-->设置-->将输入设备改成: Cable output
+		/// 如果没有安装虚拟声卡，请在:https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip下载
 		/// </summary>
 		/// <param name="who">好友昵称或群聊名称</param>
 		/// <param name="filePath">语音文件路径</param>
-		internal async Task SendVoiceMessage(string who, string filePath)
+		public async Task SendVoiceMessage(string who, string filePath)
 		{
+			if (string.IsNullOrWhiteSpace(who))
+			{
+				var chatInfo = await _Client.ChatContent.ChatHeader.GetTitle();
+				if (!chatInfo.CanTalk())
+				{
+					return;
+				}
+			}
+			else
+			{
+				await _Client.Conversations.Search(who);
+			}
+			RandomWait.Wait(300, 1200);
 
+			await WeChatInvoker.Call(SendVoiceMessageCore, who, filePath);
 		}
+
+		private void SendVoiceMessageCore(UIA3Automation automation, string who, string filePath)
+		{
+			var device = _CheckVirtualSoudDevices();
+			this._Client.MainWindow.Focus();
+			using var audioFile = new AudioFileReader(filePath);
+			var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/Group/Group/ToolBar/Group/Group/Button[@Name='发语音 ( 按住右 Alt )']";
+			var buttonRetry = Retry.WhileNull(()=>this._Client.MainWindow.FindFirstByXPath(path),TimeSpan.FromSeconds(3),TimeSpan.FromMilliseconds(200));
+			if (!buttonRetry.Success)
+				return;
+			var point = buttonRetry.Result.BoundingRectangle.SafeRandomPoint();
+			Mouse.Position = point;
+			RandomWait.Wait(300, 900);
+			SupperMouseKey.LeftClick();
+			try
+			{
+				RandomWait.Wait(600, 1200);
+				using var output = new WasapiOut(
+					device,
+					AudioClientShareMode.Shared,
+					false,
+					100);
+				output.Init(audioFile);
+				output.Play();
+
+				while (output.PlaybackState == PlaybackState.Playing)
+				{
+					Thread.Sleep(100);
+				}
+
+				RandomWait.Wait(600,1500);
+			}
+			finally
+			{
+				point = point.Confusion(10,2);
+				Mouse.MoveTo(point);
+				RandomWait.Wait(300, 900);
+				SupperMouseKey.LeftClick();
+			}
+		}
+
+		private MMDevice _CheckVirtualSoudDevices()
+		{
+			MMDevice device = null;
+			var enumerator = new MMDeviceEnumerator();
+			// 播放设备
+			var renderDevices = enumerator.EnumerateAudioEndPoints(
+				DataFlow.Render,
+				DeviceState.Active);
+			device = renderDevices.Where(x => x.FriendlyName.Contains("CABLE Input")).FirstOrDefault();
+			if (device == null)
+				throw new Exception("请先安装Cable input/Cable output,可以在：https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip 下载安装");
+			var captureDevices = enumerator.EnumerateAudioEndPoints(
+				DataFlow.Capture,
+				DeviceState.Active);
+			if (captureDevices.Where(x => x.FriendlyName.Contains("CABLE Output")).Count() == 0)
+				throw new Exception("请先安装Cable input/Cable output,可以在：https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip 下载安装");
+			return device;
+		}
+
 		/// <summary>
-		/// 通过文本发送语音消息，需要下载whisper模型并配置好环境，文本转语音后发送
+		/// 通过文本发送语音消息，需要下载模型并配置好环境，文本转语音后发送
 		/// </summary>
 		/// <param name="who">好友昵称或群聊名称</param>
 		/// <param name="message">要转换为语音的文本消息</param>
 		/// <param name="textToVoiceFunc">文本转语音的函数，参数为要转换的文本，返回值为生成的语音文件路径,如果不提供，则使用默认的文本转语音功能(默认使用whisper)，当然你也可以提供自己的实现（如连接到外部平台的API）</param>
 		/// <returns></returns>
-		internal async Task SendVoiceMessage(string who, string message, Func<string, Task<string>> textToVoiceFunc = default)
+		public async Task SendVoiceMessage(string who, string message, Func<string, Task<string>> textToVoiceFunc = default)
 		{
 
 		}
@@ -334,9 +412,6 @@ namespace WeChatAuto.Components
 		{
 			if (string.IsNullOrWhiteSpace(who))
 			{
-				//可能没有选择聊天对象，如果没有选择聊天对象，则不发送.
-				// if (unSelectChatItem())
-				//     return;
 				var chatInfo = _Client.ChatContent.ChatHeader.GetTitleCore(automation);
 				if (!chatInfo.CanTalk())
 				{

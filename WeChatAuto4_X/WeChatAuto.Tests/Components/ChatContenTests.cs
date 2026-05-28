@@ -178,8 +178,18 @@ public class ChatContenTests
         Assert.True(true);
     }
 
+    [Fact(DisplayName = "测试发送语音消息")]
+    public async Task Test_SendVoiceMessage()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.SendVoiceMessage("AI.Net_test",Path.Combine(AppContext.BaseDirectory,"Assets","littlecat.wav"));
+        Assert.True(true);
+    }
 
 
+
+    //WASAPI
     [Fact(DisplayName = "显示WASAPI设备")]
     public void Test_ListWasapiDevices()
     {
@@ -192,10 +202,10 @@ public class ChatContenTests
 
         foreach (var device in renderDevices)
         {
-            _output.WriteLine($"Render: {device.FriendlyName}");
+            _output.WriteLine($"Render: {device.FriendlyName} - {device.DeviceFriendlyName}");
         }
 
-        // 录音设备
+        // 输入设备
         var captureDevices = enumerator.EnumerateAudioEndPoints(
             DataFlow.Capture,
             DeviceState.Active);
