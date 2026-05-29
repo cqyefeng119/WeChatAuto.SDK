@@ -655,8 +655,8 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 打开朋友圈,如果未打开，则打开朋友圈，如果已经打开了，则窗口提前到顶端
         /// </summary>
-        /// <returns></returns>
-        public async Task OpenMoments() => await this.Moments.OpenMoments();
+        /// <returns>返回朋友圈窗口对象|</returns>
+        public async Task<Window> OpenMoments() => await this.Moments.OpenMoments();
         /// <summary>
         /// 关闭朋友圈
         /// </summary>
@@ -665,7 +665,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 发送朋友圈
         /// </summary>
-        /// <param name="imageFiles">图片列表，可以一看，也可以多个</param>
+        /// <param name="imageFiles">图片列表，可以一个，也可以多个,如果是多个文件，要求在同一个目录中</param>
         /// <param name="content">朋友圈内容</param>
         /// <param name="options">发送选项，请参考<see cref="MomentsOptions"/></param>
         /// <returns>成功还是失败</returns>

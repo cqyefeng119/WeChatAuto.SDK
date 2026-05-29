@@ -27,4 +27,14 @@ public class MomentsTests
         await client.CloseMoments();
         Assert.True(true);
     }
+
+    [Fact(DisplayName = "发朋友圈")]
+    public async Task Test_add_moments()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.AddMoments(new List<string> {Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"),
+        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "仅是一个测试");
+        Assert.True(result);
+    }
 }
