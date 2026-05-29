@@ -22,21 +22,21 @@ namespace WeChatAuto.Models
         /// <summary>
         /// 消息日期,日期时间格式
         /// </summary>
-        public DateTime DateTime
-        {
-            get
-            {
-                if (DateTime.TryParseExact(SendDateTime.Trim(), "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-                {
-                    return date;
-                }
-                if (DateTime.TryParseExact(SendDateTime.Trim(), "yyyy年M月d日 H:m", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date2))
-                {
-                    return date2;
-                }
-                throw new Exception("错误：日期格式不匹配!");
-            }
-        }
+        public DateTime DateTime { get; set; }
+        //{
+        //    get
+        //    {
+        //        if (DateTime.TryParseExact(SendDateTime.Trim(), "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        //        {
+        //            return date;
+        //        }
+        //        if (DateTime.TryParseExact(SendDateTime.Trim(), "yyyy年M月d日 H:m", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date2))
+        //        {
+        //            return date2;
+        //        }
+        //        throw new Exception("错误：日期格式不匹配!");
+        //    }
+        //}
         /// <summary>
         /// 唯一字符串
         /// </summary>
