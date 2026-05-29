@@ -226,6 +226,23 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task CloseSearchWindow(string who) => await this.ChatContent.CloseSearchWindow(who);
 
+        /// <summary>
+        /// 移动窗口至主窗口的中间
+        /// </summary>
+        /// <param name="window"></param>
+        public void MoveWinToMainCenter(Window window)
+        {
+            if (window == null)
+                return;
+            window.Focus();
+            RandomWait.Wait(100, 600);
+            window.Move(
+                this.MainWindow.BoundingRectangle.X + (int)((this.MainWindow.BoundingRectangle.Width - window.BoundingRectangle.Width) / 2),
+                this.MainWindow.BoundingRectangle.Y + (int)((this.MainWindow.BoundingRectangle.Height - window.BoundingRectangle.Height) / 2)
+            );
+            RandomWait.Wait(300, 900);
+        }
+
         #endregion
 
         #region Navigator管理

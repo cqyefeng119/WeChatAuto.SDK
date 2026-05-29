@@ -61,13 +61,18 @@ namespace WeChatAuto.Components
 			{
 				this._Client.Navigation.SwitchNavigationCore(automation, NavigationType.朋友圈);
 				RandomWait.Wait(600, 1200);
+				result = IsOpenMomentsWin(automation);
+				if (result.success)
+				{
+					this._Client.MoveWinToMainCenter(result.win);
+				}
 			}
 			else
 			{
-				result.win.Focus();
-				RandomWait.Wait(600, 1200);
+				this._Client.MoveWinToMainCenter(result.win);
 			}
 		}
+
 		/// <summary>
 		/// 是否打开朋友圈
 		/// </summary>
@@ -113,7 +118,18 @@ namespace WeChatAuto.Components
 
 		internal bool AddMomentsCore(UIA3Automation automation, List<string> imageFiles, string content, MomentsOptions options)
 		{
-			return false;
+			if (!CheckImagesValid(imageFiles))
+				return false;
+			OpenMomentsCore(automation);  //打开朋友圈
+			return true;
+		}
+		private bool CheckImagesValid(List<string> imageFiles)
+		{
+			if (imageFiles.Count == 0)
+				return false;
+
+
+			return true;
 		}
 
 		/// <summary>
