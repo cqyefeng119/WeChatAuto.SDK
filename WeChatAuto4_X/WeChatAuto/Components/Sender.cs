@@ -79,7 +79,9 @@ namespace WeChatAuto.Components
 			}
 			else
 			{
-				_Client.Conversations.SearchWhoCore(automation, who);
+				var result = _Client.Conversations.SearchWhoCore(automation, who);
+				if (!result)
+					return;
 			}
 			RandomWait.Wait(300, 1200);
 			var root = this.content.Root;
@@ -122,7 +124,9 @@ namespace WeChatAuto.Components
 			}
 			else
 			{
-				_Client.Conversations.SearchWhoCore(automation, who);
+				var result = _Client.Conversations.SearchWhoCore(automation, who);
+				if (!result)
+					return;
 			}
 			RandomWait.Wait(300, 1200);
 			var root = this.content.Root;
@@ -169,7 +173,9 @@ namespace WeChatAuto.Components
 			}
 			else
 			{
-				_Client.Conversations.SearchWhoCore(automation, who);
+				var result = _Client.Conversations.SearchWhoCore(automation, who);
+				if (!result)
+					return;
 			}
 			RandomWait.Wait(300, 1200);
 			var filter = partner.Where(u => u != _Client.NickName).ToList().ToArray();
@@ -297,20 +303,36 @@ namespace WeChatAuto.Components
 			}
 			else
 			{
-				await _Client.Conversations.Search(who);
+				var result = await _Client.Conversations.Search(who);
+				if (!result)
+					return;
 			}
 			RandomWait.Wait(300, 1200);
 
-			await WeChatInvoker.Call(SendVoiceMessageCore, who, filePath);
+			await WeChatInvoker.Call(SendVoiceMessageCore, filePath);
+		}
+		/// <summary>
+		/// 给本聊天窗口发送语音消息，请确保本聊天窗口可用.
+		/// 请在声音-->设置-->将输入设备改成: Cable output
+		/// 如果没有安装虚拟声卡，请在:https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip下载
+		/// </summary>
+		/// <param name="filePath">语音文件路径</param>
+		/// <returns></returns>
+		public async Task SendVoiceMessage(string filePath)
+		{
+			await WeChatInvoker.Call(SendVoiceMessageCore, filePath);
 		}
 
-		private void SendVoiceMessageCore(UIA3Automation automation, string who, string filePath)
+		private void SendVoiceMessageCore(UIA3Automation automation, string filePath)
 		{
+			var chatInfo = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+			if (!chatInfo.CanTalk())
+				return;
 			var device = _CheckVirtualSoudDevices();
 			this._Client.MainWindow.Focus();
 			using var audioFile = new AudioFileReader(filePath);
 			var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/Group/Group/ToolBar/Group/Group/Button[@Name='发语音 ( 按住右 Alt )']";
-			var buttonRetry = Retry.WhileNull(()=>this._Client.MainWindow.FindFirstByXPath(path),TimeSpan.FromSeconds(3),TimeSpan.FromMilliseconds(200));
+			var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(200));
 			if (!buttonRetry.Success)
 				return;
 			var point = buttonRetry.Result.BoundingRectangle.SafeRandomPoint();
@@ -333,16 +355,16 @@ namespace WeChatAuto.Components
 					Thread.Sleep(100);
 				}
 
-				RandomWait.Wait(600,1500);
+				RandomWait.Wait(600, 1500);
 			}
 			finally
 			{
-				point = point.Confusion(30,2);
+				point = point.Confusion(30, 2);
 				Mouse.MoveTo(point);
 				RandomWait.Wait(300, 900);
 				SupperMouseKey.LeftClick();
 				RandomWait.Wait(300, 900);
-				point = point.Confusion(100,100);
+				point = point.Confusion(100, 100);
 				Mouse.MoveTo(point);
 			}
 		}
@@ -423,7 +445,9 @@ namespace WeChatAuto.Components
 			}
 			else
 			{
-				_Client.Conversations.SearchWhoCore(automation, who);
+				var result = _Client.Conversations.SearchWhoCore(automation, who);
+				if (!result)
+					return;
 			}
 			RandomWait.Wait(300, 1200);
 			SendMessageCore(automation, message, atUser, refer);
@@ -449,7 +473,9 @@ namespace WeChatAuto.Components
 			}
 			else
 			{
-				_Client.Conversations.SearchWhoCore(automation, who);
+				var result = _Client.Conversations.SearchWhoCore(automation, who);
+				if (!result)
+					return;
 			}
 			RandomWait.Wait(100, 600);
 			SendFileCore(automation, files);

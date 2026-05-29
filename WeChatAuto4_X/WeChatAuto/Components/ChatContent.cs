@@ -164,6 +164,15 @@ namespace WeChatAuto.Components
         public async Task SendVoiceMessage(string who, string filePath) => await Sender.SendVoiceMessage(who, filePath);
 
         /// <summary>
+        /// 给本聊天窗口发送语音消息，请确保本聊天窗口可用.
+        /// 请在声音-->设置-->将输入设备改成: Cable output
+        /// 如果没有安装虚拟声卡，请在:https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip下载
+        /// </summary>
+        /// <param name="filePath">语音文件路径</param>
+        /// <returns></returns>
+        public async Task SendVoiceMessage(string filePath) => await Sender.SendVoiceMessage(filePath);
+
+        /// <summary>
         /// 根据日期获取当前聊天窗口的聊天历史
         /// </summary>
         /// <param name="dates">查询日期列表</param>

@@ -94,6 +94,7 @@ namespace WeChatAuto.Components
             this.NotifyIcon = new ShellNotifyIcon(this, serviceProvider, WechatIndex);
             this.OwnerGroup = new OwnerGroup(this, _MainThreadInvoker, serviceProvider);
             this.OuterGroup = new OuterGroup(this, _MainThreadInvoker, serviceProvider);
+            this.Moments = new Moments(this, _MainThreadInvoker, serviceProvider);
             _RunCheckAddressBook();
         }
 
@@ -155,6 +156,11 @@ namespace WeChatAuto.Components
         /// 外部群
         /// </summary>
         public OuterGroup OuterGroup;
+
+        /// <summary>
+        /// 朋友圈
+        /// </summary>
+        public Moments Moments;
 
 
         #endregion
@@ -375,7 +381,6 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who">好友昵称,可以为空，如果为空，则发送到当前聊天窗口</param>
         public async Task SendVedioChat(string who) => await ChatContent.SendVedioChat(who);
-
         /// <summary>
         /// 发起多人语音聊天，适用于群聊发起语音聊天
         /// </summary>
@@ -390,6 +395,14 @@ namespace WeChatAuto.Components
         /// <param name="who">好友昵称或群聊名称</param>
         /// <param name="filePath">语音文件路径</param>
         public async Task SendVoiceMessage(string who, string filePath) => await ChatContent.SendVoiceMessage(who, filePath);
+        /// <summary>
+        /// 给本聊天窗口发送语音消息，请确保本聊天窗口可用.
+        /// 请在声音-->设置-->将输入设备改成: Cable output
+        /// 如果没有安装虚拟声卡，请在:https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip下载
+        /// </summary>
+        /// <param name="filePath">语音文件路径</param>
+        /// <returns></returns>
+        public async Task SendVoiceMessage(string filePath) => await ChatContent.SendVoiceMessage(filePath);
         /// <summary>
         /// 根据日期获取当前聊天窗口的聊天历史
         /// </summary>
@@ -622,6 +635,33 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 朋友圈管理
+        /// <summary>
+        /// 打开朋友圈,如果未打开，则打开朋友圈，如果已经打开了，则窗口提前到顶端
+        /// </summary>
+        /// <returns></returns>
+        public async Task OpenMoments() => await this.Moments.OpenMoments();
+        /// <summary>
+        /// 关闭朋友圈
+        /// </summary>
+        /// <returns></returns>
+        public async Task CloseMoments() => await this.Moments.CloseMoments();
+        /// <summary>
+        /// 发送朋友圈
+        /// </summary>
+        /// <param name="imageFiles">图片列表，可以一看，也可以多个</param>
+        /// <param name="content">朋友圈内容</param>
+        /// <param name="options">发送选项，请参考<see cref="MomentsOptions"/></param>
+        /// <returns>成功还是失败</returns>
+        public async Task<bool> AddMoments(List<string> imageFiles, string content, MomentsOptions options = null)
+          => await this.Moments.AddMoments(imageFiles, content, options);
+        /// <summary>
+        /// 移除自己发送的朋友圈
+        /// </summary>
+        /// <param name="content">朋友圈文字内容</param>
+        /// <param name="date">日期，可以不填，如果不填，则删除最近发布的朋友圈内容</param>
+        /// <returns></returns>
+        public async Task<bool> RemoveMoments(string content, DateTime date = default)
+          => await this.Moments.RemoveMoments(content, date);
         #endregion
 
         #region 释放资源
