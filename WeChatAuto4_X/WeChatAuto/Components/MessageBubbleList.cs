@@ -375,6 +375,7 @@ namespace WeChatAuto.Components
                     item.Who = match.Groups[1].Value;
                     item.Message = match.Groups[2].Value;
                     item.SendDateTime = match.Groups[3].Value;
+                    item.DateTime = date;
                     item.UniqueString = GetMd5(input);
                     list.Add(item);
                 }
@@ -407,6 +408,7 @@ namespace WeChatAuto.Components
                     item.Who = match.Groups[1].Value;
                     item.Message = match.Groups[2].Value;
                     item.SendDateTime = match.Groups[3].Value;
+                    item.DateTime = date;
                     item.UniqueString = GetMd5(input);
                     list.Add(item);
                 }
