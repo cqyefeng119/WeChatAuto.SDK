@@ -34,7 +34,57 @@ public class MomentsTests
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.AddMoments(new List<string> {Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"),
-        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "仅是一个测试");
+        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "使用键鼠测试发朋友圈一", new Options.MomentsOptions
+        {
+            AtUsrs = new List<string> { "软件作家涛哥_vip" },
+            Labels = "aaa",
+        });
         Assert.True(result);
+    }
+
+    [Fact(DisplayName = "发朋友圈-多标签")]
+    public async Task Test_add_moments_mult_label()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.AddMoments(new List<string> {Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"),
+        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "使用键鼠测试发朋友圈一", new Options.MomentsOptions
+        {
+            AtUsrs = new List<string> { "软件作家涛哥_vip" },
+            Labels = new List<string> { "aaa", "666" },
+        });
+        Assert.True(result);
+    }
+
+    [Fact(DisplayName = "发朋友圈-测试错误情况")]
+    public async Task Test_add_moments_err()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.AddMoments(new List<string> {Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"),
+        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "使用键鼠测试发朋友圈一", new Options.MomentsOptions
+        {
+            AtUsrs = new List<string> { "软件作家涛哥_vip222" },
+            Labels = new List<string> { "888" },
+        });
+        Assert.False(result);
+    }
+
+    [Fact(DisplayName = "删除朋友圈")]
+    public async Task Test_remove_monents()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.RemoveMoments("使用键鼠测试发朋友圈一");
+        Assert.True(result);
+    }
+
+    [Fact(DisplayName = "删除朋友圈-故意设置错误")]
+    public async Task Test_remove_monents_error()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.RemoveMoments("使用键鼠测试发朋友圈一");
+        Assert.False(result);
     }
 }

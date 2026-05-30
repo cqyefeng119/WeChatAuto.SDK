@@ -78,7 +78,6 @@ namespace WeChatAuto.Components
             this.AvatorPath = ownerInfo.AvatorPath;
             this.WechatIndex = index;
             _logger = provider.GetRequiredService<AutoLogger<WeChatClient>>();
-            CheckVersion();
             _Initialize();
         }
 
@@ -95,6 +94,7 @@ namespace WeChatAuto.Components
             this.OwnerGroup = new OwnerGroup(this, _MainThreadInvoker, serviceProvider);
             this.OuterGroup = new OuterGroup(this, _MainThreadInvoker, serviceProvider);
             this.Moments = new Moments(this, _MainThreadInvoker, serviceProvider);
+            this.Search = new Search(this, _MainThreadInvoker, serviceProvider);
             _RunCheckAddressBook();
         }
 
@@ -143,6 +143,8 @@ namespace WeChatAuto.Components
         /// </summary>
         public NewFriendMonitor NewFriendMonitor;
 
+        public Search Search;
+
         /// <summary>
         /// 得到OCR引擎
         /// </summary>
@@ -169,13 +171,7 @@ namespace WeChatAuto.Components
             _Navigation = new Navigation(this, this.MainThreadInvoker, this.serviceProvider);
             return _Navigation;
         }
-        private void CheckVersion()
-        {
-            if (WeAutomation.Config.WxVersion != version)
-            {
-                throw new Exception("错误：配置参数错误！请检查：1.微信客户端是否是最新版本,2.是否正确设置参数.");
-            }
-        }
+
 
         #region 个人信息
         /// <summary>
@@ -303,7 +299,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who">待搜索的好友/群聊昵称,who - 微信会话列表肉眼可见的名称,如果群有备注，则这个who即为备注名</param>
         /// <returns>如果找到，返回true,如果没有找到，则返回false.</returns>
-        public async Task<bool> Search(string who) => await this.Conversations.Search(who);
+        public async Task<bool> SearchFriend(string who) => await this.Conversations.Search(who);
 
         /// <summary>
         /// 定位会话
@@ -569,6 +565,24 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 好友/群聊管理
+        /// <summary>
+        /// 打开新增朋友窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Window> OpenAddFriensWin() => await this.Search.OpenAddFriensWin();
+        /// <summary>
+        /// 关闭新增朋友窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task CloseAddFriendWin() => await this.Search.CloseAddFriendWin();
+        /// <summary>
+        /// 通过手机号码、微信号查找并添加好友
+        /// </summary>
+        /// <param name="friends">手机号码或者微信号列表</param>
+        /// <param name="options">增加朋友选项，具体请参考<see cref="AddFriendsOptions"/></param>
+        /// <returns>添加好友结果列表，详情请参见<see cref="FriendSearchResultEnums"/></returns>
+        public async Task<IDictionary<string, FriendSearchResultEnums>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options=null)
+            => await this.Search.AddFriends(friends, options);
         #region 缓存中好友信息管理
         /// <summary>
         /// 显示缓存中存储的好友信息.
@@ -675,10 +689,9 @@ namespace WeChatAuto.Components
         /// 移除自己发送的朋友圈
         /// </summary>
         /// <param name="content">朋友圈文字内容</param>
-        /// <param name="date">日期，可以不填，如果不填，则删除最近发布的朋友圈内容</param>
-        /// <returns></returns>
-        public async Task<bool> RemoveMoments(string content, DateTime date = default)
-          => await this.Moments.RemoveMoments(content, date);
+        /// <returns>是否成功删除</returns>
+        public async Task<bool> RemoveMoments(string content)
+          => await this.Moments.RemoveMoments(content);
         #endregion
 
         #region 释放资源

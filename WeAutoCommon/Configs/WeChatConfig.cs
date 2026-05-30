@@ -14,11 +14,6 @@ namespace WeAutoCommon.Configs
     public class WeChatConfig
     {
         /// <summary>
-        /// 微信版本号.
-        /// </summary>
-        public string WxVersion { get; set; } = "";
-
-        /// <summary>
         /// 下载文件/图片默认保存路径
         /// </summary>
         public string DefaultSavePath { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "wxauto_download");
@@ -63,6 +58,11 @@ namespace WeAutoCommon.Configs
         /// 会话列表鼠标滚动行数.
         /// </summary>
         public int ConversationInterval { get; set; } = 5;
+
+        /// <summary>
+        /// 当滚动删除朋友圈内容时，最大滚动次数,如果朋友圈内容多，请将此值设置大一些。
+        /// </summary>
+        public int MonentsScrollMaxSetp { get; set; } = 30;
         /// <summary>
         /// 是否启用OCR,但是一些功能由于腾迅的限制必须要启用OCR
         /// 如果启用OCR,则必须保证OCR模型在models目录下，并且需要配置好模型文件名称

@@ -19,7 +19,7 @@ namespace WeChatAuto.Components
 	public class ChatHeader
 	{
 		private readonly IServiceProvider _serviceProvider;
-		private readonly AutoLogger<ChatContent> _logger;
+		private readonly AutoLogger<ChatHeader> _logger;
 		private UIThreadInvoker _uiMainThreadInvoker;
 		private WeChatClient _Client;
 		private ChatContent content;
@@ -42,7 +42,7 @@ namespace WeChatAuto.Components
 		internal ChatHeader(WeChatClient client, IServiceProvider serviceProvider, UIThreadInvoker _uiMainThreadInvoker, ChatContent content)
 		{
 			this._uiMainThreadInvoker = _uiMainThreadInvoker;
-			_logger = serviceProvider.GetRequiredService<AutoLogger<ChatContent>>();
+			_logger = serviceProvider.GetRequiredService<AutoLogger<ChatHeader>>();
 			_serviceProvider = serviceProvider;
 			this._Client = client;
 			this.content = content;

@@ -312,7 +312,7 @@ namespace WeChatAuto.Utils
         /// <summary>
         /// 按着某键不放
         /// </summary>
-        public static void KeyDownCore(VirtualKeyShort key)
+        private static void KeyDownCore(VirtualKeyShort key)
         {
             keybd_event((byte)key, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
         }
@@ -320,7 +320,7 @@ namespace WeChatAuto.Utils
         /// <summary>
         /// 释放某键
         /// </summary>
-        public static void KeyUpCore(VirtualKeyShort key)
+        private static void KeyUpCore(VirtualKeyShort key)
         {
             keybd_event((byte)key, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         }

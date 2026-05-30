@@ -25,6 +25,12 @@ using System.Drawing;
 using WeChatAuto.Options;
 using WeChatAuto.Models;
 using Emgu.CV.Dai;
+using System.Windows.Controls;
+using Emgu.CV.Structure;
+using WeChatAuto.Services;
+using Emgu.CV;
+using System.Windows.Media.Imaging;
+using System.ComponentModel.DataAnnotations;
 
 
 namespace WeChatAuto.Components
@@ -36,7 +42,7 @@ namespace WeChatAuto.Components
 	{
 		private readonly IServiceProvider _serviceProvider;
 		private UIThreadInvoker _uiMainThreadInvoker;
-		private AutoLogger<AddressBookList> _logger;
+		private AutoLogger<Moments> _logger;
 		private WeChatClient _Client;
 		internal AutomationElement ToolBar => GetToolBar();
 
@@ -52,7 +58,7 @@ namespace WeChatAuto.Components
 
 		internal Moments(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
 		{
-			_logger = serviceProvider.GetRequiredService<AutoLogger<AddressBookList>>();
+			_logger = serviceProvider.GetRequiredService<AutoLogger<Moments>>();
 			_uiMainThreadInvoker = uiThreadInvoker;
 			_Client = client;
 			_serviceProvider = serviceProvider;
@@ -116,7 +122,8 @@ namespace WeChatAuto.Components
 			{
 				result.win.Focus();
 				RandomWait.Wait(600, 1200);
-				SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+				result.win.Close();
+				RandomWait.Wait(600, 900);
 			}
 		}
 
@@ -158,6 +165,14 @@ namespace WeChatAuto.Components
 				return false;
 
 			result = _ProcessContent(automation, content, options, win);
+			if (options == null || options.IsCloseMoments)
+			{
+				win?.Focus();
+				RandomWait.Wait(100, 600);
+				win?.Close();
+				RandomWait.Wait(100, 600);
+				this._Client.MainWindow.Focus();
+			}
 
 			return result;
 		}
@@ -182,7 +197,7 @@ namespace WeChatAuto.Components
 				SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 				if (options != null)
 				{
-					__ProcessAnthoer(automation, options, window);
+					__ProcessAnthoer(automation, options, window, contentRoot);
 				}
 
 				var sendButton = buttonRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("发表")));
@@ -192,15 +207,257 @@ namespace WeChatAuto.Components
 				SupperMouseKey.MoveTo(point.Confusion(3, 2));
 				RandomWait.Wait(200, 900);
 				SupperMouseKey.LeftClick();
-				RandomWait.Wait(300,1200);
+				RandomWait.Wait(300, 1200);
 				return true;
 			}
 			return false;
 		}
 
-		private void __ProcessAnthoer(UIA3Automation automation, MomentsOptions options, Window window)
+		private void __ProcessAnthoer(UIA3Automation automation, MomentsOptions options, Window window, AutomationElement root)
 		{
+			if (options.AtUsrs.Value != null)
+			{
+				//@好友处理
+				__ProcessAtUser(automation, options, window, root);
+			}
+			if (options.Labels.Value != null)
+			{
+				__ProcessLabel(automation, options, window, root);
+			}
+		}
 
+		private void __ProcessAtUser(UIA3Automation automation, MomentsOptions options, Window window, AutomationElement root)
+		{
+			var atUserLink = root.FindFirstDescendant(cf => cf.ByName("提醒谁看").And(cf.ByClassName("mmui::PublishComponent").And(cf.ByControlType(ControlType.Group))));
+			if (atUserLink == null)
+				return;
+			var point = atUserLink.BoundingRectangle.SafeRandomPoint();
+			SupperMouseKey.MoveTo(point);
+			RandomWait.Wait(100, 500);
+			SupperMouseKey.MoveTo(point.Confusion(5, 2));
+			RandomWait.Wait(100, 900);
+			SupperMouseKey.LeftClick();
+			//处理@好友
+			var atList = options.AtUsrs.IsT0 ? new List<string> { options.AtUsrs.AsT0 } : options.AtUsrs.AsT1.ToHashSet().ToList();
+			var winRetry = Retry.WhileNull(() => window.FindFirstChild(cf => cf.ByName("微信提醒谁看").And(cf.ByControlType(ControlType.Window))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			if (winRetry.Success)
+			{
+				var popWin = winRetry.Result.AsWindow();
+				var edit = popWin.FindFirstByXPath("/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']");
+				point = edit.BoundingRectangle.SafeRandomPoint();
+				SupperMouseKey.MoveTo(point);
+				RandomWait.Wait(100, 500);
+				var path = "";
+				foreach (var f in atList)
+				{
+					SupperMouseKey.MoveTo(point.Confusion(5, 2));
+					RandomWait.Wait(100, 300);
+					SupperMouseKey.MoveTo(point.Confusion(5, 2));
+					RandomWait.Wait(100, 300);
+					SupperMouseKey.LeftClick();
+					RandomWait.Wait(100, 900);
+					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+					RandomWait.Wait(100, 900);
+					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+					System.Windows.Clipboard.SetText(f);
+					RandomWait.Wait(100, 900);
+					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+					RandomWait.Wait(100, 900);
+					path = "/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_search_result_list']";
+					var list = popWin.FindFirstByXPath(path);
+					if (list != null)
+					{
+						var chkList = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+						var fItem = chkList.Where(item => item.Name.Trim().Equals(f.Trim())).FirstOrDefault();
+						if (fItem != null)
+						{
+							var point2 = fItem.BoundingRectangle.SafeRandomPoint();
+							SupperMouseKey.MoveTo(point2);
+							RandomWait.Wait(100, 300);
+							SupperMouseKey.MoveTo(point2.Confusion(5, 2));
+							RandomWait.Wait(300, 1200);
+							SupperMouseKey.LeftClick();
+							RandomWait.Wait(300, 1500);
+						}
+					}
+				}
+
+				//检查结果集.
+				path = "/Group/Group/Text/Group[@AutomationId='sp_choice_contact_list.qt_scrollarea_viewport']";
+				var resultPaneRetry = Retry.WhileNull(() => popWin.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+				if (resultPaneRetry.Success)
+				{
+					var resultPane = resultPaneRetry.Result;
+					var buttonRoot = resultPane.FindFirstChild(cf => cf.ByControlType(ControlType.Group));
+					var buttonList = buttonRoot.FindAllChildren(cf => cf.ByControlType(ControlType.Button));
+					if (buttonList.Length > 0)
+					{
+						path = "/Group/Group/Button[@Name='完成']";
+						var finishButton = popWin.FindFirstByXPath(path);
+						if (finishButton != null)
+						{
+							var point2 = finishButton.BoundingRectangle.SafeRandomPoint();
+							SupperMouseKey.MoveTo(point2);
+							RandomWait.Wait(100, 300);
+							SupperMouseKey.MoveTo(point2.Confusion(5, 2));
+							RandomWait.Wait(300, 1200);
+							SupperMouseKey.LeftClick();
+							return;
+						}
+					}
+					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+					RandomWait.Wait(300, 1500);
+				}
+				else
+				{
+					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+					RandomWait.Wait(300, 1500);
+				}
+			}
+		}
+
+		private void __ProcessLabel(UIA3Automation automation, MomentsOptions options, Window window, AutomationElement root)
+		{
+			var labels = options.Labels.IsT0 ? new List<string> { options.Labels.AsT0 } : options.Labels.AsT1;
+			var selectNumber = 0;
+			if (labels.Count == 0)
+				return;
+			var path = "/Group/Button[@ClassName='mmui::PublishPrivacyView']";
+			var lableLinkRetry = Retry.WhileNull(() => root.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+			if (!lableLinkRetry.Success)
+				return;
+			var point = lableLinkRetry.Result.BoundingRectangle.SafeRandomPoint();
+			SupperMouseKey.MoveTo(point);
+			RandomWait.Wait(100, 500);
+			SupperMouseKey.MoveTo(point.Confusion(5, 2));
+			RandomWait.Wait(100, 900);
+			SupperMouseKey.LeftClick();
+			path = "/Window[@Name='Weixin']";
+			var rootPopWinRetry = Retry.WhileNull(() => window.FindFirstByXPath("/Window[@Name='Weixin']"), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			if (rootPopWinRetry.Success)
+			{
+				var rootPopWin = rootPopWinRetry.Result;
+				path = "/Group/RadioButton[@Name='谁可以看']";
+				var whoVisibleButton = rootPopWin.FindFirstByXPath(path);
+				point = whoVisibleButton.BoundingRectangle.SafeRandomPoint();
+				SupperMouseKey.MoveTo(point);
+				RandomWait.Wait(100, 500);
+				SupperMouseKey.MoveTo(point.Confusion(5, 3));
+				RandomWait.Wait(100, 900);
+				SupperMouseKey.LeftClick();
+				//处理谁可以看.
+				path = "/Window/Window[@Name='微信谁可以看']";
+				var whoVisibleWinRetry = Retry.WhileNull(() => window.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+				if (whoVisibleWinRetry.Success)
+				{
+					var whoVisibleWin = whoVisibleWinRetry.Result;
+					path = "/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_to_select_contact_list']";
+					var list = whoVisibleWin.FindFirstByXPath(path);
+					var chkBoxs = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+					foreach (var item in chkBoxs)
+					{
+						var s = item.Name.Trim().Split(' ');
+						var label = s[0];
+						if (labels.Contains(label))
+						{
+							labels.Remove(label);
+							point = item.BoundingRectangle.SafeRandomPoint();
+							SupperMouseKey.MoveTo(point);
+							RandomWait.Wait(50, 300);
+							SupperMouseKey.MoveTo(point.Confusion(10, 3));
+							RandomWait.Wait(300, 900);
+							SupperMouseKey.LeftClick();
+							RandomWait.Wait(300, 1200);
+							selectNumber++;
+						}
+					}
+					if (labels.Count > 0)
+					{
+						foreach (var item in labels)
+						{
+							//搜索
+							path = "/Group/Group/Group/Edit[@Name='搜索']";
+							var edit = whoVisibleWin.FindFirstByXPath(path);
+							point = edit.BoundingRectangle.SafeRandomPoint();
+							SupperMouseKey.MoveTo(point);
+							RandomWait.Wait(50, 300);
+							SupperMouseKey.MoveTo(point.Confusion(10, 3));
+							RandomWait.Wait(300, 900);
+							SupperMouseKey.LeftClick();
+							RandomWait.Wait(300, 1200);
+							SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+							RandomWait.Wait(300, 900);
+							SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+							RandomWait.Wait(300, 900);
+							System.Windows.Clipboard.SetText(item);
+							SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+							RandomWait.Wait(600, 1500);
+							path = "/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_to_select_contact_list']";
+							list = whoVisibleWin.FindFirstByXPath(path);
+							chkBoxs = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+							if (chkBoxs.Count() > 0)
+							{
+								foreach (var subItem in chkBoxs)
+								{
+									var s = subItem.Name.Trim().Split(' ');
+									var label = s[0];
+									if (label.Equals(item))
+									{
+										point = subItem.BoundingRectangle.SafeRandomPoint();
+										SupperMouseKey.MoveTo(point);
+										RandomWait.Wait(50, 300);
+										SupperMouseKey.MoveTo(point.Confusion(10, 3));
+										RandomWait.Wait(300, 900);
+										SupperMouseKey.LeftClick();
+										RandomWait.Wait(300, 1200);
+										selectNumber++;
+									}
+								}
+							}
+						}
+					}
+					//关闭
+					if (selectNumber > 0)
+					{
+						//点击完成
+						path = "/Group/Group/Button[@Name='完成'][@AutomationId='confirm_btn']";
+						var finishButton = whoVisibleWin.FindFirstByXPath(path);
+						point = finishButton.BoundingRectangle.SafeRandomPoint();
+						SupperMouseKey.MoveTo(point);
+						RandomWait.Wait(50, 300);
+						SupperMouseKey.MoveTo(point.Confusion(10, 3));
+						RandomWait.Wait(300, 900);
+						SupperMouseKey.LeftClick();
+						RandomWait.Wait(300, 1200);
+
+						//点击确定
+						path = "/Window/Group/Button[@Name='确定']";
+						var confirmButton = window.FindFirstByXPath(path);
+						if (confirmButton != null)
+						{
+							point = confirmButton.BoundingRectangle.SafeRandomPoint();
+							SupperMouseKey.MoveTo(point);
+							RandomWait.Wait(50, 300);
+							SupperMouseKey.MoveTo(point.Confusion(10, 3));
+							RandomWait.Wait(300, 900);
+							SupperMouseKey.LeftClick();
+							RandomWait.Wait(300, 1200);
+						}
+					}
+					else
+					{
+						whoVisibleWin.Focus();
+						SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+						RandomWait.Wait(600, 1200);
+
+						//关闭下一层窗口
+						rootPopWin.Focus();
+						SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+						RandomWait.Wait(600, 1200);
+
+					}
+				}
+			}
 		}
 
 		private bool _ProcessImageFiles(string pathRoot, Window window, List<string> imageFiles)
@@ -295,16 +552,137 @@ namespace WeChatAuto.Components
 		/// 移除自己发送的朋友圈
 		/// </summary>
 		/// <param name="content">朋友圈文字内容</param>
-		/// <param name="date">日期，可以不填，如果不填，则删除最近发布的朋友圈内容</param>
-		/// <returns></returns>
-		public async Task<bool> RemoveMoments(string content, DateTime date = default)
+		/// <returns>是否成功删除</returns>
+		public async Task<bool> RemoveMoments(string content)
 		{
-			return await WeChatInvoker.Call(RemoveMomentsCore, content, date);
+			return await WeChatInvoker.Call(RemoveMomentsCore, content);
 		}
 
-		internal bool RemoveMomentsCore(UIA3Automation automation, string content, DateTime date)
+		internal bool RemoveMomentsCore(UIA3Automation automation, string content)
 		{
-			throw new NotImplementedException();
+			if (string.IsNullOrWhiteSpace(content))
+			{
+				_logger.Error(content);
+				return false;
+			}
+			var mainWin = OpenMomentsCore(automation);
+			//首先点击刷新按钮到顶部
+			var toolBar = ToolBar;
+			if (toolBar == null)
+				return false;
+			var refreshButton = toolBar.FindFirstChild(cf => cf.ByName("刷新").And(cf.ByControlType(ControlType.Button)));
+			var point = refreshButton.BoundingRectangle.Center();
+			SupperMouseKey.MoveTo(point.Confusion(4, 4));
+			RandomWait.Wait(100, 300);
+			SupperMouseKey.MoveTo(point.Confusion(4, 4));
+			RandomWait.Wait(300, 900);
+			SupperMouseKey.LeftClick();
+			RandomWait.Wait(1000, 2500);
+			var container = mainWin.FindFirstByXPath("/Group/Group/Group/Custom/Group/List[@Name='朋友圈'][@AutomationId='sns_list']");
+			point = container.BoundingRectangle.SafeRandomPoint();
+			SupperMouseKey.MoveTo(point);
+			RandomWait.Wait(100, 300);
+			SupperMouseKey.MoveTo(point.Confusion(10, 10));
+			RandomWait.Wait(300, 900);
+			var index = 0;
+			var result = false;
+			//滚动并且删除.
+			while (index < WeAutomation.Config.MonentsScrollMaxSetp)
+			{
+				var childItems = container.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+				var filterItems = childItems.Where(x => !x.ClassName.Equals("mmui::TimelineCell") && !x.ClassName.Equals("mmui::TimelineCommentCell") && !string.IsNullOrWhiteSpace(x.Name)).ToList();
+				foreach (var item in filterItems)
+				{
+					if (item.Name.StartsWith(this._Client.NickName) && item.Name.Contains(content))
+					{
+						if (item.BoundingRectangle.Y + item.BoundingRectangle.Height <= container.BoundingRectangle.Y + container.BoundingRectangle.Height - 60)
+						{
+							//点击删除按钮.
+							RandomWait.Wait(600, 1500);
+							__ProcessDeleteItem(item, mainWin);
+							result = true;
+							break;
+						}
+					}
+				}
+				if (result)
+					break;
+				var currentPoint = point.Confusion(5, 5);
+				SupperMouseKey.MoveTo(currentPoint);
+				RandomWait.Wait(100, 300);
+				MouseScrollHelper.DownStep(currentPoint, 1);
+				index++;
+			}
+
+			mainWin.Focus();
+			CloseMomentsCore(automation);
+			return true;
+		}
+
+		private void __ProcessDeleteItem(AutomationElement item, Window mainWin)
+		{
+			using var mat1 = this._Client.OcrEngee.GetMatFromElement(item);
+			var roi = new Rectangle(0, mat1.Height - 25, mat1.Width - 80, 25);
+			using var mat2 = new Mat(mat1, roi);
+			//放大3倍
+			using var mat3 = new Mat();
+			CvInvoke.Resize(mat2, mat3, Size.Empty, 3, 3, Emgu.CV.CvEnum.Inter.Cubic);
+			var result = this._Client.OcrEngee.Detect(mat3.ToBitmap(), 0, mat3.Width, boxScoreThresh: 0.8f, boxThresh: 0.85f, isTest: false, doAngle: false, mostAngle: false);
+			_logger.Debug(result.ToString());
+			var texts = result.TextBlocks.Where(u => !string.IsNullOrWhiteSpace(u.Text) && u.CharScores.Average() > 0.85f).ToList();
+			var rightPos = texts.Max(u => u.BoxPoints[1].X);
+			var text = texts.Where(u => u.BoxPoints[1].X == rightPos).FirstOrDefault();
+			if (text != null)
+			{
+				var point = new Point(text.BoxPoints[1].X, text.BoxPoints[1].Y + (int)((text.BoxPoints[2].Y - text.BoxPoints[1].Y) / 2));
+				point = new Point(point.X / 3, point.Y / 3);
+				point = new Point(item.BoundingRectangle.X + point.X, item.BoundingRectangle.Y + item.BoundingRectangle.Height - 25 + point.Y);
+				SupperMouseKey.MoveTo(point);
+				RandomWait.Wait(800, 1500);
+				bool success = TryClick(new Point(point.X + 5 + 23, point.Y), mainWin);
+				if (!success)
+				{
+					TryClick(new Point(point.X + 5, point.Y), mainWin);
+				}
+			}
+		}
+
+		private bool TryClick(Point point, Window mainWin)
+		{
+			var point2 = new Point(point.X + 12, point.Y);
+			SupperMouseKey.MoveTo(point2);
+			RandomWait.Wait(100, 300);
+			SupperMouseKey.MoveTo(point2.Confusion(4, 2));
+			RandomWait.Wait(300, 900);
+			SupperMouseKey.LeftClick();
+			RandomWait.Wait(300, 900);
+			//等候删除按钮出来.
+			var path = "/Window/Group/Text[@Name='删除该朋友圈？']";
+			var deleWinRetry = Retry.WhileNull(() => mainWin.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+			if (deleWinRetry.Success)
+			{
+				path = "/Window/Group/Group/Group/Button[@Name='删除'][@ClassName='mmui::XOutlineButton']";
+				var delButton = mainWin.FindFirstByXPath(path);
+				if (delButton != null)
+				{
+					point2 = delButton.BoundingRectangle.SafeRandomPoint();
+					SupperMouseKey.MoveTo(point2);
+					RandomWait.Wait(100, 300);
+					SupperMouseKey.MoveTo(point2.Confusion(4, 2));
+					RandomWait.Wait(300, 900);
+					SupperMouseKey.LeftClick();
+					RandomWait.Wait(300, 900);
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else
+			{
+				return false;
+			}
 		}
 	}
 }

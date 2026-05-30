@@ -115,7 +115,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.Search(who);
+        var result = await client.SearchFriend(who);
         Assert.True(result);
     }
 
@@ -129,7 +129,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.Search(who);
+        var result = await client.SearchFriend(who);
         Assert.False(result);
     }
 
@@ -143,7 +143,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.Search(who);
+        var result = await client.SearchFriend(who);
         Assert.True(result);
     }
 
@@ -157,7 +157,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.Search(who);
+        var result = await client.SearchFriend(who);
         Assert.False(result);
     }
 }
