@@ -78,7 +78,6 @@ namespace WeChatAuto.Components
             this.AvatorPath = ownerInfo.AvatorPath;
             this.WechatIndex = index;
             _logger = provider.GetRequiredService<AutoLogger<WeChatClient>>();
-            CheckVersion();
             _Initialize();
         }
 
@@ -169,13 +168,7 @@ namespace WeChatAuto.Components
             _Navigation = new Navigation(this, this.MainThreadInvoker, this.serviceProvider);
             return _Navigation;
         }
-        private void CheckVersion()
-        {
-            if (WeAutomation.Config.WxVersion != version)
-            {
-                throw new Exception("错误：配置参数错误！请检查：1.微信客户端是否是最新版本,2.是否正确设置参数.");
-            }
-        }
+
 
         #region 个人信息
         /// <summary>

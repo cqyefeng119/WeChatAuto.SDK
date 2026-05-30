@@ -24,7 +24,6 @@ using WeAutoCommon.Utils;
 
 var serviceProvider = WeAutomation.Initialize(options =>
 {
-    options.WxVersion = "4.1.9.55";
     options.EnableOCR = true;
     // options.DebugMode = false;
     // options.EnableMouseKeyboardSimulator = false;
