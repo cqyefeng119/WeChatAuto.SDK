@@ -443,6 +443,13 @@ namespace WeChatAuto.Components
 					{
 						whoVisibleWin.Focus();
 						SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+						RandomWait.Wait(600, 1200);
+
+						//关闭下一层窗口
+						rootPopWin.Focus();
+						SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+						RandomWait.Wait(600, 1200);
+
 					}
 				}
 			}

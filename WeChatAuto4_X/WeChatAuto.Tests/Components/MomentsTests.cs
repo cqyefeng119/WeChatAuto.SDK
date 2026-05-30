@@ -65,7 +65,7 @@ public class MomentsTests
         Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "使用键鼠测试发朋友圈一", new Options.MomentsOptions
         {
             AtUsrs = new List<string> { "软件作家涛哥_vip222" },
-            Labels = new List<string> { "aaa", "888" },
+            Labels = new List<string> { "888" },
         });
         Assert.False(result);
     }
