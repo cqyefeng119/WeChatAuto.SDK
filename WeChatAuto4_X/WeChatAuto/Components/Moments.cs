@@ -30,6 +30,7 @@ using Emgu.CV.Structure;
 using WeChatAuto.Services;
 using Emgu.CV;
 using System.Windows.Media.Imaging;
+using System.ComponentModel.DataAnnotations;
 
 
 namespace WeChatAuto.Components
@@ -597,7 +598,7 @@ namespace WeChatAuto.Components
 						{
 							//点击删除按钮.
 							RandomWait.Wait(600, 1500);
-							__ProcessDeleteItem(item);
+							__ProcessDeleteItem(item, mainWin);
 							result = true;
 							break;
 						}
@@ -617,7 +618,7 @@ namespace WeChatAuto.Components
 			return true;
 		}
 
-		private void __ProcessDeleteItem(AutomationElement item)
+		private void __ProcessDeleteItem(AutomationElement item, Window mainWin)
 		{
 			using var mat1 = this._Client.OcrEngee.GetMatFromElement(item);
 			var roi = new Rectangle(0, mat1.Height - 25, mat1.Width - 80, 25);
@@ -625,9 +626,9 @@ namespace WeChatAuto.Components
 			//放大3倍
 			using var mat3 = new Mat();
 			CvInvoke.Resize(mat2, mat3, Size.Empty, 3, 3, Emgu.CV.CvEnum.Inter.Cubic);
-			var result = this._Client.OcrEngee.Detect(mat3.ToBitmap(), 0, mat3.Width, boxScoreThresh: 0.6f, boxThresh: 0.8f, isTest: true, doAngle: false, mostAngle: false);
+			var result = this._Client.OcrEngee.Detect(mat3.ToBitmap(), 0, mat3.Width, boxScoreThresh: 0.8f, boxThresh: 0.85f, isTest: false, doAngle: false, mostAngle: false);
 			_logger.Debug(result.ToString());
-			var texts = result.TextBlocks.Where(u => !string.IsNullOrWhiteSpace(u.Text)).ToList();
+			var texts = result.TextBlocks.Where(u => !string.IsNullOrWhiteSpace(u.Text) && u.CharScores.Average() > 0.85f).ToList();
 			var rightPos = texts.Max(u => u.BoxPoints[1].X);
 			var text = texts.Where(u => u.BoxPoints[1].X == rightPos).FirstOrDefault();
 			if (text != null)
@@ -636,7 +637,49 @@ namespace WeChatAuto.Components
 				point = new Point(point.X / 3, point.Y / 3);
 				point = new Point(item.BoundingRectangle.X + point.X, item.BoundingRectangle.Y + item.BoundingRectangle.Height - 25 + point.Y);
 				SupperMouseKey.MoveTo(point);
-				RandomWait.Wait(3000,6000);
+				RandomWait.Wait(800, 1500);
+				bool success = TryClick(new Point(point.X + 5 + 23, point.Y), mainWin);
+				if (!success)
+				{
+					TryClick(new Point(point.X + 5, point.Y), mainWin);
+				}
+			}
+		}
+
+		private bool TryClick(Point point, Window mainWin)
+		{
+			var point2 = new Point(point.X + 12, point.Y);
+			SupperMouseKey.MoveTo(point2);
+			RandomWait.Wait(100, 300);
+			SupperMouseKey.MoveTo(point2.Confusion(4, 2));
+			RandomWait.Wait(300, 900);
+			SupperMouseKey.LeftClick();
+			RandomWait.Wait(300, 900);
+			//等候删除按钮出来.
+			var path = "/Window/Group/Text[@Name='删除该朋友圈？']";
+			var deleWinRetry = Retry.WhileNull(() => mainWin.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+			if (deleWinRetry.Success)
+			{
+				path = "/Window/Group/Group/Group/Button[@Name='删除'][@ClassName='mmui::XOutlineButton']";
+				var delButton = mainWin.FindFirstByXPath(path);
+				if (delButton != null)
+				{
+					point2 = delButton.BoundingRectangle.SafeRandomPoint();
+					SupperMouseKey.MoveTo(point2);
+					RandomWait.Wait(100, 300);
+					SupperMouseKey.MoveTo(point2.Confusion(4, 2));
+					RandomWait.Wait(300, 900);
+					SupperMouseKey.LeftClick();
+					RandomWait.Wait(300, 900);
+					return true;
+				}else
+				{
+					return false;
+				}
+			}
+			else
+			{
+				return false;
 			}
 		}
 	}
