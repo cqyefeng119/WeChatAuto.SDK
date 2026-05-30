@@ -20,6 +20,21 @@ namespace WeChatAuto.Options
         /// <summary>
         /// 是否关闭增加朋友窗口,默认关闭，可以设置为false不关闭
         /// </summary>
-        public bool IsCloseWin {get;set;} = true;
+        public bool IsCloseWin { get; set; } = true;
+
+        /// <summary>
+        /// 加好友时打招呼内容,如果为空，则保持微信默认
+        /// </summary>
+        public string SayHi { get; set; }
+
+        /// <summary>
+        /// 备注后缀，如：设置suffix为"test",则备注为:xxxx_test
+        /// </summary>
+        public string Suffix { get; set; }
+
+        /// <summary>
+        /// 设置标签
+        /// </summary>
+        public string Label { get; set; }
     }
 }

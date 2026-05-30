@@ -53,6 +53,7 @@ public class SearchTest
         var result = await client.AddFriends(new string[] { "18978694189", "13719238557", "13719238558" },
         new Options.AddFriendsOptions
         {
+            IntervalTime = 4,
             IsCloseWin = true,
         });
         Assert.True(true);
