@@ -42,7 +42,7 @@ namespace WeChatAuto.Components
 	{
 		private readonly IServiceProvider _serviceProvider;
 		private UIThreadInvoker _uiMainThreadInvoker;
-		private AutoLogger<AddressBookList> _logger;
+		private AutoLogger<Moments> _logger;
 		private WeChatClient _Client;
 		internal AutomationElement ToolBar => GetToolBar();
 
@@ -58,7 +58,7 @@ namespace WeChatAuto.Components
 
 		internal Moments(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
 		{
-			_logger = serviceProvider.GetRequiredService<AutoLogger<AddressBookList>>();
+			_logger = serviceProvider.GetRequiredService<AutoLogger<Moments>>();
 			_uiMainThreadInvoker = uiThreadInvoker;
 			_Client = client;
 			_serviceProvider = serviceProvider;
