@@ -260,17 +260,20 @@ namespace WeChatAuto.Components
 					RandomWait.Wait(100, 900);
 					path = "/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_search_result_list']";
 					var list = popWin.FindFirstByXPath(path);
-					var chkList = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
-					var fItem = chkList.Where(item => item.Name.Trim().Equals(f.Trim())).FirstOrDefault();
-					if (fItem != null)
+					if (list != null)
 					{
-						var point2 = fItem.BoundingRectangle.SafeRandomPoint();
-						SupperMouseKey.MoveTo(point2);
-						RandomWait.Wait(100, 300);
-						SupperMouseKey.MoveTo(point2.Confusion(5, 2));
-						RandomWait.Wait(300, 1200);
-						SupperMouseKey.LeftClick();
-						RandomWait.Wait(300, 1500);
+						var chkList = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+						var fItem = chkList.Where(item => item.Name.Trim().Equals(f.Trim())).FirstOrDefault();
+						if (fItem != null)
+						{
+							var point2 = fItem.BoundingRectangle.SafeRandomPoint();
+							SupperMouseKey.MoveTo(point2);
+							RandomWait.Wait(100, 300);
+							SupperMouseKey.MoveTo(point2.Confusion(5, 2));
+							RandomWait.Wait(300, 1200);
+							SupperMouseKey.LeftClick();
+							RandomWait.Wait(300, 1500);
+						}
 					}
 				}
 
