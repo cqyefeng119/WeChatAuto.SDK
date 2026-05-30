@@ -69,4 +69,22 @@ public class MomentsTests
         });
         Assert.False(result);
     }
+
+    [Fact(DisplayName = "删除朋友圈")]
+    public async Task Test_remove_monents()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.RemoveMoments("使用键鼠测试发朋友圈一");
+        Assert.True(result);
+    }
+
+    [Fact(DisplayName = "删除朋友圈-故意设置错误")]
+    public async Task Test_remove_monents_error()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.RemoveMoments("使用键鼠测试发朋友圈一");
+        Assert.False(result);
+    }
 }

@@ -27,6 +27,9 @@ using WeChatAuto.Models;
 using Emgu.CV.Dai;
 using System.Windows.Controls;
 using Emgu.CV.Structure;
+using WeChatAuto.Services;
+using Emgu.CV;
+using System.Windows.Media.Imaging;
 
 
 namespace WeChatAuto.Components
@@ -547,16 +550,94 @@ namespace WeChatAuto.Components
 		/// 移除自己发送的朋友圈
 		/// </summary>
 		/// <param name="content">朋友圈文字内容</param>
-		/// <param name="date">日期，可以不填，如果不填，则删除最近发布的朋友圈内容</param>
-		/// <returns></returns>
-		public async Task<bool> RemoveMoments(string content, DateTime date = default)
+		/// <returns>是否成功删除</returns>
+		public async Task<bool> RemoveMoments(string content)
 		{
-			return await WeChatInvoker.Call(RemoveMomentsCore, content, date);
+			return await WeChatInvoker.Call(RemoveMomentsCore, content);
 		}
 
-		internal bool RemoveMomentsCore(UIA3Automation automation, string content, DateTime date)
+		internal bool RemoveMomentsCore(UIA3Automation automation, string content)
 		{
-			throw new NotImplementedException();
+			if (string.IsNullOrWhiteSpace(content))
+			{
+				_logger.Error(content);
+				return false;
+			}
+			var mainWin = OpenMomentsCore(automation);
+			//首先点击刷新按钮到顶部
+			var toolBar = ToolBar;
+			if (toolBar == null)
+				return false;
+			var refreshButton = toolBar.FindFirstChild(cf => cf.ByName("刷新").And(cf.ByControlType(ControlType.Button)));
+			var point = refreshButton.BoundingRectangle.Center();
+			SupperMouseKey.MoveTo(point.Confusion(4, 4));
+			RandomWait.Wait(100, 300);
+			SupperMouseKey.MoveTo(point.Confusion(4, 4));
+			RandomWait.Wait(300, 900);
+			SupperMouseKey.LeftClick();
+			RandomWait.Wait(1000, 2500);
+			var container = mainWin.FindFirstByXPath("/Group/Group/Group/Custom/Group/List[@Name='朋友圈'][@AutomationId='sns_list']");
+			point = container.BoundingRectangle.SafeRandomPoint();
+			SupperMouseKey.MoveTo(point);
+			RandomWait.Wait(100, 300);
+			SupperMouseKey.MoveTo(point.Confusion(10, 10));
+			RandomWait.Wait(300, 900);
+			var index = 0;
+			var result = false;
+			//滚动并且删除.
+			while (index < WeAutomation.Config.MonentsScrollMaxSetp)
+			{
+				var childItems = container.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+				var filterItems = childItems.Where(x => !x.ClassName.Equals("mmui::TimelineCell") && !x.ClassName.Equals("mmui::TimelineCommentCell") && !string.IsNullOrWhiteSpace(x.Name)).ToList();
+				foreach (var item in filterItems)
+				{
+					if (item.Name.StartsWith(this._Client.NickName) && item.Name.Contains(content))
+					{
+						if (item.BoundingRectangle.Y + item.BoundingRectangle.Height <= container.BoundingRectangle.Y + container.BoundingRectangle.Height - 60)
+						{
+							//点击删除按钮.
+							RandomWait.Wait(600, 1500);
+							__ProcessDeleteItem(item);
+							result = true;
+							break;
+						}
+					}
+				}
+				if (result)
+					break;
+				var currentPoint = point.Confusion(5, 5);
+				SupperMouseKey.MoveTo(currentPoint);
+				RandomWait.Wait(100, 300);
+				MouseScrollHelper.DownStep(currentPoint, 1);
+				index++;
+			}
+
+			mainWin.Focus();
+			CloseMomentsCore(automation);
+			return true;
+		}
+
+		private void __ProcessDeleteItem(AutomationElement item)
+		{
+			using var mat1 = this._Client.OcrEngee.GetMatFromElement(item);
+			var roi = new Rectangle(0, mat1.Height - 25, mat1.Width - 80, 25);
+			using var mat2 = new Mat(mat1, roi);
+			//放大3倍
+			using var mat3 = new Mat();
+			CvInvoke.Resize(mat2, mat3, Size.Empty, 3, 3, Emgu.CV.CvEnum.Inter.Cubic);
+			var result = this._Client.OcrEngee.Detect(mat3.ToBitmap(), 0, mat3.Width, boxScoreThresh: 0.6f, boxThresh: 0.8f, isTest: true, doAngle: false, mostAngle: false);
+			_logger.Debug(result.ToString());
+			var texts = result.TextBlocks.Where(u => !string.IsNullOrWhiteSpace(u.Text)).ToList();
+			var rightPos = texts.Max(u => u.BoxPoints[1].X);
+			var text = texts.Where(u => u.BoxPoints[1].X == rightPos).FirstOrDefault();
+			if (text != null)
+			{
+				var point = new Point(text.BoxPoints[1].X, text.BoxPoints[1].Y + (int)((text.BoxPoints[2].Y - text.BoxPoints[1].Y) / 2));
+				point = new Point(point.X / 3, point.Y / 3);
+				point = new Point(item.BoundingRectangle.X + point.X, item.BoundingRectangle.Y + item.BoundingRectangle.Height - 25 + point.Y);
+				SupperMouseKey.MoveTo(point);
+				RandomWait.Wait(3000,6000);
+			}
 		}
 	}
 }

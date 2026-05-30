@@ -675,10 +675,9 @@ namespace WeChatAuto.Components
         /// 移除自己发送的朋友圈
         /// </summary>
         /// <param name="content">朋友圈文字内容</param>
-        /// <param name="date">日期，可以不填，如果不填，则删除最近发布的朋友圈内容</param>
-        /// <returns></returns>
-        public async Task<bool> RemoveMoments(string content, DateTime date = default)
-          => await this.Moments.RemoveMoments(content, date);
+        /// <returns>是否成功删除</returns>
+        public async Task<bool> RemoveMoments(string content)
+          => await this.Moments.RemoveMoments(content);
         #endregion
 
         #region 释放资源
