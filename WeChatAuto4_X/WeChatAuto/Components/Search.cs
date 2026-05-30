@@ -33,6 +33,10 @@ using System.Reflection.Metadata.Ecma335;
 using System.Windows.Media.Imaging;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using System.ComponentModel.DataAnnotations;
+using System.Windows.Controls;
+using WeChatAuto.Options;
+using System.IO;
 
 namespace WeChatAuto.Components
 {
@@ -45,17 +49,180 @@ namespace WeChatAuto.Components
         private UIThreadInvoker _uiThreadInvoker;
         private readonly IServiceProvider _serviceProvider;
         private WeChatClient _Client;
-        private ChatContent content;
         /// <summary>
         /// 聊天内容区发送者构造函数
         /// </summary>
-        internal Search(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider, ChatContent content)
+        internal Search(WeChatClient client, UIThreadInvoker uiThreadInvoker, IServiceProvider serviceProvider)
         {
             _uiThreadInvoker = uiThreadInvoker;
             _serviceProvider = serviceProvider;
             _logger = serviceProvider.GetRequiredService<AutoLogger<Search>>();
             this._Client = client;
-            this.content = content;
+        }
+
+        /// <summary>
+        /// 打开新增朋友窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Window> OpenAddFriensWin() => await WeChatInvoker.Call(OpenAddFriensWinCore);
+
+
+        internal Window OpenAddFriensWinCore(UIA3Automation automation)
+        {
+            var desktop = automation.GetDesktop();
+            var winRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("添加朋友").And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)).And(cf.ByControlType(ControlType.Window)).And(cf.ByAutomationId("AddFriendWindow"))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (winRetry.Success)
+            {
+                winRetry.Result.AsWindow().Focus();
+                RandomWait.Wait(100, 300);
+                this._Client.MoveWinToMainCenter(winRetry.Result.AsWindow());
+                return winRetry.Result.AsWindow();
+            }
+            //打开
+            var conversationRoot = this._Client.Conversations.ConversationRoot;
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/Group/Button[@Name='快捷操作']";
+            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (buttonRetry.Success)
+            {
+                var button = buttonRetry.Result.AsButton();
+                var point = button.BoundingRectangle.Center();
+                var point2 = point.Confusion(10, 10);
+                Mouse.Position = point2;
+                RandomWait.Wait(100, 300);
+                point2 = point.Confusion(10, 10);
+                SupperMouseKey.MoveTo(point2);
+                RandomWait.Wait(100, 300);
+                point2 = point.Confusion(10, 10);
+                SupperMouseKey.MoveTo(point2);
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 900);
+                var menuRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath("/Window/Group/List[@Name='快捷操作'][@AutomationId='chat_more_entry']"), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (menuRetry.Success)
+                {
+                    var menuList = menuRetry.Result;
+                    var menuItem = menuList.FindFirstChild(cf => cf.ByName("添加朋友").And(cf.ByControlType(ControlType.ListItem)));
+                    if (menuItem != null)
+                    {
+                        point = menuItem.BoundingRectangle.Center().Confusion(10, 5);
+                        SupperMouseKey.MoveTo(point);
+                        RandomWait.Wait(100, 300);
+                        point = menuItem.BoundingRectangle.Center().Confusion(10, 5);
+                        SupperMouseKey.MoveTo(point);
+                        RandomWait.Wait(300, 900);
+                        SupperMouseKey.LeftClick();
+                        RandomWait.Wait(300, 1200);
+
+                        winRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("添加朋友").And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)).And(cf.ByControlType(ControlType.Window)).And(cf.ByAutomationId("AddFriendWindow"))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+                        if (winRetry.Success)
+                        {
+                            this._Client.MoveWinToMainCenter(winRetry.Result.AsWindow());
+                            return winRetry.Result.AsWindow();
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 关闭新增朋友窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task CloseAddFriendWin() => await WeChatInvoker.Call(CloseAddFriendWinCore);
+
+
+        internal void CloseAddFriendWinCore(UIA3Automation automation)
+        {
+            var desktop = automation.GetDesktop();
+            var winRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("添加朋友").And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)).And(cf.ByControlType(ControlType.Window)).And(cf.ByAutomationId("AddFriendWindow"))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (winRetry.Success)
+            {
+                winRetry.Result.AsWindow().Focus();
+                RandomWait.Wait(300, 900);
+                winRetry.Result.AsWindow().Close();
+            }
+        }
+
+        /// <summary>
+        /// 通过手机号码、微信号查找并添加好友
+        /// </summary>
+        /// <param name="friends">手机号码或者微信号列表</param>
+        /// <param name="options">增加朋友选项，具体请参考<see cref="AddFriendsOptions"/></param>
+        /// <returns>添加好友结果列表，详情请参见<see cref="FriendSearchResultEnums"/></returns>
+        public async Task<IDictionary<string, FriendSearchResultEnums>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options = null)
+        => await WeChatInvoker.Call(AddFriendsCore, friends, options);
+
+        private IDictionary<string, FriendSearchResultEnums> AddFriendsCore(UIA3Automation automation, OneOf<string, string[]> friends, AddFriendsOptions options)
+        {
+            var result = new Dictionary<string, FriendSearchResultEnums>();
+            var win = OpenAddFriensWinCore(automation);
+            if (win == null)
+                return result;
+            var friendList = friends.IsT0 ? new List<string>() { friends.AsT0 } : friends.AsT1.ToList();
+            foreach (var f in friendList)
+            {
+                var path = "/Group/Group/Group/Button[@Name='清空']";
+                var clearRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMicroseconds(200));
+                if (clearRetry.Success)
+                {
+                    var cPoint = clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5);
+                    SupperMouseKey.MoveTo(cPoint);
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    RandomWait.Wait(300, 900);
+                }
+                path = "/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
+                var edit = win.FindFirstByXPath(path).AsTextBox();
+                if (edit == null)
+                    continue;
+                var point = edit.BoundingRectangle.Center().Confusion(20, 4);
+                SupperMouseKey.MoveTo(point);
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(edit.BoundingRectangle.Center().Confusion(20, 4));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.Type(f);
+                RandomWait.Wait(300, 900);
+                path = "/Group/Group/Button[@Name='搜索'][@ClassName='mmui::XOutlineButton']";
+                var button = win.FindFirstByXPath(path).AsButton();
+                if (button != null)
+                {
+                    point = button.BoundingRectangle.Center().Confusion(20, 4);
+                    SupperMouseKey.MoveTo(point);
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(button.BoundingRectangle.Center().Confusion(20, 4));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    RandomWait.Wait(300, 900);
+                    __ProcessSearResult(win, result);
+                }
+                if (options != null)
+                {
+                    RandomWait.Wait(System.Math.Max(options.IntervalTime - 1, 0) * 1000, Math.Max(options.IntervalTime + 1, 1) * 1000);
+                    continue;
+                }
+                RandomWait.Wait(2000, 5000);
+            }
+
+            if (options != null && options.IsCloseWin)
+            {
+                CloseAddFriendWinCore(automation);
+            }
+            else
+            {
+                CloseAddFriendWinCore(automation);
+            }
+
+            return result;
+        }
+
+        private void __ProcessSearResult(Window win, Dictionary<string, FriendSearchResultEnums> result)
+        {
+
         }
     }
 }

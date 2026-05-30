@@ -122,7 +122,8 @@ namespace WeChatAuto.Components
 			{
 				result.win.Focus();
 				RandomWait.Wait(600, 1200);
-				SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+				result.win.Close();
+				RandomWait.Wait(600, 900);
 			}
 		}
 
@@ -672,7 +673,8 @@ namespace WeChatAuto.Components
 					SupperMouseKey.LeftClick();
 					RandomWait.Wait(300, 900);
 					return true;
-				}else
+				}
+				else
 				{
 					return false;
 				}

@@ -94,6 +94,7 @@ namespace WeChatAuto.Components
             this.OwnerGroup = new OwnerGroup(this, _MainThreadInvoker, serviceProvider);
             this.OuterGroup = new OuterGroup(this, _MainThreadInvoker, serviceProvider);
             this.Moments = new Moments(this, _MainThreadInvoker, serviceProvider);
+            this.Search = new Search(this, _MainThreadInvoker, serviceProvider);
             _RunCheckAddressBook();
         }
 
@@ -141,6 +142,8 @@ namespace WeChatAuto.Components
         /// 通过新好友添加好友监听器
         /// </summary>
         public NewFriendMonitor NewFriendMonitor;
+
+        public Search Search;
 
         /// <summary>
         /// 得到OCR引擎
@@ -296,7 +299,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who">待搜索的好友/群聊昵称,who - 微信会话列表肉眼可见的名称,如果群有备注，则这个who即为备注名</param>
         /// <returns>如果找到，返回true,如果没有找到，则返回false.</returns>
-        public async Task<bool> Search(string who) => await this.Conversations.Search(who);
+        public async Task<bool> SearchFriend(string who) => await this.Conversations.Search(who);
 
         /// <summary>
         /// 定位会话
@@ -562,6 +565,24 @@ namespace WeChatAuto.Components
         #endregion
 
         #region 好友/群聊管理
+        /// <summary>
+        /// 打开新增朋友窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Window> OpenAddFriensWin() => await this.Search.OpenAddFriensWin();
+        /// <summary>
+        /// 关闭新增朋友窗口
+        /// </summary>
+        /// <returns></returns>
+        public async Task CloseAddFriendWin() => await this.Search.CloseAddFriendWin();
+        /// <summary>
+        /// 通过手机号码、微信号查找并添加好友
+        /// </summary>
+        /// <param name="friends">手机号码或者微信号列表</param>
+        /// <param name="options">增加朋友选项，具体请参考<see cref="AddFriendsOptions"/></param>
+        /// <returns>添加好友结果列表，详情请参见<see cref="FriendSearchResultEnums"/></returns>
+        public async Task<IDictionary<string, FriendSearchResultEnums>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options=null)
+            => await this.Search.AddFriends(friends, options);
         #region 缓存中好友信息管理
         /// <summary>
         /// 显示缓存中存储的好友信息.
