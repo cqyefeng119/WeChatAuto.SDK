@@ -163,7 +163,7 @@ namespace WeChatAuto.Components
             foreach (var f in friendList)
             {
                 var path = "/Group/Group/Group/Button[@Name='清空']";
-                var clearRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMicroseconds(200));
+                var clearRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
                 if (clearRetry.Success)
                 {
                     var cPoint = clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5);

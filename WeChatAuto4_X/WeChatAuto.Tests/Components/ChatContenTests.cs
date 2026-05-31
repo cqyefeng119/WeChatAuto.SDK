@@ -28,6 +28,7 @@ public class ChatContenTests
     [InlineData("")]
     [InlineData("测试04")]
     [InlineData("测试01")]
+    [InlineData("秋歌")]
     public async Task Test_Send_Message(string who)
     {
         var framework = _globalFixture.clientFactory;
@@ -149,7 +150,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendVoiceChat("AI.Net");
+        await client.SendVoiceChat("EthanX_vip");
     }
 
     [Fact(DisplayName = "测试发送视频消息")]
@@ -183,7 +184,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendVoiceMessage("人工智能自动化技术讨论群",Path.Combine(AppContext.BaseDirectory,"Assets","littlecat.wav"));
+        await client.SendVoiceMessage("AI.Net_test",Path.Combine(AppContext.BaseDirectory,"Assets","littlecat.wav"));
         Assert.True(true);
     }
 
