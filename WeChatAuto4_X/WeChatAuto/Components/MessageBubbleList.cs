@@ -334,6 +334,7 @@ namespace WeChatAuto.Components
                         break;
                 }
 
+                RandomWait.Wait(30, 80);
                 //滚动
                 MouseScrollHelper.DownStep(scollPoint, 3);
             }
