@@ -580,8 +580,8 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="friends">手机号码或者微信号列表</param>
         /// <param name="options">增加朋友选项，具体请参考<see cref="AddFriendsOptions"/></param>
-        /// <returns>添加好友结果列表，详情请参见<see cref="FriendSearchResultEnums"/></returns>
-        public async Task<IDictionary<string, FriendSearchResultEnums>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options=null)
+        /// <returns>添加好友结果列表，详情请参见<see cref="FriendAddResult"/></returns>
+        public async Task<IDictionary<string, FriendAddResult>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options=null)
             => await this.Search.AddFriends(friends, options);
         #region 缓存中好友信息管理
         /// <summary>
