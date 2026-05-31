@@ -113,6 +113,26 @@ namespace WeChatAuto.Components
             }
         }
         /// <summary>
+        /// 从缓存中得到一个好友的信息,因为名字可能重复，而wxid永远重复
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public FriendInfo GetFriendWithWxIDFromCache(string wxid)
+        {
+            try
+            {
+                _cacheLock.Wait();
+                if (string.IsNullOrWhiteSpace(wxid))
+                    return null;
+                List<FriendInfo> list = GetFriendListFromCache();
+                return list.FirstOrDefault(x => x.WxId == wxid);
+            }
+            finally
+            {
+                _cacheLock.Release();
+            }
+        }
+        /// <summary>
         /// 从缓存中得到一个好友的信息
         /// </summary>
         /// <param name="who"></param>
@@ -126,6 +146,26 @@ namespace WeChatAuto.Components
                     return null;
                 List<FriendInfo> list = await GetFriendListFromCacheAsync();
                 return list.FirstOrDefault(x => x.Name == who);
+            }
+            finally
+            {
+                _cacheLock.Release();
+            }
+        }
+        /// <summary>
+        /// 从缓存中得到一个好友的信息,通过wxid来获取，因为名字可能重复
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public async Task<FriendInfo> GetFriendWithWxIDFromCacheAsync(string wxid)
+        {
+            try
+            {
+                await _cacheLock.WaitAsync();
+                if (string.IsNullOrWhiteSpace(wxid))
+                    return null;
+                List<FriendInfo> list = await GetFriendListFromCacheAsync();
+                return list.FirstOrDefault(x => x.WxId == wxid);
             }
             finally
             {
@@ -155,7 +195,29 @@ namespace WeChatAuto.Components
             }
         }
         /// <summary>
-        /// 从缓存中移除一个好友
+        /// 从缓存中移除一个好友,通过微信id，因为通过微信名可能会重复
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        public void RemoveFriendWithWxIDFromCache(string wxid)
+        {
+            try
+            {
+                _cacheLock.Wait();
+                if (string.IsNullOrWhiteSpace(wxid))
+                    return;
+                List<FriendInfo> friendInfos = GetFriendListFromCache();
+                friendInfos = friendInfos.Where(u => !u.WxId.Equals(wxid)).ToList();
+                byte[] bytes = MessagePack.MessagePackSerializer.Serialize<List<FriendInfo>>(friendInfos);
+                var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+                File.WriteAllBytes(path, bytes);
+            }
+            finally
+            {
+                _cacheLock.Release();
+            }
+        }
+        /// <summary>
+        /// 从缓存中移除一个好友,异步方法
         /// </summary>
         /// <param name="who"></param>
         public async Task RemoveFriendFromCacheAsync(string who)
@@ -167,6 +229,29 @@ namespace WeChatAuto.Components
                     return;
                 List<FriendInfo> friendInfos = await GetFriendListFromCacheAsync();
                 friendInfos = friendInfos.Where(u => !u.Name.Equals(who)).ToList();
+                using MemoryStream ms = new MemoryStream();
+                await MessagePack.MessagePackSerializer.SerializeAsync<List<FriendInfo>>(ms, friendInfos);
+                var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");
+                await File.WriteAllBytesAsync(path, ms.ToArray());
+            }
+            finally
+            {
+                _cacheLock.Release();
+            }
+        }
+        /// <summary>
+        /// 从缓存中移除一个好友,通过wxid,异步方法
+        /// </summary>
+        /// <param name="wxid"></param>
+        public async Task RemoveFriendWithWxIDFromCacheAsync(string wxid)
+        {
+            try
+            {
+                await _cacheLock.WaitAsync();
+                if (string.IsNullOrWhiteSpace(wxid))
+                    return;
+                List<FriendInfo> friendInfos = await GetFriendListFromCacheAsync();
+                friendInfos = friendInfos.Where(u => !u.WxId.Equals(wxid)).ToList();
                 using MemoryStream ms = new MemoryStream();
                 await MessagePack.MessagePackSerializer.SerializeAsync<List<FriendInfo>>(ms, friendInfos);
                 var path = Path.Combine(AppContext.BaseDirectory, _Client.WxId + "_cache.dat");

@@ -589,12 +589,14 @@ namespace WeChatAuto.Components
         /// 显示缓存中存储的好友信息.
         /// </summary>
         /// <returns>好友信息列表，请参考<see cref="FriendInfo"/></returns>
-        public List<FriendInfo> GetFriendsFromCache() => OwnerGroup.GetFriendListFromCache();
+        public List<FriendInfo> GetFriendListFromCache() => OwnerGroup.GetFriendListFromCache();
+
         /// <summary>
         /// 显示缓存中存储的好友信息,异步方法
         /// </summary>
         /// <returns>好友信息列表，请参考<see cref="FriendInfo"/></returns>
-        public async Task<List<FriendInfo>> GetFriendsFromCacheAsync() => await OwnerGroup.GetFriendListFromCacheAsync();
+        public async Task<List<FriendInfo>> GetFriendListFromCacheAsync() => await OwnerGroup.GetFriendListFromCacheAsync();
+
         /// <summary>
         /// 从缓存中得到一个好友的信息
         /// </summary>
@@ -603,11 +605,61 @@ namespace WeChatAuto.Components
         public FriendInfo GetFriendFromCache(string who) => OwnerGroup.GetFriendFromCache(who);
 
         /// <summary>
-        /// 从缓存中得到一个好友的信息
+        /// 从缓存中得到一个好友的信息,因为名字可能重复，而wxid永远重复
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public FriendInfo GetFriendWithWxIDFromCache(string wxid) => OwnerGroup.GetFriendWithWxIDFromCache(wxid);
+
+        /// <summary>
+        /// 从缓存中得到一个好友的信息,异步方法
         /// </summary>
         /// <param name="who">好友名称</param>
         /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
         public async Task<FriendInfo> GetFriendFromCacheAsync(string who) => await OwnerGroup.GetFriendFromCacheAsync(who);
+
+        /// <summary>
+        /// 从缓存中得到一个好友的信息,通过wxid来获取，因为名字可能重复
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
+        public async Task<FriendInfo> GetFriendWithWxIDFromCacheAsync(string wxid) => await OwnerGroup.GetFriendWithWxIDFromCacheAsync(wxid);
+
+        /// <summary>
+        /// 从缓存中移除一个好友
+        /// </summary>
+        /// <param name="who"></param>
+        public void RemoveFriendFromCache(string who) => OwnerGroup.RemoveFriendFromCache(who);
+        /// <summary>
+        /// 从缓存中移除一个好友,异步方法
+        /// </summary>
+        /// <param name="who"></param>
+        public async Task RemoveFriendFromCacheAsync(string who) => await OwnerGroup.RemoveFriendFromCacheAsync(who);
+
+        /// <summary>
+        /// 从缓存中移除一个好友,通过微信id，因为通过微信名可能会重复
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        public void RemoveFriendWithWxIDFromCache(string wxid) => OwnerGroup.RemoveFriendWithWxIDFromCache(wxid);
+        
+        /// <summary>
+        /// 从缓存中移除一个好友,通过wxid,异步方法
+        /// </summary>
+        /// <param name="wxid">微信号</param>
+        public async Task RemoveFriendWithWxIDFromCacheAsync(string wxid) => await OwnerGroup.RemoveFriendWithWxIDFromCacheAsync(wxid);
+
+        /// <summary>
+        /// 手动增加或者修改一个好友对象
+        /// </summary>
+        /// <param name="friend">好友对象，请参考<see cref="FriendInfo"/></param>
+        public void AddOrUpdateFriendFromCache(FriendInfo friend) => OwnerGroup.AddOrUpdateFriendFromCache(friend);
+
+        /// <summary>
+        /// 手动增加或者修改一个好友对象，使用异步方法
+        /// </summary>
+        /// <param name="friend">好友对象，请参考<see cref="FriendInfo"/></param>
+        public async Task AddOrUpdateFriendFromCacheAsync(FriendInfo friend) => await OwnerGroup.AddOrUpdateFriendFromCacheAsync(friend);
+
         #endregion
         /// <summary>
         /// 是否是自有群
