@@ -55,8 +55,14 @@ public class SearchTest
         {
             IntervalTime = 4,
             IsCloseWin = true,
+            Suffix = "test",
+            Label = "wechatauto22"
         });
         Assert.True(true);
+        foreach (var item in result)
+        {
+            _output.WriteLine(item.Key, item.Value.ToString());
+        }
     }
 
 }

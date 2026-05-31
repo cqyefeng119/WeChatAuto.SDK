@@ -28,7 +28,7 @@ namespace WeChatAuto.Options
         public string SayHi { get; set; }
 
         /// <summary>
-        /// 备注后缀，如：设置suffix为"test",则备注为:xxxx_test
+        /// 备注后缀，如：设置suffix为"test",则备注为:xxxx_test,可以未来以备注的后缀来区分不同的好友分类
         /// </summary>
         public string Suffix { get; set; }
 

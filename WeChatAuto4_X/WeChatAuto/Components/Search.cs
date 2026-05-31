@@ -149,80 +149,281 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="friends">手机号码或者微信号列表</param>
         /// <param name="options">增加朋友选项，具体请参考<see cref="AddFriendsOptions"/></param>
+        /// <param name="token">取消令牌</param>
         /// <returns>添加好友结果列表，详情请参见<see cref="FriendAddResult"/></returns>
-        public async Task<IDictionary<string, FriendAddResult>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options = null)
-        => await WeChatInvoker.Call(AddFriendsCore, friends, options);
+        public async Task<IDictionary<string, FriendAddResult>> AddFriends(OneOf<string, string[]> friends, AddFriendsOptions options = null, CancellationToken token = default)
+        => await WeChatInvoker.Call(AddFriendsCore, friends, options, token);
 
-        private IDictionary<string, FriendAddResult> AddFriendsCore(UIA3Automation automation, OneOf<string, string[]> friends, AddFriendsOptions options)
+        internal IDictionary<string, FriendAddResult> AddFriendsCore(UIA3Automation automation, OneOf<string, string[]> friends, AddFriendsOptions options, CancellationToken token)
         {
             var result = new Dictionary<string, FriendAddResult>();
-            var win = OpenAddFriensWinCore(automation);
-            if (win == null)
-                return result;
-            var friendList = friends.IsT0 ? new List<string>() { friends.AsT0 } : friends.AsT1.ToList();
-            foreach (var f in friendList)
+            try
             {
-                var path = "/Group/Group/Group/Button[@Name='清空']";
-                var clearRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-                if (clearRetry.Success)
+                var win = OpenAddFriensWinCore(automation);
+                if (win == null)
+                    return result;
+                token.ThrowIfCancellationRequested();
+                var friendList = friends.IsT0 ? new List<string>() { friends.AsT0 } : friends.AsT1.ToList();
+                foreach (var f in friendList)
                 {
-                    var cPoint = clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5);
-                    SupperMouseKey.MoveTo(cPoint);
-                    RandomWait.Wait(100, 300);
-                    SupperMouseKey.MoveTo(clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5));
-                    RandomWait.Wait(300, 900);
-                    SupperMouseKey.LeftClick();
-                    RandomWait.Wait(300, 900);
-                }
-                path = "/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
-                var edit = win.FindFirstByXPath(path).AsTextBox();
-                if (edit == null)
-                    continue;
-                var point = edit.BoundingRectangle.Center().Confusion(20, 4);
-                SupperMouseKey.MoveTo(point);
-                RandomWait.Wait(100, 300);
-                SupperMouseKey.MoveTo(edit.BoundingRectangle.Center().Confusion(20, 4));
-                RandomWait.Wait(300, 900);
-                SupperMouseKey.LeftClick();
-                RandomWait.Wait(300, 900);
-                SupperMouseKey.Type(f);
-                RandomWait.Wait(300, 900);
-                path = "/Group/Group/Button[@Name='搜索'][@ClassName='mmui::XOutlineButton']";
-                var button = win.FindFirstByXPath(path).AsButton();
-                if (button != null)
-                {
-                    point = button.BoundingRectangle.Center().Confusion(20, 4);
+                    var path = "/Group/Group/Group/Button[@Name='清空']";
+                    var clearRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+                    if (clearRetry.Success)
+                    {
+                        var cPoint = clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5);
+                        SupperMouseKey.MoveTo(cPoint);
+                        RandomWait.Wait(100, 300);
+                        SupperMouseKey.MoveTo(clearRetry.Result.BoundingRectangle.Center().Confusion(5, 5));
+                        RandomWait.Wait(300, 900);
+                        SupperMouseKey.LeftClick();
+                        RandomWait.Wait(300, 900);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    path = "/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
+                    var edit = win.FindFirstByXPath(path).AsTextBox();
+                    if (edit == null)
+                        continue;
+                    var point = edit.BoundingRectangle.Center().Confusion(20, 4);
                     SupperMouseKey.MoveTo(point);
                     RandomWait.Wait(100, 300);
-                    SupperMouseKey.MoveTo(button.BoundingRectangle.Center().Confusion(20, 4));
+                    SupperMouseKey.MoveTo(edit.BoundingRectangle.Center().Confusion(20, 4));
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.LeftClick();
                     RandomWait.Wait(300, 900);
-                    __ProcessSearResult(win, result);
+                    SupperMouseKey.Type(f);
+                    RandomWait.Wait(300, 900);
+                    path = "/Group/Group/Button[@Name='搜索'][@ClassName='mmui::XOutlineButton']";
+                    var button = win.FindFirstByXPath(path).AsButton();
+                    token.ThrowIfCancellationRequested();
+                    if (button != null)
+                    {
+                        point = button.BoundingRectangle.Center().Confusion(20, 4);
+                        SupperMouseKey.MoveTo(point);
+                        RandomWait.Wait(100, 300);
+                        SupperMouseKey.MoveTo(button.BoundingRectangle.Center().Confusion(20, 4));
+                        RandomWait.Wait(300, 900);
+                        SupperMouseKey.LeftClick();
+                        RandomWait.Wait(300, 900);
+                        __ProcessSearResult(win, result, f, options, token);
+                    }
+                    if (options != null)
+                    {
+                        RandomWait.Wait(System.Math.Max(options.IntervalTime - 1, 0) * 1000, Math.Max(options.IntervalTime + 1, 1) * 1000);
+                        continue;
+                    }
+                    RandomWait.Wait(2000, 5000);
+                    token.ThrowIfCancellationRequested();
                 }
-                if (options != null)
+
+                if (options != null && options.IsCloseWin)
                 {
-                    RandomWait.Wait(System.Math.Max(options.IntervalTime - 1, 0) * 1000, Math.Max(options.IntervalTime + 1, 1) * 1000);
-                    continue;
+                    CloseAddFriendWinCore(automation);
                 }
-                RandomWait.Wait(2000, 5000);
-            }
+                else
+                {
+                    CloseAddFriendWinCore(automation);
+                }
 
-            if (options != null && options.IsCloseWin)
-            {
-                CloseAddFriendWinCore(automation);
+                return result;
             }
-            else
+            catch (OperationCanceledException)
             {
-                CloseAddFriendWinCore(automation);
-            }
+                //用户取消
 
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+            }
             return result;
         }
 
-        private void __ProcessSearResult(Window win, Dictionary<string, FriendAddResult> result)
+        private void __ProcessSearResult(Window win, Dictionary<string, FriendAddResult> result, string friend, AddFriendsOptions options, CancellationToken token)
+        {
+            //第一种情况： 找不到用户
+            var path = "/Group/Group/Group/Text[@Name='无法找到该用户，请检查你填写的账号是否正确。']";
+            var errTextRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (errTextRetry.Success)
+            {
+                result.Add(friend, FriendAddResult.No_Find);
+                return;
+            }
+            token.ThrowIfCancellationRequested();
+            //第二种情况...添加
+            path = "/Group/Group/Group/Group/Group/Group/Group/Group/Button[@Name='添加到通讯录'][@AutomationId='content_v_view.ProfileActionUi.add_friend_button']";
+            var buttonRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (buttonRetry.Success)
+            {
+                var button = buttonRetry.Result.AsButton();
+                var point = button.BoundingRectangle.SafeRandomPoint();
+                SupperMouseKey.MoveTo(point);
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(point.Confusion(10, 5));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 900);
+                __ConfigAddInfomation(win, result, friend, options, token);
+                result.Add(friend, FriendAddResult.Adding);
+                return;
+            }
+            token.ThrowIfCancellationRequested();
+            //第三种情况...已是好友,更新cache.
+            path = "/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Text[@Name='微信号：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+            var wxLabelRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (wxLabelRetry.Success)
+            {
+                __ProcessAlreadFriendInfomation(win, result, friend, wxLabelRetry.Result, token);
+            }
+        }
+        private void __ConfigAddInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AddFriendsOptions options, CancellationToken token)
+        {
+            var desktop = win.Automation.GetDesktop();
+            var addWinRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("申请添加朋友").And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByControlType(ControlType.Window)))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (addWinRetry.Success)
+            {
+                var addWin = addWinRetry.Result.AsWindow();
+                this._Client.MoveWinToMainCenter(addWin);
+                if (options != null && !string.IsNullOrWhiteSpace(options.SayHi))
+                {
+                    var path = "/Group/Group/Group/Group/Group/Group/Group/Edit[@Name='发送添加朋友申请'][@ClassName='mmui::XValidatorTextEdit']";
+                    var edit = addWin.FindFirstByXPath(path);
+                    var point = edit.BoundingRectangle.SafeRandomPoint();
+                    SupperMouseKey.MoveTo(point);
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(point.Confusion(10, 5));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    RandomWait.Wait(300, 900);
+                    System.Windows.Clipboard.SetText(options.SayHi);
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                    RandomWait.Wait(600, 2000);
+                    token.ThrowIfCancellationRequested();
+                }
+                if (options != null && !string.IsNullOrWhiteSpace(options.Suffix))
+                {
+                    var path = "/Group/Group/Group/Group/Group/Group/Text/Edit[@Name='修改备注'][@ClassName='mmui::XLineEdit']";
+                    var edit = addWin.FindFirstByXPath(path);
+                    var memoName = edit.GetParent().Name;  //得到名字，但是名字可能是空格等异常情况.
+                    if (string.IsNullOrWhiteSpace(memoName))
+                    {
+                        memoName = Path.GetFileNameWithoutExtension(Path.GetRandomFileName());  //如果为空，则得到一个随机名称
+                    }
+                    if (!memoName.EndsWith($"_{options.Suffix}"))
+                    {
+                        memoName = $"{memoName}_{options.Suffix}";
+                    }
+                    var point = edit.BoundingRectangle.SafeRandomPoint();
+                    SupperMouseKey.MoveTo(point);
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(point.Confusion(10, 5));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    RandomWait.Wait(300, 900);
+                    System.Windows.Clipboard.SetText(memoName);
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                    RandomWait.Wait(600, 2000);
+                    token.ThrowIfCancellationRequested();
+
+                }
+                if (options != null && !string.IsNullOrWhiteSpace(options.Label))
+                {
+                    var lableItem = addWin.FindFirstByXPath("/Group/Group/Group/Group/Group/Group/Button[@Name='修改标签'][@AutomationId='button']");
+                    var point = lableItem.BoundingRectangle.SafeRandomPoint();
+                    Mouse.MoveTo(point);
+                    RandomWait.Wait(100, 600);
+                    Mouse.LeftClick();
+                    RandomWait.Wait(1000, 2500);
+                    //标签名可能已经存在，或者不存在，需要新建.
+                    var list = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
+                    var items = list.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                    if (items.Select(x => x.Name).Where(x => x.Equals(options.Label)).Count() > 0)
+                    {
+                        //已经有标签
+                        var selectItem = items.FirstOrDefault(x => x.Name.Equals(options.Label));
+                        if (selectItem != null)
+                        {
+                            var point2 = selectItem.BoundingRectangle.SafeRandomPoint();
+                            Mouse.MoveTo(point2);
+                            Mouse.LeftClick();
+                            RandomWait.Wait(300, 900);
+                        }
+                    }
+                    else
+                    {
+                        //无标签，需要新建
+                        var searchEdit = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("搜索")).And(cf.ByClassName("mmui::XValidatorTextEdit")));
+                        if (searchEdit != null)
+                        {
+                            searchEdit.Focus();
+                            var point2 = searchEdit.BoundingRectangle.SafeRandomPoint();
+                            Mouse.Click(point2);
+                            System.Windows.Clipboard.SetText(options.Label);
+                            Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                            RandomWait.Wait(300, 900);
+                            list = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
+                            var createItemRetry = Retry.WhileNull(() => list.Items.Where(u => u.Name.Contains("创建新标签") && u.ControlType == ControlType.ListItem).FirstOrDefault(),
+                            timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+                            if (createItemRetry != null)
+                            {
+                                var createItem = createItemRetry.Result;
+                                point2 = createItem.BoundingRectangle.SafeRandomPoint();
+                                Mouse.Click(point2);
+                                RandomWait.Wait(300, 900);
+                            }
+                        }
+                    }
+                    var randomRetry = Random.Shared.Next(1, 10);
+                    if (randomRetry <= 5)
+                    {
+                        //点击备注栏
+                        var clkItem = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("修改备注").And(cf.ByClassName("mmui::XLineEdit"))));
+                        clkItem.Click();
+                    }
+                    else
+                    {
+                        //点击“确定上面一点”
+                        var button = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("确定")).And(cf.ByClassName("mmui::XOutlineButton")));
+                        if (button != null)
+                        {
+                            var buttonRect = button.BoundingRectangle;
+                            var point2 = new Rectangle(buttonRect.X - 100, buttonRect.Y, 90, buttonRect.Height).SafeRandomPoint();
+                            Mouse.MoveTo(point2);
+                            Mouse.Click();
+                        }
+                    }
+                }
+                token.ThrowIfCancellationRequested();
+                //点击确定
+                RandomWait.Wait(1000, 3000);
+                var confirmButton = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("确定")).And(cf.ByClassName("mmui::XOutlineButton")));
+                if (confirmButton != null)
+                {
+                    SupperMouseKey.MoveTo(confirmButton.BoundingRectangle.Center().Confusion(10, 5));
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(confirmButton.BoundingRectangle.Center().Confusion(10, 5));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    // addWin.Focus();  //测试
+                    // addWin.Close();
+                    RandomWait.Wait(1000, 1500);
+                }
+            }
+        }
+
+
+        private void __ProcessAlreadFriendInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AutomationElement wxLabel, CancellationToken token)
         {
 
+            result.Add(friend, FriendAddResult.Friend);
         }
+
     }
 }
