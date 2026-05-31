@@ -421,9 +421,81 @@ namespace WeChatAuto.Components
         private void __ProcessAlreadFriendInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AutomationElement wxLabel, CancellationToken token)
         {
             //更新缓存数据.
+            FriendInfo friendInfo = new FriendInfo();
+            var wxid = wxLabel.GetSibling(1);
+            if (wxid != null)
+                friendInfo.WxId = wxid.Name;
+            var oldFriendInfo = this._Client.GetFriendWithWxIDFromCache(friendInfo.WxId);
+            var path = "/Group/Group/Group/Group/Group/Group/Group[@AutomationId='content_v_view'][@ClassName='mmui::ProfileResizeVBoxView']";
+            var rootRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (!rootRetry.Success)
+            {
+                result.Add(friend, FriendAddResult.Friend);
+                return;
+            }
+            var root = rootRetry.Result;
+            //地区
+            path = "//Text[@Name='地区：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+            var item = root.FindFirstByXPath(path);
+            if (item != null)
+            {
+                item = item.GetSibling(1);
+                friendInfo.Area = item?.Name;
+            }
+            //昵称
+            path = "//Text[@Name='昵称：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+            item = root.FindFirstByXPath(path);
+            if (item != null)
+            {
+                item = item.GetSibling(1);
+                friendInfo.NickName = item?.Name;
+                friendInfo.MemoName = item?.Name;   //暂时一样，后面会改
+            }
+            //头像
+            path = "//Button[@AutomationId='head_image_v_view.head_view_']";
+            item = root.FindFirstByXPath(path);
+            if (item != null)
+            {
+                path = Path.Combine(AppContext.BaseDirectory, "Avator", $"{friendInfo.WxId}.png");
+                item.CaptureToFile(path);
+                friendInfo.AvatarPath = path;
+            }
+            //备注
+            path = "//Text[@AutomationId='content_v_view.ProfileResizeVBoxView.detail_scroll_view.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.remark_line.value_remark_view.content_view.ProfileTextView'][@ClassName='mmui::ProfileTextView']";
+            item = root.FindFirstByXPath(path);
+            if (item != null)
+            {
+                friendInfo.MemoName = item.Name;
+            }
+            //共同群聊
+            path = "//Text[@AutomationId='content_v_view.ProfileResizeVBoxView.detail_scroll_view.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.chatroom_intersection.value_normal_view.content_view.value_reader_view.value_reader_'][@ClassName='mmui::ProfileTextView']";
+            item = root.FindFirstByXPath(path);
+            if (item != null)
+            {
+                friendInfo.SameGroupNumber = item?.Name;
+            }
+            else
+            {
+                friendInfo.SameGroupNumber = oldFriendInfo?.SameGroupNumber;
+            }
+            //标签
+            path = "//Text[@AutomationId='content_v_view.ProfileResizeVBoxView.detail_scroll_view.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.tag_line.value_normal_view.content_view.value_reader_view.value_reader_'][@ClassName='mmui::ProfileTextView']";
+            item = root.FindFirstByXPath(path);
+            if (item != null)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Name))
+                {
+                    var labelList = item.Name.Split(',').ToList();
+                    friendInfo.Lable = labelList;
+                }
+            }
 
+            friendInfo.Signature = oldFriendInfo?.Signature;
+            friendInfo.Source = oldFriendInfo?.Source;
+            friendInfo.AddDateTime = oldFriendInfo?.AddDateTime;
+
+            this._Client.AddOrUpdateFriendFromCache(friendInfo);
             result.Add(friend, FriendAddResult.Friend);
         }
-
     }
 }
