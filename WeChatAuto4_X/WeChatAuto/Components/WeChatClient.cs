@@ -43,7 +43,7 @@ namespace WeChatAuto.Components
         private ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
         internal SemaphoreSlim noticeEvent = new SemaphoreSlim(1, 1);    //有消息事件.
 
-        #region 下面三个公开字段为比较稳定的字段，只要微信不关闭
+        #region 比较稳定的字段
         public readonly Window MainWindow;
         public readonly int ClientProcessId;
         public readonly WeChatClientFactory Factory;
@@ -589,12 +589,12 @@ namespace WeChatAuto.Components
         /// 显示缓存中存储的好友信息.
         /// </summary>
         /// <returns>好友信息列表，请参考<see cref="FriendInfo"/></returns>
-        public List<FriendInfo> GetFriendsFromCache() => OwnerGroup.GetFriendsFromCache();
+        public List<FriendInfo> GetFriendsFromCache() => OwnerGroup.GetFriendListFromCache();
         /// <summary>
         /// 显示缓存中存储的好友信息,异步方法
         /// </summary>
         /// <returns>好友信息列表，请参考<see cref="FriendInfo"/></returns>
-        public async Task<List<FriendInfo>> GetFriendsFromCacheAsync() => await OwnerGroup.GetFriendsFromCacheAsync();
+        public async Task<List<FriendInfo>> GetFriendsFromCacheAsync() => await OwnerGroup.GetFriendListFromCacheAsync();
         /// <summary>
         /// 从缓存中得到一个好友的信息
         /// </summary>

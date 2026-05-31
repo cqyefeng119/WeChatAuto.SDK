@@ -61,7 +61,7 @@ public class SearchTest
         Assert.True(true);
         foreach (var item in result)
         {
-            _output.WriteLine(item.Key, item.Value.ToString());
+            _output.WriteLine(item.Key +"  " + item.Value.ToString());
         }
     }
 

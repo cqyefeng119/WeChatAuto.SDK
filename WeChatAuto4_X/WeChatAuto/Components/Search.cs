@@ -380,6 +380,7 @@ namespace WeChatAuto.Components
                             }
                         }
                     }
+                    token.ThrowIfCancellationRequested();
                     var randomRetry = Random.Shared.Next(1, 10);
                     if (randomRetry <= 5)
                     {
@@ -411,8 +412,6 @@ namespace WeChatAuto.Components
                     SupperMouseKey.MoveTo(confirmButton.BoundingRectangle.Center().Confusion(10, 5));
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.LeftClick();
-                    // addWin.Focus();  //测试
-                    // addWin.Close();
                     RandomWait.Wait(1000, 1500);
                 }
             }
@@ -421,6 +420,7 @@ namespace WeChatAuto.Components
 
         private void __ProcessAlreadFriendInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AutomationElement wxLabel, CancellationToken token)
         {
+            //更新缓存数据.
 
             result.Add(friend, FriendAddResult.Friend);
         }
