@@ -28,6 +28,8 @@ using OneOf;
 using System.Collections.Concurrent;
 using WeChatAuto.Services;
 using System.Text.RegularExpressions;
+using WeChatAuto.Options;
+using System.ComponentModel.DataAnnotations;
 
 namespace WeChatAuto.Components
 {
@@ -88,15 +90,17 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="nickNames">好友昵称,可以是一个，也可以是多个好友/群聊 </param>
         /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="MessageContext"/></param>
-        /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
+        /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听,而固定式监听为只监听设定的好友/群</param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
-        => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, userToken, UIInvoker, new DateTimeRange());
+        /// <param name="options">监听选项，具体请参见<see cref="MessageMonitorOptions"/></param>
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null, MessageMonitorOptions options = null)
+        => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, userToken, UIInvoker, new DateTimeRange(), options);
 
         /// <summary>
         /// 添加一个从什么时候开始，什么时候结束的消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
         /// 参考<see cref="MessageContext"/>
+        /// 添加此监听，在设定的开始时间开始监听，并且在设定的结束时间暂停监听
         /// 
         /// <para>使用规则：</para>
         /// <para>1. 仅能监听“允许消息通知”的好友/群聊,所以需要监听的好友/群聊不要设置为“消息免打扰”;</para>
@@ -114,7 +118,8 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
+        /// <param name="options">监听选项，具体请参见<see cref="MessageMonitorOptions"/></param>
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, TimeOnly startTime, TimeOnly endTime, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null, MessageMonitorOptions options = null)
         => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, userToken, UIInvoker, new DateTimeRange()
         {
             IsCheckDate = true,
@@ -125,7 +130,7 @@ namespace WeChatAuto.Components
                     EndTime = endTime,
                 }
             }
-        });
+        }, options);
         /// <summary>
         /// 添加一天中多个时间段的消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
         /// 参考<see cref="MessageContext"/>
@@ -145,12 +150,13 @@ namespace WeChatAuto.Components
         /// <param name="IsOpenMonitor">是否开启开放式监听，默认不开放(值为false）,如果开启开放式监听，前面的nickNames可以为空，所谓的开放式监听的含义是：无须固定好友/群监听，只要此好友/群没有设置“消息免打挠”就可以监听</param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
-        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null)
+        /// <param name="options">监听选项，具体请参见<see cref="MessageMonitorOptions"/></param>
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null, MessageMonitorOptions options = null)
         => await AddMessageListenerCore(nickNames, callBack, IsOpenMonitor, userToken, UIInvoker, new DateTimeRange()
         {
             IsCheckDate = true,
             TimeList = range,
-        });
+        }, options);
 
         /// <summary>
         /// 暂停消息监听
@@ -172,9 +178,9 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 监听过程中添加好友
+        /// 监听过程中动态添加待监听的好友/群聊
         /// </summary>
-        /// <param name="who">好友名称</param>
+        /// <param name="who">好友/群聊名称</param>
         /// <returns></returns>
         public async Task AddListeningFriend(string who)
         {
@@ -187,9 +193,9 @@ namespace WeChatAuto.Components
             await Task.CompletedTask;
         }
         /// <summary>
-        /// 监听过程中移除被监听中的好友/群聊
+        /// 监听过程中动态移除被监听的好友/群聊
         /// </summary>
-        /// <param name="who"></param>
+        /// <param name="who">好友/群聊</param>
         /// <returns></returns>
         public async Task RemoveListeningFriend(string who)
         {
@@ -199,7 +205,7 @@ namespace WeChatAuto.Components
             await Task.CompletedTask;
         }
 
-        private async Task AddMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationToken userToken, Action<string> UIInvoker, DateTimeRange range)
+        private async Task AddMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationToken userToken, Action<string> UIInvoker, DateTimeRange range, MessageMonitorOptions options)
         {
             if (Interlocked.CompareExchange(ref messageListnerStartedFlag, 1, 0) == 1)
             {
@@ -222,7 +228,7 @@ namespace WeChatAuto.Components
             {
                 token = messageCts.Token;
             }
-            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1 : nickNames.AsT2.ToList()).ForEach(u => _MonitorList.TryAdd(u, false));  //赋初始值.
+            (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1.ToHashSet().ToList() : nickNames.AsT2.ToHashSet().ToList()).ForEach(u => _MonitorList.TryAdd(u, false));  //赋初始值.
             try
             {
                 var startTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -245,7 +251,7 @@ namespace WeChatAuto.Components
                             await noticeEvent.WaitAsync(token);
                             try
                             {
-                                await WeChatInvoker.Call(AddMessageListenerAction, callBack, token, IsOpenMonitor);
+                                await WeChatInvoker.Call(AddMessageListenerAction, callBack, token, IsOpenMonitor, options);
                             }
                             finally
                             {
@@ -283,16 +289,16 @@ namespace WeChatAuto.Components
                 }
             }
         }
-        private void AddMessageListenerAction(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor)
+        private void AddMessageListenerAction(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor, MessageMonitorOptions options)
         {
             var root = this._Client.Conversations.ConversationRoot;
             token.ThrowIfCancellationRequested();
             if (messageStarted)
             {
-                //一开始对会话遍历一次.
+                //一开始对会话列表遍历一次.
                 messageStarted = false;
                 _SwtichUI(token);
-                _TravelConversationList(automation, callBack, IsOpenMonitor, token, root);
+                _TravelConversationList(automation, callBack, IsOpenMonitor, token, root, options);
                 return;
             }
             #region 鼠标方案,比较有意思，但是不够优雅，暂时取消
@@ -314,7 +320,7 @@ namespace WeChatAuto.Components
             //增量执行监听
             _SwtichUI(token);
             token.ThrowIfCancellationRequested();
-            _MessageClickScheduling(automation, callBack, token, IsOpenMonitor, root);
+            _MessageClickScheduling(automation, callBack, token, IsOpenMonitor, root, options);
         }
         /// <summary>
         /// 允许调用者做一些UI操作.
@@ -361,27 +367,27 @@ namespace WeChatAuto.Components
             }
         }
 
-        private void _TravelConversationList(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationToken token, ListBox root)
+        private void _TravelConversationList(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, CancellationToken token, ListBox root, MessageMonitorOptions options)
         {
             //当前的消息列表处理
-            _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, root.BoundingRectangle, token);
+            _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, root.BoundingRectangle, token, options);
             //先往上翻到顶.
             this._Client.Conversations.UpCore(automation, (els, rootRect) =>
             {
-                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
+                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token, options);
                 return true;
             });
             //再往下翻到底
             this._Client.Conversations.DownCore(automation, (el, rootRect) =>
             {
-                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
+                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token, options);
                 return true;
             });
             //再往上翻到顶
             this._Client.Conversations.UpCore(automation, (els, rootRect) => true);
         }
 
-        private void _MessageClickScheduling(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor, ListBox root)
+        private void _MessageClickScheduling(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, bool IsOpenMonitor, ListBox root, MessageMonitorOptions options)
         {
             this._Client.MainWindow.Focus();
             Mouse.Position = _Client.MainWindow.BoundingRectangle.Center();
@@ -390,7 +396,7 @@ namespace WeChatAuto.Components
             token.ThrowIfCancellationRequested();
 
             //当前的消息列表处理
-            _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, root.BoundingRectangle, token);
+            _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, root.BoundingRectangle, token, options);
             if (_GetTotalMessage(token) == 0)
                 return;
 
@@ -398,7 +404,7 @@ namespace WeChatAuto.Components
             this._Client.Conversations.DownCore(automation, (el, rootRect) =>
             {
                 index++;
-                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
+                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token, options);
                 if (index <= WeAutomation.Config.MonitorMessageMaxDownInterval)
                 {
                     return true;
@@ -408,22 +414,23 @@ namespace WeChatAuto.Components
             //再往上翻到顶.
             this._Client.Conversations.UpCore(automation, (els, rootRect) =>
             {
-                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token);
+                _ProcessVisibleConversation(automation, callBack, IsOpenMonitor, rootRect, token, options);
                 return true;
             });
 
             token.ThrowIfCancellationRequested();
         }
 
-        private void _ProcessVisibleConversation(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, Rectangle rootRect, CancellationToken token)
+        //未设置“免打扰”,有未读消息数字
+        private void _ProcessVisibleConversation(UIA3Automation automation, Action<MessageContext> callBack, bool IsOpenMonitor, Rectangle rootRect, CancellationToken token, MessageMonitorOptions options)
         {
-            token.ThrowIfCancellationRequested();
             List<SimpleConversation> fullList = _Client.Conversations.GetVisibleConversationsCore(automation);
             RandomWait.Wait(100, 350);
+            token.ThrowIfCancellationRequested();
             var filterObjList = fullList.Where(item => !item.IsDoNotDisturb && item.NotReadNumbr > 0).ToList();  //取出没有设置“免打扰”的好友,并且未读数>0
-            var elementList = _Client.Conversations.GetVisibleConversationElements(automation);
-            List<AutomationElement> clickList = new List<AutomationElement>();
-            var tmpList = filterObjList.Select(x => x.ConversationTitle);
+            var elementList = _Client.Conversations.GetVisibleConversationElements(automation);  //取所有可见的会话元素
+            List<AutomationElement> clickList = new List<AutomationElement>();  //待点击的列表
+            var tmpList = filterObjList.Select(x => x.ConversationTitle);  //可点击的元素标题 列表
             foreach (var item in elementList)
             {
                 string[] aryItems = item.Name.Split('\n');
@@ -433,45 +440,198 @@ namespace WeChatAuto.Components
                     clickList.Add(item);
                 }
             }
-            var checkList = new List<string>();
+            var willParseList = new List<string>();  //待获取元素并要求返回消息回调s
             if (IsOpenMonitor)
             {
-                checkList.AddRange(clickList.Select(u => u.GetName()));
+                willParseList.AddRange(clickList.Select(u => u.GetName()));
             }
             else
             {
                 var l1 = clickList.Select(u => u.GetName()).ToList(); //本次获取的对象。
                 var l2 = this._MonitorList.Keys;  //所有监听对象
-                checkList.AddRange(l2.Intersect(l1));
+                willParseList.AddRange(l2.Intersect(l1));
             }
 
-            foreach (var item in clickList)
+            foreach (var item in clickList)   //丢失了点击没有关系，下一轮又会点击，关键不能失去返回消息的能力.
             {
                 token.ThrowIfCancellationRequested();
                 if (item.BoundingRectangle.IsClickSafe(rootRect))
                 {
+                    int count = _GetCurrentNotReadNumbr(item, token);
                     var serviceBackClickFlag = item.Name.StartsWith("服务号\n") ? true : false;
                     var point = item.BoundingRectangle.SafeRandomPoint();
                     Mouse.Position = point;
-                    Mouse.Click();
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.LeftClick();   //点击
                     RandomWait.Wait(300, 900);
                     _ProcessClickServiceNumber(serviceBackClickFlag);  //点击了服务号需要进行返回
-                    if (!serviceBackClickFlag && checkList.Contains(item.GetName()))
+                    if (!serviceBackClickFlag && willParseList.Contains(item.GetName()))
                     {
-                        _ParserMessaageCore(automation, callBack, token, item);
+                        _ParserMessaageCore(automation, callBack, token, item, options, count);
                     }
                 }
             }
         }
 
-
-
-        private void _ParserMessaageCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, AutomationElement el)
+        //item 为会话列表AutomationElement
+        private int _GetCurrentNotReadNumbr(AutomationElement item, CancellationToken token)
         {
-            var dontCheckItems = new string[] { "服务号", "服务通知", "文件传输助手", "公众号", "元宝", "微信团队" };
-            _Logger.Debug($"自动点击了:{el.Name.Trim()}");
+            var result = 0;
+            var aryContent = item.Name.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var i in aryContent)
+            {
+                var pattern = @"\[(\d+)条\]";
+                var match = Regex.Match(i, pattern);
+                if (match.Success)
+                {
+                    result = int.TryParse(match.Groups[1].Value, out var r) ? r : 0;
+                    break;
+                }
+            }
+            return result;
         }
 
+        private void _ParserMessaageCore(UIA3Automation automation, Action<MessageContext> callBack, CancellationToken token, AutomationElement clickConversionItem, MessageMonitorOptions options, int count)
+        {
+            if (options != null && options.FetchFriendInfo)
+            {
+                //先获取用户信息后再获取消息
+                var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+                if (title.HeaderType == ChatType.好友)  //只有普通好友才有wxid.
+                {
+                    _FetchFriendInfo(automation, token, title);
+                }
+            }
+            //获取消息
+        }
+
+        //仅用于测试.
+        public async Task FetchFriendInfo(string who)
+        {
+            await this._Client.SearchFriend(who);
+            RandomWait.Wait(500, 1200);
+            var chatInfo = await this._Client.ChatContent.ChatHeader.GetTitle();
+            await WeChatInvoker.Call(_FetchFriendInfo, CancellationToken.None, chatInfo);
+        }
+
+        internal void _FetchFriendInfo(UIA3Automation automation, CancellationToken token, HeaderInfo headerInfo)
+        {
+            //首先判断在缓存中有没有此用户
+            var result = this._Client.GetFriendFromCache(headerInfo.Title);
+            token.ThrowIfCancellationRequested();
+            if (result != null)
+            {
+                return;
+            }
+            //如果没有此用户，则取用户wxid
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Button[@Name='聊天信息'][@AutomationId='content_view.top_content_view.title_h_view.right_v_view.right_content_h_view.right_content_v_view.right_ui_.more_button']";
+            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (!buttonRetry.Success)
+                return;
+            var button = buttonRetry.Result; //点击侧边栏按钮.
+            var point = button.BoundingRectangle.Center();
+            var point1 = point.Confusion(5, 3);
+            Mouse.Position = point1;
+            RandomWait.Wait(100, 300);
+            point1 = point.Confusion(5, 3);
+            SupperMouseKey.MoveTo(point1);
+            RandomWait.Wait(200, 800);
+            SupperMouseKey.LeftClick();
+            //点击后找到右边侧图标
+            path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Group[2]/Group[2]/Group/Group/Group/Group[1]/Button[1]";
+            buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (!buttonRetry.Success)
+                return;
+            token.ThrowIfCancellationRequested();
+            button = buttonRetry.Result;
+            button = button.FindFirstChild(cf=>cf.ByControlType(ControlType.Button).And(cf.ByClassName("mmui::ContactHeadView")));
+            point = button.BoundingRectangle.Center();
+            point1 = point.Confusion(5, 5);
+            Mouse.Position = point1;
+            RandomWait.Wait(100, 300);
+            point1 = point.Confusion(5, 3);
+            SupperMouseKey.MoveTo(point1);
+            RandomWait.Wait(200, 800);
+            SupperMouseKey.LeftClick();
+            token.ThrowIfCancellationRequested();
+
+            //获取信息
+            FriendInfo friendInfo = GetFriendInfoCore(automation);
+            if (friendInfo != null)
+            {
+                this._Client.AddOrUpdateFriendFromCache(friendInfo);
+            }
+            token.ThrowIfCancellationRequested();
+            this._Client.ChatContent.Sender.FcouseSenderCore(automation);  //获取完信息后把焦点切回消息输入框
+        }
+
+        internal FriendInfo GetFriendInfoCore(UIA3Automation automation)
+        {
+            FriendInfo friendInfo = new FriendInfo();
+            var winRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf => cf.ByName("Weixin").And(cf.ByClassName("mmui::ProfileUniquePop").And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (!winRetry.Success)
+                return null;
+            var win = winRetry.Result.AsWindow();
+            var path = "/Group/Group/Group/Group/Group/Group/Group/Text[@Name='微信号：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+            var textRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (!textRetry.Success)
+                return null;
+            //微信号
+            var text = textRetry.Result.GetSibling(1);
+            friendInfo.WxId = text.Name;
+            //名称、昵称、备注
+            path = "/Group/Group/Group/Group/Group/Group/Text[@AutomationId='right_v_view.nickname_button_view.display_name_text']";
+            text = win.FindFirstByXPath(path);
+            friendInfo.NickName = text.Name;
+            friendInfo.MemoName = text.Name;
+            //昵称
+            path = "/Group/Group/Group/Group/Group/Group/Group/Text[@Name='昵称：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+            text = win.FindFirstByXPath(path)?.GetSibling(1);
+            if (text != null)
+            {
+                friendInfo.NickName = text.Name;
+            }
+            //地区
+            path = "/Group/Group/Group/Group/Group/Group/Group/Text[@Name='地区：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+            text = win.FindFirstByXPath(path)?.GetSibling(1);
+            if (text != null)
+            {
+                friendInfo.Area = text.Name;
+            }
+            //共同群聊
+            path = "/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Button/Group/Group/Text[@AutomationId='content_v_view.ProfileResizeVBoxView.detail_scroll_view.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.chatroom_intersection.value_normal_view.content_view.value_reader_view.value_reader_'][@ClassName='mmui::ProfileTextView']";
+            text = win.FindFirstByXPath(path);
+            if (text != null)
+            {
+                friendInfo.SameGroupNumber = text.Name;
+            }
+            //签名
+            path = "/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Button/Group/Group/Text[@AutomationId='content_v_view.ProfileResizeVBoxView.detail_scroll_view.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.more_line_v_view.sign.value_normal_view.content_view.value_reader_view.value_reader_'][@ClassName='mmui::ProfileTextView']";
+            text = win.FindFirstByXPath(path);
+            if (text != null)
+            {
+                friendInfo.Signature = text.Name;
+            }
+            //来源与添加时间略掉，因为没啥意义.
+            //标签
+            path = "/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Button/Group/Group/Text[@AutomationId='content_v_view.ProfileResizeVBoxView.detail_scroll_view.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport.detail_content_host.detail_center_v_view.detail_derived_content_view.section_shell.main_line_v_view.tag_line.value_normal_view.content_view.value_reader_view.value_reader_'][@ClassName='mmui::ProfileTextView']";
+            text = win.FindFirstByXPath(path);
+            if (text != null)
+            {
+                string[] tags = text.Name.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                friendInfo.Lable = tags.ToList();
+            }
+            path = "/Group/Group/Group/Group/Group/Button[@AutomationId='head_image_v_view.head_view_'][@ClassName='mmui::ContactHeadView']";
+            var button = win.FindFirstByXPath(path);
+            if (button != null)
+            {
+                path = Path.Combine(AppContext.BaseDirectory,"Avator", $"{friendInfo.WxId}.png");
+                button.CaptureToFile(path);
+                friendInfo.AvatarPath = path;
+            }
+            win?.Close();
+            return friendInfo;
+        }
         private void _ProcessClickServiceNumber(bool serviceBackClick)
         {
             if (serviceBackClick)

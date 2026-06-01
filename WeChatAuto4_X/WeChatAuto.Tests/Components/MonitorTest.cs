@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using OneOf;
+using WeAutoCommon.Models;
 using WeChatAuto.Models;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ public class MonitorTest
         _globalFixture = globalFixture;
     }
 
-    [Fact(DisplayName = "测试开放式监听")]
+    [Fact(DisplayName = "开放式监听")]
     public async Task Test_Message_Monitor_open()
     {
         var framework = _globalFixture.clientFactory;
@@ -30,7 +31,7 @@ public class MonitorTest
         await Task.Delay(-1);
     }
 
-    [Fact(DisplayName = "测试固定好友、群监听")]
+    [Fact(DisplayName = "固定好友、群监听")]
     public async Task Test_Message_Monitor_friend()
     {
         var framework = _globalFixture.clientFactory;
@@ -77,6 +78,19 @@ public class MonitorTest
 
         }, list, false);
         await Task.Delay(-1);
+    }
+
+    [Theory(DisplayName = "测试获取好友信息选项")]
+    [InlineData("AI.Net_test")]
+    [InlineData("秋歌")]
+    public async Task Test_Fetch_Friend_Info(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.MessageMonitor.FetchFriendInfo(who);
+        FriendInfo friendInfo = client.GetFriendFromCache(who);
+        _output.WriteLine(friendInfo.ToString());
+        Debug.Assert(friendInfo != null);
     }
 
 }

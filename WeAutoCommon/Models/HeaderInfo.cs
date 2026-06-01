@@ -10,7 +10,7 @@ namespace WeAutoCommon.Models
     public class HeaderInfo
     {
         /// <summary>
-        /// 标题
+        /// 标题,也就是好友/群聊名称
         /// </summary>
         public string Title { get; set; }
         /// <summary>

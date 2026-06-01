@@ -2,6 +2,9 @@ using System;
 
 namespace WeChatAuto.Models
 {
+    /// <summary>
+    /// 时间范围，即定义：开始时间与结束时间
+    /// </summary>
     public class TimeOnlyRange
     {
         /// <summary>
