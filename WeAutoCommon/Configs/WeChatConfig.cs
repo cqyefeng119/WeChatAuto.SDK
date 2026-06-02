@@ -5,6 +5,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
 using OneOf.Types;
+using System.ComponentModel;
 
 namespace WeAutoCommon.Configs
 {
@@ -170,6 +171,10 @@ namespace WeAutoCommon.Configs
         /// 头像按钮距离微信按钮的Y轴偏移量
         /// </summary>
         public int AvatorToWeixinButtonOffsetY = 50;
+        /// <summary>
+        /// 可以命令本微信执行操作的用户,用于设定权限
+        /// </summary>
+        public List<string> PrivilegedUser { get; set; } = new List<string>();
     }
 
     public static class Language
