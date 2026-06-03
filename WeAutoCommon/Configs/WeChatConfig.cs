@@ -172,7 +172,7 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public int AvatorToWeixinButtonOffsetY = 50;
         /// <summary>
-        /// 可以命令本微信执行操作的用户,用于设定权限
+        /// 可以命令本微信执行操作的用户,用于设定权限，只有在列表中的用户才被允许命令此微信执行操作
         /// </summary>
         public List<string> PrivilegedUser { get; set; } = new List<string>();
     }

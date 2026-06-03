@@ -11,6 +11,7 @@ namespace WeChatAuto.Models
         /// <summary>
         /// 微信名
         /// 如果是自己发送，则值为"我"
+        /// 如果是系统发送，则值为"系统"
         /// </summary>
         [Key(1)]
         public string Who { get; set; }

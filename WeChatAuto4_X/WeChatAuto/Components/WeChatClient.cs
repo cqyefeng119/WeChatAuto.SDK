@@ -608,7 +608,7 @@ namespace WeChatAuto.Components
         public FriendInfo GetFriendFromCache(string who) => OwnerGroup.GetFriendFromCache(who);
 
         /// <summary>
-        /// 从缓存中得到一个好友的信息,因为名字可能重复，而wxid永远重复
+        /// 从缓存中得到一个好友的信息,因为名字可能重复，而wxid永远不重复
         /// </summary>
         /// <param name="wxid">微信号</param>
         /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
@@ -622,7 +622,7 @@ namespace WeChatAuto.Components
         public async Task<FriendInfo> GetFriendFromCacheAsync(string who) => await OwnerGroup.GetFriendFromCacheAsync(who);
 
         /// <summary>
-        /// 从缓存中得到一个好友的信息,通过wxid来获取，因为名字可能重复
+        /// 从缓存中得到一个好友的信息,通过wxid来获取，因为名字可能重复,而微信id号永不重复
         /// </summary>
         /// <param name="wxid">微信号</param>
         /// <returns>好友对象，请参考:<see cref="FriendInfo"/></returns>
