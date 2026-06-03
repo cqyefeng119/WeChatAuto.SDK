@@ -31,6 +31,31 @@ public class MonitorTest
         await Task.Delay(-1);
     }
 
+    [Fact(DisplayName = "开放式监听-收集图片-新增好友信息")]
+    public async Task Test_Message_Monitor_open_image()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.AddMessageListener("", (context) =>
+        {
+            _output.WriteLine("======= 最新消息 ======");
+            foreach (var item in context.NewMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
+            _output.WriteLine("======= 历史消息 ======");
+            foreach (var item in context.HistoryMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
+        }, true, options: new Options.MessageMonitorOptions
+        {
+            FetchFriendInfo = true,
+            FetchImage = true,
+        });
+        await Task.Delay(-1);
+    }
+
     [Fact(DisplayName = "固定好友、群监听")]
     public async Task Test_Message_Monitor_friend()
     {
@@ -38,7 +63,16 @@ public class MonitorTest
         var client = framework.GetWeChatClient(_wxClientName);
         await client.AddMessageListener(new string[] { "AI.Net", "DroidMirror官方技术支持" }, (context) =>
         {
-
+            _output.WriteLine("======= 最新消息 ======");
+            foreach (var item in context.NewMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
+            _output.WriteLine("======= 历史消息 ======");
+            foreach (var item in context.HistoryMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
         }, false);
         await Task.Delay(-1);
     }

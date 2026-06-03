@@ -60,7 +60,7 @@ namespace WeChatAuto.Components
                     }
                     else
                     {
-                        this._Client.Navigation.SwitchNavigationCore(uiThreadInvoker.Automation, NavigationType.聊天);
+                        this._Client.Navigation.SwitchNavigationCore(uiThreadInvoker.Automation, NavigationType.微信);
                         index++;
                     }
                 }

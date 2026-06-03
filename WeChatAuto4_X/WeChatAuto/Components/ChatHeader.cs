@@ -72,7 +72,7 @@ namespace WeChatAuto.Components
 			var root = HeaderRoot;
 			if (root == null)
 				return headerInfo;
-			var textRoot = root.FindFirstChild(cf => cf.ByAutomationId("content_view.top_content_view.title_h_view.left_v_view.left_content_v_view.left_ui_.big_title_line_h_view").And(cf.ByClassName("mmui::XView")).And(cf.ByControlType(FlaUI.Core.Definitions.ControlType.Text))).AsLabel();
+			var textRoot = root.FindFirstChild(cf => cf.ByAutomationId("content_view.top_content_view.title_h_view.left_v_view.left_content_v_view.left_ui_.big_title_line_h_view").And(cf.ByControlType(FlaUI.Core.Definitions.ControlType.Text))).AsLabel();
 			var fullTitle = textRoot.Name.Trim();
 			var texts = textRoot.FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Text));
 			bool hasHistoryButton = IsHasHistoryButton();

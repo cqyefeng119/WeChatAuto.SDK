@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Automation;
 using OneOf;
+using WeAutoCommon.Utils;
 using WeChatAuto.Components;
 using WeChatAuto.Models;
 
@@ -32,5 +33,23 @@ namespace WeChatAuto.Options
         /// 手动处理消息，SDK只默认处理了文字消息、图片消息、红包/转账消息，其他的消息可以自行处理，如：自行处理打开视频号等.
         /// </summary>
         public Action<AutomationElement> CustomProcessMessageAction = null;
+
+        /// <summary>
+        /// 是否预防风控,如果待监控的群不多，建议设置为False,如果监测的群/好友很多，并且聊天很频繁，建议将设置为True.
+        /// 因为人不可能一天24小时进行操作的,否则极易被微信风控退出。
+        /// </summary>
+        public bool IsRiskPrevention { get; set; } = false;
+
+        /// <summary>
+        /// 预防风控方法
+        /// 如果上面IsRiskPrevention设置为True,则预防风控方法生效，预设预防风控行为是等候一段时间，你也可以覆盖此方法，加入更多不可预测行为.
+        /// 如：你可以加入随机与某人聊一句，或者运行其他的方法，甚至晚上一段时间停止等
+        /// 触发时间：运行6-10分钟之内的某个随机时间触发
+        /// 预防风控方法运行时，消息监听会暂停，预防风控方法运行结束，消息监听继续.
+        /// </summary>
+        public Func<WeChatClient,Task> RiskPreventionAction { get; set; } = async client =>
+        {
+            await RandomWait.WaitAsync(60 * 1_000, 3 * 60 * 1_1000);  //随机等候1..3分钟.
+        };
     }
 }

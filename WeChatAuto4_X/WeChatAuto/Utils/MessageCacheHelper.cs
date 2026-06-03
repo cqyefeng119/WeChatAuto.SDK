@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.WindowsAPI;
 using WeAutoCommon.Configs;
@@ -55,7 +57,8 @@ namespace WeChatAuto.Utils
         public static List<SimpleMessageBubble> GetMessageCaches(string who, DateTime date)
         {
             var result = new List<SimpleMessageBubble>();
-            var path = Path.Combine(_RootCachePath, date.ToString("yyyy-MM-dd"), $"{who}.dat");
+            var fileName = GetStandFileName(who);
+            var path = Path.Combine(_RootCachePath, date.ToString("yyyy-MM-dd"), $"{fileName}.dat");
             if (!File.Exists(path))
                 return result;
             byte[] bytes = File.ReadAllBytes(path);
@@ -83,7 +86,8 @@ namespace WeChatAuto.Utils
             {
                 Directory.CreateDirectory(dir);
             }
-            var path = Path.Combine(dir, $"{who}.dat");
+            var fileName = GetStandFileName(who);
+            var path = Path.Combine(dir, $"{fileName}.dat");
             byte[] bytes = MessagePack.MessagePackSerializer.Serialize(messages);
             File.WriteAllBytes(path, bytes);
         }
@@ -97,6 +101,19 @@ namespace WeChatAuto.Utils
             List<SimpleMessageBubble> list = GetTodayMessageCaches(who);
             list.AddRange(messages);
             SaveTodayMessageCaches(who, list);
+        }
+        /// <summary>
+        /// 文件名可能会无效.
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
+        public static string GetStandFileName(string fileName)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(c, '_');
+            }
+            return fileName;
         }
     }
 }

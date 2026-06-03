@@ -19,7 +19,7 @@ namespace WeChatAuto.Models
         /// 消息
         /// </summary>
         [Key(2)]
-        public string message { get; set; }
+        public string Message { get; set; }
         /// <summary>
         /// 发送日期，大概日期，并不准确,因为微信本身也日期也不准确
         /// </summary>
@@ -49,5 +49,10 @@ namespace WeChatAuto.Models
         /// </summary>
         [Key(6)]
         public string ImageFile { get; set; }
+
+        public override string ToString()
+        {
+            return $"who={this.Who} Message={this.Message} SendDate={this.SendDate.ToString("yyyy-MM-dd HH:mm")} Image={(this.Image != null ? "有图片" : "无")} MessageType={this.MessageType.ToString()} ImageFile={this.ImageFile}";
+        }
     }
 }

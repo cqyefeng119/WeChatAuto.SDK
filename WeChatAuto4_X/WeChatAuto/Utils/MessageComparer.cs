@@ -17,7 +17,7 @@ namespace WeChatAuto.Utils
         {
             if (x == null || x == y)
                 return false;
-            if (x.message == y.message && x.Who == y.Who)
+            if (x.Message == y.Message && x.Who == y.Who)
             {
                 return true;
             }
@@ -26,7 +26,7 @@ namespace WeChatAuto.Utils
 
         public int GetHashCode([DisallowNull] SimpleMessageBubble obj)
         {
-            return $"{obj.Who}-{obj.message}".GetHashCode();
+            return $"{obj.Who}-{obj.Message}".GetHashCode();
         }
     }
 }
