@@ -997,19 +997,39 @@ namespace WeChatAuto.Components
         internal bool _ProcessPopMenu(UIA3Automation automation, AutomationElement messageListRoot)
         {
             var messages = messageListRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-            foreach (var item in messages)
+            if (messages.Count() > 1)
             {
-                if (ExcludeMessage(item))
-                    continue;
-                if ((item.BoundingRectangle.Y >= messageListRoot.BoundingRectangle.Y) &&
-                    (item.BoundingRectangle.Y + 85 <= messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height))
+                foreach (var item in messages)
                 {
-                    var result = __ProcessPopMenuCore(automation, item);
-                    if (result)
-                        return true;
+                    if (ExcludeMessage(item))
+                        continue;
+                    if ((item.BoundingRectangle.Y >= messageListRoot.BoundingRectangle.Y) &&
+                        (item.BoundingRectangle.Y + 85 <= messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height))
+                    {
+                        var result = __ProcessPopMenuCore(automation, item);
+                        if (result)
+                            return true;
+                    }
                 }
+                return false;
+            }else
+            {
+                //长文本处理
+                var index = 0;
+                var item = messages[0];
+                while (index < 6)
+                {
+                    if (item.BoundingRectangle.Y >= messageListRoot.BoundingRectangle.Y)
+                    {
+                        var result = __ProcessPopMenuCore(automation, item);
+                        if (result)
+                            return true;
+                    }
+                    index ++;
+                    MouseScrollHelper.UpStep(messageListRoot.BoundingRectangle.Center().Confusion(10,10),1);
+                }
+                return false;
             }
-            return false;
         }
 
         private bool __ProcessPopMenuCore(UIA3Automation automation, AutomationElement item)
