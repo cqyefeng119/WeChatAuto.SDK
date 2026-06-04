@@ -53,12 +53,13 @@ namespace WeChatAuto.Components
         private bool messageStarted = true;
         private int totalNewMessage = 0;   //新消息数量
         private readonly ConcurrentDictionary<string, bool> _MonitorList = new ConcurrentDictionary<string, bool>();
+        private readonly ConcurrentDictionary<string,bool> _HistoryDoneList = new ConcurrentDictionary<string, bool>();
+        private readonly ConcurrentDictionary<string,List<string>> _CurrentSnapshot = new ConcurrentDictionary<string, List<string>>();  //每个好友的当前快照
         private CancellationTokenSource messageCts = new CancellationTokenSource();
         private Task messageRunningTask;
         private Action<string> UIInvoker;
         private int _IsContinue = 1;
         private int pauseTime = Random.Shared.Next(6 * 60 * 1_000, 10 * 60 * 1_000);  //6与10分钟的某个时间段
-        private bool firstFlag = true;
         //系统消息监听
         private int systemListnerStartedFlag = 0;   //系统消息监听启用标识
         private readonly ConcurrentDictionary<string, bool> _SystemMonitorList = new ConcurrentDictionary<string, bool>();
@@ -553,7 +554,7 @@ namespace WeChatAuto.Components
             }
             else
             {
-                var l1 = clickList.Select(u => u.GetName()).ToList(); //本次获取的对象。
+                var l1 = clickList.Select(u => u.GetName().Trim()).ToList(); //本次获取的对象。
                 var l2 = this._MonitorList.Keys;  //所有监听对象
                 willParseList.AddRange(l2.Intersect(l1));
             }
@@ -564,14 +565,15 @@ namespace WeChatAuto.Components
                 token.ThrowIfCancellationRequested();
                 if (item.BoundingRectangle.IsClickSafe(rootRect))
                 {
-                    //var serviceBackClickFlag = item.Name.StartsWith("服务号\n") ? true : false;
                     var point = item.BoundingRectangle.SafeRandomPoint();
                     Mouse.Position = point;
                     RandomWait.Wait(100, 300);
                     SupperMouseKey.LeftClick();   //点击
-                    RandomWait.Wait(300, 1200);
-                    var clickResult = _ProcessClickBack();  //点击了服务号需要进行返回
-                    if (!clickResult && willParseList.Contains(item.GetName()))
+                    RandomWait.Wait(300, 900);
+                    var clickBackResult = _ProcessClickBack();  //点击了服务号需要进行返回
+                    if (clickBackResult)
+                        continue;
+                    if (willParseList.Contains(item.GetName()))
                     {
                         var excludeResult = ExcludeUnParserItems(item);
                         if (excludeResult)
@@ -644,7 +646,7 @@ namespace WeChatAuto.Components
             var popResult = _ProcessPopMenu(automation, messageListRoot);  //弹出并点击“多选”菜单
             if (!popResult)
             {
-                _Logger.Error("解析消息时，右键菜单解析失败，可能会导致消息监听失败");
+                _Logger.Error("解析消息时，右键菜单解析失败，可能会导致消息监听失败,但是下次有消息时会重新获取...");
                 return;
             }
             List<SimpleMessageBubble> newMessages = _FetchMessageCore(automation, token, clickConversionItem, messageListRoot, title.Title, options); //本次最新的消息列表
@@ -699,20 +701,29 @@ namespace WeChatAuto.Components
             RandomWait.Wait(100, 300);
             SupperMouseKey.MoveTo(point.Confusion(5, 10));
             RandomWait.Wait(100, 900);
-            var lastItems = new List<AutomationElement>();
+            if (!_CurrentSnapshot.Keys.Contains(who))
+            {
+                _CurrentSnapshot.TryAdd(who,new List<string>());
+            }
             var index = 0;  //循环取3次.
             while (index < 3)
             {
                 var items = messageListRoot.FindAllChildren().ToList();  //全部本次滚动全部子ListItem.
-                var exceptList = items.Except(lastItems, new AutomationRuntimeComparer()).ToList();
+                var exceptList = items.Select(u=>u.Name.Trim()).Except(_CurrentSnapshot[who]).ToList();
                 if (exceptList.Count() == 0)
                 {
                     index++;
                 }
                 else
                 {
-                    lastItems = items;
-                    var newList = _GenerateSimpleMessageBubbles(exceptList.ToArray(), messageListRoot, who, automation, options);
+                    _CurrentSnapshot[who] = items.Select(u=>u.Name.Trim()).ToList();
+                    var AryWillProcess = new List<AutomationElement>();
+                    foreach(var e in exceptList)
+                    {
+                        AryWillProcess.Add(items.ToList().Last(x=>x.Name.Trim().Equals(e)));
+                    } 
+
+                    var newList = _GenerateSimpleMessageBubbles(AryWillProcess.ToArray(), messageListRoot, who, automation, options);
                     result.AddRange(newList);  //增加进入结果列表
                     index = 0;
                 }
@@ -729,23 +740,38 @@ namespace WeChatAuto.Components
             var newList = new List<SimpleMessageBubble>();
             foreach (var item in newItems)
             {
-                if (item.BoundingRectangle.Y < messageListRoot.BoundingRectangle.Y || item.BoundingRectangle.Y + 75 > messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height)  //因为不在处理范围，处理不了,事实之前循环已经处理.
-                    continue;
+                if (newItems.Count() == 1)
+                {
+                    //如果是长文本,整个屏就只有一条，可能在不可点击犯围
+                    var index = 0;
+                    while (item.BoundingRectangle.Y < messageListRoot.BoundingRectangle.Y && index <= 2)
+                    {
+                        SupperMouseKey.Scroll(1);
+                        index++;
+                        RandomWait.Wait(100,600);
+                    }
+                }
+                else
+                {
+                    if (item.BoundingRectangle.Y < messageListRoot.BoundingRectangle.Y || item.BoundingRectangle.Y + 75 > messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height)  //因为不在处理范围，处理不了,事实之前循环已经处理.
+                        continue;
+                }
                 if (item.ControlType == ControlType.CheckBox)
                 {
                     //真正的消息
                     //如果有图片消息，或者红包/转账消息，则取消-->处理-->再勾选.
                     SimpleMessageBubble message = new SimpleMessageBubble();
                     string[] aryMessage = item.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    string who = aryMessage[0];
+                    string who = aryMessage[0].Trim();
+                    message.Who = who;
+                    message.SendDate = DateTime.Now;
+                    string maybeType = aryMessage.Length > 1 ? aryMessage[1] : "";
+                    string content = item.Name.Trim().Substring(who.Length).Trim();
                     if (who == this._Client.NickName)
                     {
                         who = "我";
                     }
                     message.Who = who;
-                    message.SendDate = DateTime.Now;
-                    string maybeType = aryMessage.Length > 1 ? aryMessage[1] : "";
-                    string content = item.Name.Trim().Substring(who.Length).Trim();
                     __ProcessMessageType(maybeType, message, content, item.Name.Trim());
                     if (message.MessageType == MessageType.图片 && options != null && options.FetchImage)
                     {
@@ -786,12 +812,15 @@ namespace WeChatAuto.Components
                 }
             }
 
-            if (firstFlag)
+            if (!_HistoryDoneList.Keys.Contains(title))
+                _HistoryDoneList.TryAdd(title,false);
+
+            if (!_HistoryDoneList[title])
             {
                 var historyList = MessageCacheHelper.GetTodayLastMessages(title, 5);  //历史消息中最后5条，因为首次可能会与历史重复.
                 newList = newList.Where(x => !historyList.Contains(x, new MessageComparer())).ToList();
 
-                firstFlag = false;
+                _HistoryDoneList.TryUpdate(title,true,false);
             }
             return newList;
         }

@@ -21,7 +21,7 @@ namespace WeChatAuto.Utils
     /// </summary>
     public static class MessageCacheHelper
     {
-        private static string _RootCachePath = Path.Combine(AppContext.BaseDirectory, "MessageCache");
+        private static string _RootCachePath = Path.Combine(AppContext.BaseDirectory, "MessageCaches");
         static MessageCacheHelper()
         {
             if (!Directory.Exists(_RootCachePath))
