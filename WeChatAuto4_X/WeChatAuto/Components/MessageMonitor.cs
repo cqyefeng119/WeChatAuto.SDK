@@ -53,8 +53,8 @@ namespace WeChatAuto.Components
         private bool messageStarted = true;
         private int totalNewMessage = 0;   //新消息数量
         private readonly ConcurrentDictionary<string, bool> _MonitorList = new ConcurrentDictionary<string, bool>();
-        private readonly ConcurrentDictionary<string,bool> _HistoryDoneList = new ConcurrentDictionary<string, bool>();
-        private readonly ConcurrentDictionary<string,List<string>> _CurrentSnapshot = new ConcurrentDictionary<string, List<string>>();  //每个好友的当前快照
+        private readonly ConcurrentDictionary<string, bool> _HistoryDoneList = new ConcurrentDictionary<string, bool>();
+        private readonly ConcurrentDictionary<string, List<int[]>> _CurrentSnapshot = new ConcurrentDictionary<string, List<int[]>>();  //每个好友的当前快照
         private CancellationTokenSource messageCts = new CancellationTokenSource();
         private Task messageRunningTask;
         private Action<string> UIInvoker;
@@ -703,25 +703,25 @@ namespace WeChatAuto.Components
             RandomWait.Wait(100, 900);
             if (!_CurrentSnapshot.Keys.Contains(who))
             {
-                _CurrentSnapshot.TryAdd(who,new List<string>());
+                _CurrentSnapshot.TryAdd(who, new List<int[]>());
             }
             var index = 0;  //循环取3次.
             while (index < 3)
             {
                 var items = messageListRoot.FindAllChildren().ToList();  //全部本次滚动全部子ListItem.
-                var exceptList = items.Select(u=>u.Name.Trim()).Except(_CurrentSnapshot[who]).ToList();
+                var exceptList = items.Select(u => u.Properties.RuntimeId.Value).Except(_CurrentSnapshot[who], new AutomationIntArrayComparer()).ToList();
                 if (exceptList.Count() == 0)
                 {
                     index++;
                 }
                 else
                 {
-                    _CurrentSnapshot[who] = items.Select(u=>u.Name.Trim()).ToList();
+                    _CurrentSnapshot[who] = items.Select(u => u.Properties.RuntimeId.Value).ToList();
                     var AryWillProcess = new List<AutomationElement>();
-                    foreach(var e in exceptList)
+                    foreach (var e in exceptList)
                     {
-                        AryWillProcess.Add(items.ToList().Last(x=>x.Name.Trim().Equals(e)));
-                    } 
+                        AryWillProcess.Add(items.Last(x => x.Properties.RuntimeId.Value.SequenceEqual(e)));
+                    }
 
                     var newList = _GenerateSimpleMessageBubbles(AryWillProcess.ToArray(), messageListRoot, who, automation, options);
                     result.AddRange(newList);  //增加进入结果列表
@@ -748,7 +748,7 @@ namespace WeChatAuto.Components
                     {
                         SupperMouseKey.Scroll(1);
                         index++;
-                        RandomWait.Wait(100,600);
+                        RandomWait.Wait(100, 600);
                     }
                 }
                 else
@@ -813,14 +813,14 @@ namespace WeChatAuto.Components
             }
 
             if (!_HistoryDoneList.Keys.Contains(title))
-                _HistoryDoneList.TryAdd(title,false);
+                _HistoryDoneList.TryAdd(title, false);
 
             if (!_HistoryDoneList[title])
             {
                 var historyList = MessageCacheHelper.GetTodayLastMessages(title, 5);  //历史消息中最后5条，因为首次可能会与历史重复.
                 newList = newList.Where(x => !historyList.Contains(x, new MessageComparer())).ToList();
 
-                _HistoryDoneList.TryUpdate(title,true,false);
+                _HistoryDoneList.TryUpdate(title, true, false);
             }
             return newList;
         }
@@ -841,7 +841,7 @@ namespace WeChatAuto.Components
                 SupperMouseKey.LeftClick();
                 RandomWait.Wait(300, 900);
             }
-            //点击图片
+            //点击图片右键.
             var index = 0;
             var items = messageListRoot.FindAllChildren();
             var clickItem = items.FirstOrDefault(x => x.Properties.RuntimeId.Value.SequenceEqual(runtimeId));
@@ -853,46 +853,8 @@ namespace WeChatAuto.Components
             while (index < 3)
             {
                 this._Client.MainWindow.Focus();
-                __ClickImageCore(automation, clickItem);
-                var imageWinRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf => cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId).And(cf.ByName("图片和视频")).And(cf.ByClassName("mmui::PreviewWindow"))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-                if (imageWinRetry.Success)
+                if (__ClickImageCore(automation, clickItem, message))
                 {
-                    var imageWin = imageWinRetry.Result.AsWindow();
-                    imageWin.Focus();
-                    var point = imageWin.BoundingRectangle.Center();
-                    point = new Point(point.X, point.Y + 50);
-                    Mouse.Position = point.Confusion(10, 10);
-                    RandomWait.Wait(100, 300);
-                    SupperMouseKey.MoveTo(point.Confusion(10, 10));
-                    RandomWait.Wait(300, 900);
-                    SupperMouseKey.RightClick();
-                    RandomWait.Wait(300, 900);
-                    var menuWinRetry = Retry.WhileNull(() => imageWin.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin").And(cf.ByClassName("mmui::XMenu")))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-                    if (!menuWinRetry.Success)
-                    {
-                        index++;
-                        continue;
-                    }
-                    var copyItem = menuWinRetry.Result.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("复制")));
-                    copyItem.Click();
-                    RandomWait.Wait(300, 900);
-                    var isImage = System.Windows.Clipboard.ContainsImage();
-                    if (isImage)
-                    {
-                        Bitmap bitmap = (Bitmap)System.Windows.Forms.Clipboard.GetImage();
-                        message.Image = bitmap;
-                        path = Path.Combine(AppContext.BaseDirectory, "ImageCaches");
-                        if (!Directory.Exists(path))
-                        {
-                            Directory.CreateDirectory(path);
-                        }
-                        path = Path.Combine(path, $"{Guid.NewGuid().ToString("N")}.png");
-                        bitmap.Save(path, ImageFormat.Png);
-                        message.ImageFile = path;
-                    }
-
-                    RandomWait.Wait(300, 900);
-                    imageWin.Close();
                     break;
                 }
                 index++;
@@ -1097,7 +1059,7 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        private bool __ClickImageCore(UIA3Automation automation, AutomationElement item)
+        private bool __ClickImageCore(UIA3Automation automation, AutomationElement item, SimpleMessageBubble message)
         {
             var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
             if (!title.CanTalk())
@@ -1120,23 +1082,37 @@ namespace WeChatAuto.Components
             RandomWait.Wait(100, 300);
             SupperMouseKey.MoveTo(point.Confusion(5, 5));
             RandomWait.Wait(300, 900);
-            SupperMouseKey.RightClick();
+            SupperMouseKey.RightClick();  //右键.
             RandomWait.Wait(300, 900);
             var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
-            var menuWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            var menuWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(0.6), TimeSpan.FromMilliseconds(200));
             if (menuWinRetry.Success)
             {
                 var menuWin = menuWinRetry.Result.AsWindow();
-                menuWin.Close();
-                SupperMouseKey.LeftClick();
+                var copyItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("复制")));
+                copyItem.Click();
+                RandomWait.Wait(300, 900);
+                var isImage = System.Windows.Clipboard.ContainsImage();
+                if (isImage)
+                {
+                    Bitmap bitmap = (Bitmap)System.Windows.Forms.Clipboard.GetImage();
+                    message.Image = bitmap;
+                    path = Path.Combine(AppContext.BaseDirectory, "ImageCaches");
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+                    path = Path.Combine(path, $"{Guid.NewGuid().ToString("N")}.png");
+                    bitmap.Save(path, ImageFormat.Png);
+                    message.ImageFile = path;
+                }
+                return true;
             }
             else
             {
                 //如果左边不行，再尝试右边
-                return __TryClickRithgSide(automation, item);
+                return __TryClickRithgSide(automation, item, message);
             }
-
-            return false;
         }
 
         private bool __TryRightSideClick(UIA3Automation automation, AutomationElement item)
@@ -1165,7 +1141,7 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        private bool __TryClickRithgSide(UIA3Automation automation, AutomationElement item)
+        private bool __TryClickRithgSide(UIA3Automation automation, AutomationElement item, SimpleMessageBubble message)
         {
             var rect = item.BoundingRectangle;
             var point = new Point(rect.X + rect.Width - 90 - 24, rect.Y + 10 + 22);  //中心
@@ -1180,8 +1156,24 @@ namespace WeChatAuto.Components
             if (menuWinRetry.Success)
             {
                 var menuWin = menuWinRetry.Result.AsWindow();
-                menuWin.Close();
-                SupperMouseKey.LeftClick();
+                var copyItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("复制")));
+                copyItem.Click();
+                RandomWait.Wait(300, 900);
+                var isImage = System.Windows.Clipboard.ContainsImage();
+                if (isImage)
+                {
+                    Bitmap bitmap = (Bitmap)System.Windows.Forms.Clipboard.GetImage();
+                    message.Image = bitmap;
+                    path = Path.Combine(AppContext.BaseDirectory, "ImageCaches");
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+                    path = Path.Combine(path, $"{Guid.NewGuid().ToString("N")}.png");
+                    bitmap.Save(path, ImageFormat.Png);
+                    message.ImageFile = path;
+                }
+                return true;
             }
             return false;
         }
