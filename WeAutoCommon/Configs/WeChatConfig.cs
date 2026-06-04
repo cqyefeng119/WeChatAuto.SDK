@@ -14,6 +14,7 @@ namespace WeAutoCommon.Configs
     /// </summary>
     public class WeChatConfig
     {
+        public string WxVersion = "4.1.10.xx";
         /// <summary>
         /// 下载文件/图片默认保存路径
         /// </summary>
@@ -45,7 +46,7 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 消息监听间隔时间，单位为秒
         /// </summary>
-        public int MonitorMessageInterval { get; set; } = 3;
+        public int MonitorMessageInterval { get; set; } = 5;
         /// <summary>
         /// 消息监听时往下滚动的次数，如果监听列表多，建议设置成：10-30
         /// 如果监听列表少，建议设置成:5~10，以提高效率 
@@ -175,6 +176,10 @@ namespace WeAutoCommon.Configs
         /// 可以命令本微信执行操作的用户,用于设定权限，只有在列表中的用户才被允许命令此微信执行操作
         /// </summary>
         public List<string> PrivilegedUser { get; set; } = new List<string>();
+        /// <summary>
+        /// 用于消息监听中，返回的历史消息最大记录数，因为事实上人工智能无须读完整个历史消息的。
+        /// </summary>
+        public int FetchMaxHistoryMessageNumber {get;set;} = 20;
     }
 
     public static class Language

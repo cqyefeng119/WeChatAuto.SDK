@@ -26,7 +26,16 @@ public class MonitorTest
         var client = framework.GetWeChatClient(_wxClientName);
         await client.AddMessageListener("", (context) =>
         {
-
+            _output.WriteLine("======= 最新消息 ======");
+            foreach (var item in context.NewMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
+            _output.WriteLine("======= 历史消息 ======");
+            foreach (var item in context.HistoryMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
         }, true);
         await Task.Delay(-1);
     }

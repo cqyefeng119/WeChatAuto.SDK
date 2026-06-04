@@ -662,7 +662,7 @@ namespace WeChatAuto.Components
             if (newMessages == null || newMessages.Count == 0)
                 return;
             var historyList = MessageCacheHelper.GetTodayLastMessages(title,WeAutomation.Config.FetchMaxHistoryMessageNumber);
-            MessageContext context = new MessageContext(newMessages,null,this._Client.ChatContent.Sender,this._Client,this._Client.Factory,this.serviceProvider,this._Client.NickName);
+            MessageContext context = new MessageContext(newMessages,historyList,this._Client.ChatContent.Sender,this._Client,this._Client.Factory,this.serviceProvider,this._Client.NickName);
             callBack.Invoke(context);
         }
 
