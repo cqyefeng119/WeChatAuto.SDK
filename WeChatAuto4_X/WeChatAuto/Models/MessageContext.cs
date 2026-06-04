@@ -41,7 +41,7 @@ namespace WeChatAuto.Models
         /// </summary>
         public Sender Sender { get; set; }
         /// <summary>
-        /// 当前微信客户端
+        /// 当前微信客户端,通过Client可以执行发消息等操作
         /// 参考<see cref="WeChatClient"/>
         /// </summary>
         public WeChatClient Client { get; set; }

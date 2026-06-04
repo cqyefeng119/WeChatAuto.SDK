@@ -86,6 +86,32 @@ public class MonitorTest
         await Task.Delay(-1);
     }
 
+    [Fact(DisplayName = "开放式好友、群监听_风控")]
+    public async Task Test_Message_Monitor_friend_risk()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.AddMessageListener("", (context) =>
+        {
+            _output.WriteLine("======= 最新消息 ======");
+            foreach (var item in context.NewMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
+            _output.WriteLine("======= 历史消息 ======");
+            foreach (var item in context.HistoryMessages)
+            {
+                _output.WriteLine(item.ToString());
+            }
+        }, true, options: new Options.MessageMonitorOptions
+        {
+            FetchFriendInfo = true,
+            FetchImage = true,
+            IsRiskPrevention = true,
+        });
+        await Task.Delay(-1);
+    }
+
     [Theory(DisplayName = "测试开始时间-结束时间的消息监听")]
     [InlineData("", "")]
     public async Task Test_Message_Monitor_friend_starendtime(string start, string end)

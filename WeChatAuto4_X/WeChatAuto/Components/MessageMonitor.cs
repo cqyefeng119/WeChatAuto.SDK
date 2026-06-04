@@ -355,19 +355,24 @@ namespace WeChatAuto.Components
                 var timespan = riskWatch.Elapsed;
                 if (timespan.TotalMilliseconds >= pauseTime)  //条件满足
                 {
-                    await options?.RiskPreventionAction?.Invoke(this._Client);  //运行预防风控行为
-                    riskWatch.Restart();  //重新计时
+                    System.Diagnostics.Debug.WriteLine($"===== 开始运行风控行为代码 ======");
+                    try
+                    {
+                        await options?.RiskPreventionAction?.Invoke(this._Client);  //运行预防风控行为
+                        riskWatch.Restart();  //重新计时
+                    }
+                    finally
+                    {
+                        await this._Client.SwitchNavigation(NavigationType.微信);
+                    }
                     this.pauseTime = Random.Shared.Next(6 * 60 * 1_000, 10 * 60 * 1_000);   //重新计算下一次停顿时间.
                     //await WeChatInvoker.Call(__FixedSideEffect);  //暂时取消副作用，因为有些打开的子窗口监听是不需要关闭的.
+                    System.Diagnostics.Debug.WriteLine($"===== 运行风控行为代码结束 ======");
                 }
             }
             catch (Exception ex)
             {
                 _Logger.Error("消息监听中运行预防风控行为出错:" + ex.ToString());
-            }
-            finally
-            {
-                await this._Client.SwitchNavigation(NavigationType.微信);
             }
         }
 
@@ -643,11 +648,13 @@ namespace WeChatAuto.Components
                 return;
             }
             List<SimpleMessageBubble> newMessages = _FetchMessageCore(automation, token, clickConversionItem, messageListRoot, title.Title, options); //本次最新的消息列表
-            //测试
+                                                                                                                                                      //测试
+            System.Diagnostics.Debug.WriteLine($"===== 来自 {title.Title} 的消息 ======");
             foreach (var item in newMessages)
             {
                 System.Diagnostics.Debug.WriteLine(item.ToString());
             }
+            System.Diagnostics.Debug.WriteLine($"===== 结束输出 {title.Title} 的消息 ======");
 
             __CloseCheckBoxList();
             MessageCacheHelper.AddTodayMessageCaches(title.Title, newMessages);  //增加进缓存.
@@ -661,8 +668,8 @@ namespace WeChatAuto.Components
                 return;
             if (newMessages == null || newMessages.Count == 0)
                 return;
-            var historyList = MessageCacheHelper.GetTodayLastMessages(title,WeAutomation.Config.FetchMaxHistoryMessageNumber);
-            MessageContext context = new MessageContext(newMessages,historyList,this._Client.ChatContent.Sender,this._Client,this._Client.Factory,this.serviceProvider,this._Client.NickName);
+            var historyList = MessageCacheHelper.GetTodayLastMessages(title, WeAutomation.Config.FetchMaxHistoryMessageNumber);
+            MessageContext context = new MessageContext(newMessages, historyList, this._Client.ChatContent.Sender, this._Client, this._Client.Factory, this.serviceProvider, this._Client.NickName);
             callBack.Invoke(context);
         }
 
@@ -677,9 +684,9 @@ namespace WeChatAuto.Components
                 Mouse.Position = point;
                 RandomWait.Wait(100, 300);
                 SupperMouseKey.MoveTo(point.Confusion(3, 5));
-                RandomWait.Wait(300, 900);
+                RandomWait.Wait(100, 600);
                 SupperMouseKey.LeftClick();
-                RandomWait.Wait(300, 900);
+                RandomWait.Wait(100, 600);
             }
         }
 
@@ -1325,13 +1332,13 @@ namespace WeChatAuto.Components
         }
         private bool _ProcessClickBack()
         {
-            var backButtonRetry = Retry.WhileNull(() => _Client.MainWindow.FindFirstDescendant(cf => cf.ByName("返回").And(cf.ByAutomationId("button")).And(cf.ByClassName("mmui::ChatBackwardView")).And(cf.ByControlType(ControlType.Button).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+            var backButtonRetry = Retry.WhileNull(() => _Client.MainWindow.FindFirstDescendant(cf => cf.ByName("返回").And(cf.ByAutomationId("button")).And(cf.ByClassName("mmui::ChatBackwardView")).And(cf.ByControlType(ControlType.Button).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))), timeout: TimeSpan.FromSeconds(0.5), interval: TimeSpan.FromMilliseconds(100));
             if (backButtonRetry.Success)
             {
                 var button = backButtonRetry.Result;
                 button.WaitUntilClickable();
                 button.Click();
-                RandomWait.Wait(300, 900);
+                RandomWait.Wait(300, 600);
                 return true;
             }
             return false;
