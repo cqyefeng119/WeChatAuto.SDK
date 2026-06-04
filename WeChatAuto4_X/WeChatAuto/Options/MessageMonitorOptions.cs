@@ -30,7 +30,7 @@ namespace WeChatAuto.Options
         public bool ClickRedEnvelope { get; set; } = false;
 
         /// <summary>
-        /// 手动处理消息，SDK只默认处理了文字消息、图片消息、红包/转账消息，其他的消息可以自行处理，如：自行处理打开视频号等.
+        /// 手动处理消息，SDK只默认处理了文字消息、图片消息、红包/转账消息，其他的消息可以自行处理，如：自行处理打开链接抓取链接内容等.
         /// </summary>
         public Action<AutomationElement> CustomProcessMessageAction = null;
 
@@ -44,12 +44,12 @@ namespace WeChatAuto.Options
         /// 预防风控方法
         /// 如果上面IsRiskPrevention设置为True,则预防风控方法生效，预设预防风控行为是等候一段时间，你也可以覆盖此方法，加入更多不可预测行为.
         /// 如：你可以加入随机与某人聊一句，或者运行其他的方法，甚至晚上一段时间停止等
-        /// 触发时间：运行6-10分钟之内的某个随机时间触发
+        /// 触发时间：运4行6-10分钟之内的某个随机时间触发
         /// 预防风控方法运行时，消息监听会暂停，预防风控方法运行结束，消息监听继续.
         /// </summary>
         public Func<WeChatClient,Task> RiskPreventionAction { get; set; } = async client =>
         {
-            await RandomWait.WaitAsync(60 * 1_000, 3 * 60 * 1_1000);  //随机等候1..3分钟.
+            await RandomWait.WaitAsync(60 * 1_000, 3 * 60 * 1_000);  //随机等候1..3分钟.
         };
     }
 }
