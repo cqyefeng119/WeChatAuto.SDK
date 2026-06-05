@@ -41,9 +41,7 @@ namespace WeChatAuto.Components
         private UIThreadInvoker _uiThreadInvoker;
         private ChatContent _ChatContent;
         private WeChatClient _Client;
-
         internal Button HistoryButton => _GetHistoryButton();   //实时获取聊天记录按钮
-
         internal MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;

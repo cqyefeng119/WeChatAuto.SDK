@@ -6,6 +6,7 @@ using System.Threading;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Tools;
 using WeAutoCommon.Simulator;
+using WeChatAuto.Utils;
 
 namespace WeChatAuto.Services
 {
@@ -491,15 +492,5 @@ namespace WeChatAuto.Services
             Skm.HKMLeftUp(_deviceData);
         }
         #endregion
-
-        // /// <summary>
-        // /// 获取窗口缩放比例
-        // /// </summary>
-        // /// <param name="hwnd">窗口句柄</param>
-        // /// <returns>缩放比例</returns>
-        // public static double GetScaleForWindow(IntPtr hwnd)
-        // {
-        //     return DpiHelper.GetWindowDpi(hwnd) / 96.0;
-        // }
     }
 }

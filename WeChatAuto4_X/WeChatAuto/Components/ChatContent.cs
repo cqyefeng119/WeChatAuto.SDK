@@ -96,8 +96,7 @@ namespace WeChatAuto.Components
                 }).AsWindow();
                 if (subWin != null)
                 {
-                    subWin.Focus();
-                    SupperMouseKey.TypeSimultaneously(virtualKeys: VirtualKeyShort.ESC);
+                    subWin.Close();
                 }
             }
         }

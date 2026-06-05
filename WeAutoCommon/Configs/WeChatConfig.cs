@@ -179,7 +179,15 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 用于消息监听中，返回的历史消息最大记录数，因为事实上人工智能无须读完整个历史消息的。
         /// </summary>
-        public int FetchMaxHistoryMessageNumber {get;set;} = 20;
+        public int MaxHistoryMessageFetchNumber { get; set; } = 20;
+        /// <summary>
+        /// 消息监听中，首次运行取历史消息的最大数量.
+        /// </summary>
+        public int MessageFirstFetchNumber { get; set; } = 10;
+        /// <summary>
+        /// 消息监听中，为了消息稳定下来重试次数
+        /// </summary>
+        public int MessageStabilityRetryNumber { get; set; } = 3;
     }
 
     public static class Language

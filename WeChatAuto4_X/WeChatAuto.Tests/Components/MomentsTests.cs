@@ -34,7 +34,7 @@ public class MomentsTests
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.AddMoments(new List<string> {Path.Combine(AppContext.BaseDirectory, "Assets", "1.png"),
-        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "使用键鼠测试发朋友圈一", new Options.MomentsOptions
+        Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "应该可以的", new Options.MomentsOptions
         {
             AtUsrs = new List<string> { "软件作家涛哥_vip" },
             Labels = "aaa",
