@@ -32,6 +32,7 @@ using WeChatAuto.Options;
 using System.ComponentModel.DataAnnotations;
 using System.Configuration;
 using System.Drawing.Imaging;
+using System.Globalization;
 
 namespace WeChatAuto.Components
 {
@@ -737,7 +738,7 @@ namespace WeChatAuto.Components
 
             return result;
         }
-
+        //消息稳定器 - 消息稳定后点击
         private int _StabilityClick(UIA3Automation automation, CancellationToken token, AutomationElement clickConversionItem, AutomationElement messageListRoot, Button historyButton, int sessionCount)
         {
             var index = 0;
@@ -793,17 +794,13 @@ namespace WeChatAuto.Components
         {
             token.ThrowIfCancellationRequested();
             List<SimpleMessageBubble> result = new List<SimpleMessageBubble>();  //本次最新的消息列表
-            int maxChat = 0;  //本次获取的number数量
+            int maxChat = sessionCount;  //本次获取的number数量
             if (!_FriendSession[title.Title])
             {
                 _FriendSession[title.Title] = true;
-                if (sessionCount < WeAutomation.Config.MessageFirstFetchNumber)
+                if (maxChat < WeAutomation.Config.MessageFirstFetchNumber)
                 {
-                    maxChat = 10;
-                }
-                else
-                {
-                    maxChat = sessionCount;
+                    maxChat = WeAutomation.Config.MessageFirstFetchNumber;
                 }
             }
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name=''聊天记录]"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
@@ -811,17 +808,160 @@ namespace WeChatAuto.Components
                 return result;
             var root = rootRetry.Result.AsListBox();
             var index = 0;
-            var readNumber = 0;
-            var lastItems = new List<string>();
-            var dpi = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);
-            while (index < 50) //最大滚动数量
+            var lastItems = new List<string>();  //内容+runtimeid
+            var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);   //ocr的比率.
+            var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
+            while (index < 3)   //到头后重试数量.
             {
-                var items = root.FindAllChildren(cf=>);
-
-                index++;
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                var thisPageList = new List<string>();
+                foreach (var item in items)
+                {
+                    var height = 31 * ratio;  //31是100% dpi的高度.
+                    if (item.BoundingRectangle.Y >= root.BoundingRectangle.Y && item.BoundingRectangle.Y + height >= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                    {
+                        thisPageList.Add($"{item.Name}_{item.Properties.RuntimeId.ToUniqueString()}");
+                    }
+                }
+                var exceptList = thisPageList.Except(lastItems).ToList();
+                if (exceptList.Count == 0)
+                {
+                    index++;
+                }
+                else
+                {
+                    index = 0;
+                    lastItems = thisPageList;
+                    var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ref maxChat, ratio, result);
+                    if (exitFlag)
+                        break;
+                }
+                MouseScrollHelper.DownStep(scrollPoint.Confusion(5, 10), 2);
+                RandomWait.Wait(100, 400);
             }
-            result.Reverse();
+            result.Reverse();  //反转，因为从下往上读的聊天记录.
             return result;
+        }
+
+        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] items, MessageMonitorOptions options, ref int maxFetchChat, decimal ratio, List<SimpleMessageBubble> result)
+        {
+            SimpleMessageBubble message = new SimpleMessageBubble();
+            var processItems = items.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
+            foreach (var item in processItems)
+            {
+                if (item.ClassName.Equals("mmui::ChatItemView"))
+                {
+                    //系统消息
+                    __ProcessSystemMessageWithOCR(item, message);
+                }
+                else
+                {
+                    //非系统消息.
+                    __ProcessMessageWithOCRCore(item, options, ratio, message);
+                    maxFetchChat--;
+                }
+
+                result.Add(message);
+                if (maxFetchChat == 0)
+                    return true;
+            }
+
+            return false;
+        }
+        // 处理非系统消息
+        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message)
+        {
+            var title = __OcrMessageTitle(item, ratio);
+                            message.Who = title;
+            // 个人名片
+            if (item.ClassName.Equals("mmui::ChatPersonalCardItemView"))
+            {
+                message.MessageType = MessageType.个人名片;
+                (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                message.Message = resultSplit.content;
+                message.SendDate = resultSplit.date;
+                return;
+            }
+            // 笔记
+            if (item.ClassName.Equals("mmui::ChatPersonalCardItemView"))
+            {
+                message.MessageType = MessageType.笔记;
+                (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                message.Message = resultSplit.content;
+                message.SendDate = resultSplit.date;
+                return;
+            }
+            //语音
+            if (item.ClassName.Equals("mmui::ChatVoiceItemView"))
+            {
+                message.MessageType = MessageType.语音;
+                var voiceResult = __ParseVoiceContent(item.Name.Trim());
+                message.Message = __GetVoiceContent(voiceResult.voiceDelay);
+                message.SendDate = voiceResult.date;
+                return;
+            }
+            if (item.ClassName.Equals("mmui::ChatTextItemView"))
+            {
+                //文字型内容
+            }
+            if (item.ClassName.Equals("mmui::ChatBubbleItemView"))
+            {
+                //
+            }
+            if (item.ClassName.Equals("mmui::ChatBubbleReferItemView"))
+            {
+                
+            }
+        }
+        // 得到语音实际内容.
+        private string __GetVoiceContent(int voiceDelay)
+        {
+            return "";
+        }
+
+        private (int voiceDelay, DateTime date) __ParseVoiceContent(string text)
+        {
+            var match = Regex.Match(
+                        text,
+                        @"^语音(?<seconds>\d+)""秒\s+(?<time>\d{4}年\d{1,2}月\d{1,2}日\s+\d{2}:\d{2})$");
+
+            if (match.Success)
+            {
+                int seconds = int.Parse(match.Groups["seconds"].Value);
+                string time = match.Groups["time"].Value;
+                return (seconds, DateTime.TryParseExact(time, "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : default);
+            }
+            return (0, default);
+        }
+
+        private (string content, DateTime date) __ParseHistoryItem(string text)
+        {
+            var match = Regex.Match(
+                text,
+                @"^(?<content>[\s\S]*?)\s*(?<time>\d{4}年\d{1,2}月\d{1,2}日\s+\d{2}:\d{2})$");
+
+            if (match.Success)
+            {
+                string content = match.Groups["content"].Value.Trim();
+                string time = match.Groups["time"].Value;
+                return (content, DateTime.TryParseExact(time, "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : default);
+            }
+            return ("", default);
+        }
+
+        private string __OcrMessageTitle(AutomationElement item, decimal ratio)
+        {
+            return "";
+        }
+
+        // 处理系统消息
+        private void __ProcessSystemMessageWithOCR(AutomationElement item, SimpleMessageBubble message)
+        {
+            //其他消息，如：系统消息,时间,收取红包,拒绝红包,拍一拍,加入群聊,移出群聊,撤回了一条消息,其他消息,
+            message.Who = "系统";
+            message.Message = item.Name.Trim();
+            message.SendDate = DateTime.Now;
+            message.MessageType = MessageType.其他;
         }
 
         private List<SimpleMessageBubble> _GenerateSimpleMessageBubbles(AutomationElement[] newItems, AutomationElement messageListRoot, string title, UIA3Automation automation, MessageMonitorOptions options)
