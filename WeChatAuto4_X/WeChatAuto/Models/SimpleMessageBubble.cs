@@ -38,7 +38,7 @@ namespace WeChatAuto.Models
         /// 消息类型
         /// </summary>
         [Key(5)]
-        public MessageType MessageType { get; set; }
+        public MessageType MessageType { get; set; } = MessageType.None;
 
         /// <summary>
         /// 图片路径

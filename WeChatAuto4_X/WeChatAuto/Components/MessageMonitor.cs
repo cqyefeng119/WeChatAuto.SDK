@@ -732,7 +732,7 @@ namespace WeChatAuto.Components
                     return result;
                 this._Client.MoveWinToMainCenter(subWin);
                 RandomWait.Wait(300, 1200);
-                result = __FetchMessageFromHistory(subWin, token, title, options, sessionCount);
+                result = __FetchMessageFromHistory(subWin, token, title, options, sessionCount, automation);
                 this._Client.ChatContent.CloseSearchWindowCore(automation, title.Title); //关闭窗口
             }
 
@@ -790,7 +790,7 @@ namespace WeChatAuto.Components
             RandomWait.Wait(100, 600);
         }
 
-        private List<SimpleMessageBubble> __FetchMessageFromHistory(Window subWin, CancellationToken token, HeaderInfo title, MessageMonitorOptions options, int sessionCount)
+        private List<SimpleMessageBubble> __FetchMessageFromHistory(Window subWin, CancellationToken token, HeaderInfo title, MessageMonitorOptions options, int sessionCount, UIA3Automation automation)
         {
             token.ThrowIfCancellationRequested();
             List<SimpleMessageBubble> result = new List<SimpleMessageBubble>();  //本次最新的消息列表
@@ -832,7 +832,7 @@ namespace WeChatAuto.Components
                 {
                     index = 0;
                     lastItems = thisPageList;
-                    var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ref maxChat, ratio, result);
+                    var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ref maxChat, ratio, result, automation, root);
                     if (exitFlag)
                         break;
                 }
@@ -843,7 +843,7 @@ namespace WeChatAuto.Components
             return result;
         }
 
-        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] items, MessageMonitorOptions options, ref int maxFetchChat, decimal ratio, List<SimpleMessageBubble> result)
+        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] items, MessageMonitorOptions options, ref int maxFetchChat, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot)
         {
             SimpleMessageBubble message = new SimpleMessageBubble();
             var processItems = items.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
@@ -857,7 +857,7 @@ namespace WeChatAuto.Components
                 else
                 {
                     //非系统消息.
-                    __ProcessMessageWithOCRCore(item, options, ratio, message);
+                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot);
                     maxFetchChat--;
                 }
 
@@ -869,10 +869,10 @@ namespace WeChatAuto.Components
             return false;
         }
         // 处理非系统消息
-        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message)
+        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message, UIA3Automation automation, AutomationElement messageListRoot)
         {
             var title = __OcrMessageTitle(item, ratio);
-                            message.Who = title;
+            message.Who = title;
             // 个人名片
             if (item.ClassName.Equals("mmui::ChatPersonalCardItemView"))
             {
@@ -883,10 +883,10 @@ namespace WeChatAuto.Components
                 return;
             }
             // 笔记
-            if (item.ClassName.Equals("mmui::ChatPersonalCardItemView"))
+            if (item.ClassName.Equals("mmui::ChatNoteCardItemView"))
             {
                 message.MessageType = MessageType.笔记;
-                (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim().Substring(2));
                 message.Message = resultSplit.content;
                 message.SendDate = resultSplit.date;
                 return;
@@ -900,19 +900,123 @@ namespace WeChatAuto.Components
                 message.SendDate = voiceResult.date;
                 return;
             }
-            if (item.ClassName.Equals("mmui::ChatTextItemView"))
-            {
-                //文字型内容
-            }
+
             if (item.ClassName.Equals("mmui::ChatBubbleItemView"))
             {
-                //
+                //微信红包
+                if (item.Name.EndsWith("微信红包"))
+                {
+                    message.Message = item.Name;
+                    message.SendDate = DateTime.Now;
+                    message.MessageType = MessageType.红包;
+                    __ProcessRedEnvelope(item, messageListRoot, automation);
+                    return;
+                }
+                //微信转账
+                if (item.Name.EndsWith("微信转账"))
+                {
+                    message.Message = item.Name;
+                    message.SendDate = DateTime.Now;
+                    message.MessageType = MessageType.微信转账;
+                    __ProcessTransfer(item, messageListRoot, automation);
+                    return;
+                }
+                //文件
+                if (item.Name.StartsWith("文件"))
+                {
+                    message.MessageType = MessageType.文件;
+                }
+                //聊天记录
+                if (item.Name.StartsWith("聊天记录"))
+                {
+                    message.MessageType = MessageType.聊天记录;
+                }
+                //位置
+                if (item.Name.StartsWith("位置"))
+                {
+                    message.MessageType = MessageType.位置;
+                }
+                //视频号
+                if (item.Name.StartsWith("视频号") && !item.Name.Contains("直播中") && !item.Name.Contains("直播已结束"))
+                {
+                    message.MessageType = MessageType.视频号;
+                }
+                if (item.Name.StartsWith("视频号") && (item.Name.Contains("直播中") || item.Name.Contains("直播已结束")))
+                {
+                    message.MessageType = MessageType.视频号直播;
+                }
+                if (item.Name.StartsWith("小程序"))
+                {
+                    message.MessageType = MessageType.小程序;
+                }
+                if (item.Name.StartsWith("[链接]"))
+                {
+                    message.MessageType = MessageType.链接;
+                }
+
+                if (message.MessageType == MessageType.None)
+                {
+                    _Logger.Warn($"警告：类：{"mmui::ChatBubbleItemView"} - {item.Name} 没有被处理，当做 文本 来处理.");
+                    message.MessageType = MessageType.文字;
+                }
+
+                (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                message.SendDate = resultSplit.date;
+                message.Message = resultSplit.content;
+                return;
             }
             if (item.ClassName.Equals("mmui::ChatBubbleReferItemView"))
             {
-                
+                //图片
+                if (item.Name.StartsWith("图片"))
+                {
+                    message.MessageType = MessageType.图片;
+                    __FetchImage(message, item, options);
+                    (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                    message.SendDate = resultSplit.date;
+                    message.Message = resultSplit.content;
+                    return;
+                }
+                //视频
+                if (item.Name.StartsWith("视频"))
+                {
+                    message.MessageType = MessageType.视频;
+                    (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                    message.SendDate = resultSplit.date;
+                    message.Message = resultSplit.content;
+                    return;
+                }
+                //动画表情
+                if (item.Name.StartsWith("动画表情"))
+                {
+                    message.MessageType = MessageType.动画表情;
+                    (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
+                    message.SendDate = resultSplit.date;
+                    message.Message = resultSplit.content;
+                    return;
+                }
+                _Logger.Warn($"警告：{item.Name} 没有被处理，当做 文本 来处理.");
+                //如果没有截取到
+                if (message.MessageType == MessageType.None)
+                    message.MessageType = MessageType.文字;
+
+                (string content, DateTime date) antother = __ParseHistoryItem(item.Name.Trim());
+                message.SendDate = antother.date;
+                message.Message = antother.content;
+                return;
             }
+
+            message.MessageType = MessageType.文字;
+            (string content, DateTime date) split = __ParseHistoryItem(item.Name.Trim());
+            message.SendDate = split.date;
+            message.Message = split.content;
         }
+
+        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
         // 得到语音实际内容.
         private string __GetVoiceContent(int voiceDelay)
         {
