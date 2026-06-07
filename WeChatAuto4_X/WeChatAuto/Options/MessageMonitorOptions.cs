@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Automation;
 using OneOf;
 using WeAutoCommon.Utils;
 using WeChatAuto.Components;
 using WeChatAuto.Models;
+using FlaUI.Core.AutomationElements;
 
 namespace WeChatAuto.Options
 {
@@ -24,15 +24,20 @@ namespace WeChatAuto.Options
         /// 如果聊天记录中有图片，是否获取图片
         /// </summary>
         public bool FetchImage { get; set; } = false;
+
+        /// <summary>
+        /// 如果聊天记录有微信语音，则取出微信语音的内容，这个依赖微信的设置: 设置 --> 通用 --> 打开"聊天中的语音消息自动转成文字"
+        /// </summary>
+        public bool FetchVoiceChat {get;set;} = false;
         /// <summary>
         /// 如果聊天记录中有红包、转账，是否点击
         /// </summary>
         public bool ClickRedEnvelope { get; set; } = false;
 
         /// <summary>
-        /// 手动处理消息，SDK只默认处理了文字消息、图片消息、红包/转账消息，其他的消息可以自行处理，如：自行处理打开链接抓取链接内容等.
+        /// 手动处理消息，SDK只默认处理了文字消息、微信语音、图片消息、红包/转账消息，其他的消息可以自行处理，如：自行处理打开链接抓取链接内容等.
         /// </summary>
-        public Action<AutomationElement> CustomProcessMessageAction = null;
+        public Action<AutomationElement,SimpleMessageBubble> CustomProcessMessageAction = null;
 
         /// <summary>
         /// 是否预防风控,如果待监控的群不多，建议设置为False,如果监测的群/好友很多，并且聊天很频繁，建议将设置为True.

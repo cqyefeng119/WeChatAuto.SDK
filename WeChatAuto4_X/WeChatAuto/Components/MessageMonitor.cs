@@ -33,6 +33,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Configuration;
 using System.Drawing.Imaging;
 using System.Globalization;
+using Emgu.CV;
 
 namespace WeChatAuto.Components
 {
@@ -652,15 +653,7 @@ namespace WeChatAuto.Components
                     }
                 }
             }
-            //获取消息
-            //获取消息核心逻辑
-            //这个放后面_ProcessUpBlanceMessage(automation, token, clickConversionItem, messageListRoot);  //如果有未读消息自动点击
-            // var popResult = _ProcessPopMenu(automation, messageListRoot);  //弹出并点击“多选”菜单
-            // if (!popResult)
-            // {
-            //     _Logger.Error("解析消息时，右键菜单解析失败，可能会导致消息监听失败,但是下次有消息时会重新获取...");
-            //     return;
-            // }
+
             List<SimpleMessageBubble> newMessages = _FetchMessageCore(automation, token, clickConversionItem, messageListRoot, title, options, count); //本次最新的消息列表
             System.Diagnostics.Debug.WriteLine($"===== 来自 {title.Title} 的消息 ======");
             foreach (var item in newMessages)
@@ -806,7 +799,7 @@ namespace WeChatAuto.Components
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name=''聊天记录]"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
             if (!rootRetry.Success)
                 return result;
-            var root = rootRetry.Result.AsListBox();
+            var root = rootRetry.Result.AsListBox();   //历史消息的根ListBox
             var index = 0;
             var lastItems = new List<string>();  //内容+runtimeid
             var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);   //ocr的比率.
@@ -832,7 +825,7 @@ namespace WeChatAuto.Components
                 {
                     index = 0;
                     lastItems = thisPageList;
-                    var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ref maxChat, ratio, result, automation, root);
+                    var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ref maxChat, ratio, result, automation, root, subWin);
                     if (exitFlag)
                         break;
                 }
@@ -843,7 +836,7 @@ namespace WeChatAuto.Components
             return result;
         }
 
-        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] items, MessageMonitorOptions options, ref int maxFetchChat, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot)
+        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] items, MessageMonitorOptions options, ref int maxFetchChat, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin)
         {
             SimpleMessageBubble message = new SimpleMessageBubble();
             var processItems = items.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
@@ -857,11 +850,16 @@ namespace WeChatAuto.Components
                 else
                 {
                     //非系统消息.
-                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot);
+                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot, subWin);
                     maxFetchChat--;
                 }
 
                 result.Add(message);
+                //自定义处理消息
+                if (options != null && options.CustomProcessMessageAction != null)
+                {
+                    options.CustomProcessMessageAction.Invoke(item,message);
+                }
                 if (maxFetchChat == 0)
                     return true;
             }
@@ -869,7 +867,7 @@ namespace WeChatAuto.Components
             return false;
         }
         // 处理非系统消息
-        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message, UIA3Automation automation, AutomationElement messageListRoot)
+        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message, UIA3Automation automation, AutomationElement messageListRoot, Window subWin)
         {
             var title = __OcrMessageTitle(item, ratio);
             message.Who = title;
@@ -896,7 +894,7 @@ namespace WeChatAuto.Components
             {
                 message.MessageType = MessageType.语音;
                 var voiceResult = __ParseVoiceContent(item.Name.Trim());
-                message.Message = __GetVoiceContent(voiceResult.voiceDelay);
+                message.Message = __GetVoiceContent(voiceResult.voiceDelay,item,ratio,automation,subWin);
                 message.SendDate = voiceResult.date;
                 return;
             }
@@ -971,7 +969,7 @@ namespace WeChatAuto.Components
                 if (item.Name.StartsWith("图片"))
                 {
                     message.MessageType = MessageType.图片;
-                    __FetchImage(message, item, options);
+                    __FetchImage(message, item, options, ratio, subWin);
                     (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
                     message.SendDate = resultSplit.date;
                     message.Message = resultSplit.content;
@@ -1012,15 +1010,49 @@ namespace WeChatAuto.Components
             message.Message = split.content;
         }
 
-        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options)
+        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options, decimal ratio, Window subWin)
         {
-            throw new NotImplementedException();
+            if (options == null)
+                return;
+            if (!options.FetchImage)
+                return;
+            var point = new Point((int)(77 * ratio), (int)(43 * ratio)).Confusion(4, 3);
+            SupperMouseKey.MoveTo(point);
+            RandomWait.Wait(100, 600);
+            SupperMouseKey.RightClick();
+            //待候弹出菜单出现
+            var path = "/Window[@ClassName='mmui::XMenu'][@Name='Weixin']";
+            var popupMenuRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (!popupMenuRetry.Success)
+                return;
+            var menuItem = popupMenuRetry.Result.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("复制")));
+            point = menuItem.BoundingRectangle.Center().Confusion(10, 3);
+            SupperMouseKey.MoveTo(point);
+            RandomWait.Wait(100, 300);
+            SupperMouseKey.MoveTo(point.Confusion(8, 2));
+            RandomWait.Wait(200, 600);
+            SupperMouseKey.LeftClick();
+            RandomWait.Wait(300, 900);
+            if (System.Windows.Clipboard.ContainsImage())
+            {
+                Bitmap bitmap = (Bitmap)System.Windows.Forms.Clipboard.GetImage();
+                message.Image = bitmap;
+                path = Path.Combine(AppContext.BaseDirectory, "ImageCaches");
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+                path = Path.Combine(path, $"{Guid.NewGuid().ToString("N")}.png");
+                bitmap.Save(path, ImageFormat.Png);
+                message.ImageFile = path;
+            }
         }
 
         // 得到语音实际内容.
-        private string __GetVoiceContent(int voiceDelay)
+        private string __GetVoiceContent(int voiceDelay,AutomationElement item,decimal ratio,UIA3Automation automation,AutomationElement subWin)
         {
-            return "";
+            
+            return "语音";
         }
 
         private (int voiceDelay, DateTime date) __ParseVoiceContent(string text)
@@ -1055,7 +1087,21 @@ namespace WeChatAuto.Components
 
         private string __OcrMessageTitle(AutomationElement item, decimal ratio)
         {
-            return "";
+            //先得到rio
+            using var oriMat = this._Client.OcrEngee.GetMatFromElement(item);
+            int top = (int)(11 * ratio);   //计算-算上dpi的顶端
+            var left = (int)(65 * ratio);  //计算-算上dpi的左边
+            var height = (int)((31 - 11) * ratio);  //计算上dpi的高度
+            var width = (int)(oriMat.Width - left - 150 * ratio);   //150为计算dpi，并且考虑日期的长度
+            using var mat = new Mat(oriMat, new Rectangle(left, top, width, height));
+            //放大3倍，增加识别准确性.
+            var bigMat = new Mat();
+            CvInvoke.Resize(mat, bigMat, Size.Empty, 3, 3, Emgu.CV.CvEnum.Inter.Cubic);
+            CvInvoke.Imshow("test", bigMat);
+            //识别
+            var result = this._Client.OcrEngee.Detect(bigMat.ToBitmap(), 10, bigMat.Width > bigMat.Height ? bigMat.Width : bigMat.Height, 0.6f, 0.5f, 1.6f, false, false, isTest: true);
+
+            return result.StrRes;
         }
 
         // 处理系统消息
