@@ -736,19 +736,20 @@ namespace WeChatAuto.Components
         {
             var index = 0;
             PreMove(historyButton);  //预先移动好
+            var conversationRoot = this._Client.Conversations.ConversationRoot;
             while (index < WeAutomation.Config.MessageStabilityRetryNumber)
             {
-                var items = messageListRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                var items = conversationRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 var item = items.Select(u => u.AsListBoxItem()).Where(u => u.IsSelected).FirstOrDefault();
-                if (item == null || item.BoundingRectangle.Y + item.BoundingRectangle.Height > messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height)   //会话列表中被挤下去.
+                if (item == null || item.BoundingRectangle.Y + item.BoundingRectangle.Height > conversationRoot.BoundingRectangle.Y + conversationRoot.BoundingRectangle.Height)   //会话列表中被挤下去.
                 {
                     var count = 0;
                     while (count < 3)
                     {
-                        MouseScrollHelper.DownStep(messageListRoot.BoundingRectangle.Center().Confusion(10, 20), 2);
-                        items = messageListRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                        MouseScrollHelper.DownStep(conversationRoot.BoundingRectangle.Center().Confusion(10, 20), 2);
+                        items = conversationRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                         item = items.Select(u => u.AsListBoxItem()).Where(u => u.IsSelected).FirstOrDefault();
-                        if (item != null && item.BoundingRectangle.Y + item.BoundingRectangle.Height <= messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height)
+                        if (item != null && item.BoundingRectangle.Y + item.BoundingRectangle.Height <= conversationRoot.BoundingRectangle.Y + conversationRoot.BoundingRectangle.Height)
                             break;
                         count++;
                     }
@@ -796,7 +797,7 @@ namespace WeChatAuto.Components
                     maxChat = WeAutomation.Config.MessageFirstFetchNumber;
                 }
             }
-            var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name=''聊天记录]"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name='聊天记录']"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
             if (!rootRetry.Success)
                 return result;
             var root = rootRetry.Result.AsListBox();   //历史消息的根ListBox
@@ -804,14 +805,14 @@ namespace WeChatAuto.Components
             var lastItems = new List<string>();  //内容+runtimeid
             var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);   //ocr的比率.
             var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
-            while (index < 3)   //到头后重试数量.
+            while (index < 6)   //到头后重试数量.
             {
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 var thisPageList = new List<string>();
                 foreach (var item in items)
                 {
                     var height = 31 * ratio;  //31是100% dpi的高度.
-                    if (item.BoundingRectangle.Y >= root.BoundingRectangle.Y && item.BoundingRectangle.Y + height >= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                    if (item.BoundingRectangle.Y >= root.BoundingRectangle.Y && item.BoundingRectangle.Y + height <= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
                     {
                         thisPageList.Add($"{item.Name}_{item.Properties.RuntimeId.ToUniqueString()}");
                     }
@@ -838,10 +839,10 @@ namespace WeChatAuto.Components
 
         private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] items, MessageMonitorOptions options, ref int maxFetchChat, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin)
         {
-            SimpleMessageBubble message = new SimpleMessageBubble();
             var processItems = items.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
             foreach (var item in processItems)
             {
+                SimpleMessageBubble message = new SimpleMessageBubble();
                 if (item.ClassName.Equals("mmui::ChatItemView"))
                 {
                     //系统消息
@@ -858,7 +859,7 @@ namespace WeChatAuto.Components
                 //自定义处理消息
                 if (options != null && options.CustomProcessMessageAction != null)
                 {
-                    options.CustomProcessMessageAction.Invoke(item,message);
+                    options.CustomProcessMessageAction.Invoke(item, message);
                 }
                 if (maxFetchChat == 0)
                     return true;
@@ -894,7 +895,7 @@ namespace WeChatAuto.Components
             {
                 message.MessageType = MessageType.语音;
                 var voiceResult = __ParseVoiceContent(item.Name.Trim());
-                message.Message = __GetVoiceContent(voiceResult.voiceDelay,item,ratio,automation,subWin);
+                message.Message = __GetVoiceContent(voiceResult.voiceDelay, item, ratio, automation, subWin);
                 message.SendDate = voiceResult.date;
                 return;
             }
@@ -969,7 +970,7 @@ namespace WeChatAuto.Components
                 if (item.Name.StartsWith("图片"))
                 {
                     message.MessageType = MessageType.图片;
-                    __FetchImage(message, item, options, ratio, subWin);
+                    __FetchImage(message, item, options, ratio, subWin, messageListRoot);
                     (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
                     message.SendDate = resultSplit.date;
                     message.Message = resultSplit.content;
@@ -1010,13 +1011,21 @@ namespace WeChatAuto.Components
             message.Message = split.content;
         }
 
-        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options, decimal ratio, Window subWin)
+        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options, decimal ratio, Window subWin, AutomationElement root)
         {
             if (options == null)
                 return;
             if (!options.FetchImage)
                 return;
-            var point = new Point((int)(77 * ratio), (int)(43 * ratio)).Confusion(4, 3);
+            var needHeight = (int)(49 * ratio);
+            if (item.BoundingRectangle.Y + needHeight > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+            {
+                //如果不在点击区域，则滚动一下.
+                MouseScrollHelper.DownStep(root.BoundingRectangle.SafeRandomPoint(), 2);
+                var items = root.FindAllChildren();
+                item = items.Where(u => u.Properties.RuntimeId.Value.SequenceEqual(item.Properties.RuntimeId.Value)).FirstOrDefault();
+            }
+            var point = new Point(item.BoundingRectangle.X + (int)(77 * ratio), item.BoundingRectangle.Y + (int)(43 * ratio)).Confusion(4, 3);
             SupperMouseKey.MoveTo(point);
             RandomWait.Wait(100, 600);
             SupperMouseKey.RightClick();
@@ -1049,9 +1058,9 @@ namespace WeChatAuto.Components
         }
 
         // 得到语音实际内容.
-        private string __GetVoiceContent(int voiceDelay,AutomationElement item,decimal ratio,UIA3Automation automation,AutomationElement subWin)
+        private string __GetVoiceContent(int voiceDelay, AutomationElement item, decimal ratio, UIA3Automation automation, AutomationElement subWin)
         {
-            
+
             return "语音";
         }
 
@@ -1091,17 +1100,16 @@ namespace WeChatAuto.Components
             using var oriMat = this._Client.OcrEngee.GetMatFromElement(item);
             int top = (int)(11 * ratio);   //计算-算上dpi的顶端
             var left = (int)(65 * ratio);  //计算-算上dpi的左边
-            var height = (int)((31 - 11) * ratio);  //计算上dpi的高度
+            var height = (int)((33 - 11) * ratio);  //计算上dpi的高度
             var width = (int)(oriMat.Width - left - 150 * ratio);   //150为计算dpi，并且考虑日期的长度
             using var mat = new Mat(oriMat, new Rectangle(left, top, width, height));
-            //放大3倍，增加识别准确性.
+            //放大2倍，增加识别准确性.
             var bigMat = new Mat();
-            CvInvoke.Resize(mat, bigMat, Size.Empty, 3, 3, Emgu.CV.CvEnum.Inter.Cubic);
-            CvInvoke.Imshow("test", bigMat);
+            CvInvoke.Resize(mat, bigMat, Size.Empty, 2, 2, Emgu.CV.CvEnum.Inter.Cubic);
             //识别
-            var result = this._Client.OcrEngee.Detect(bigMat.ToBitmap(), 10, bigMat.Width > bigMat.Height ? bigMat.Width : bigMat.Height, 0.6f, 0.5f, 1.6f, false, false, isTest: true);
+            var result = this._Client.OcrEngee.Detect(bigMat.ToBitmap(), 0, bigMat.Width > bigMat.Height ? bigMat.Width : bigMat.Height, 0.3f, 0.3f, 1.8f, false, false, isTest: false);
 
-            return result.StrRes;
+            return result.StrRes.Trim();
         }
 
         // 处理系统消息
