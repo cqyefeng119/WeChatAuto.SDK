@@ -666,10 +666,18 @@ namespace WeChatAuto.Components
                 }
                 //检查实时会话快照
                 var oldSnapshot = _ConversationSnapshot[title.Title];
+                System.Diagnostics.Debug.WriteLine($"oldSnapshot={oldSnapshot}");
                 var newSnapshot = clickConversionItem.Name;
+                System.Diagnostics.Debug.WriteLine($"newSnapshot={newSnapshot}");
                 if (oldSnapshot.Equals(newSnapshot))
                 {
                     break;
+                }
+                System.Diagnostics.Debug.WriteIf(!oldSnapshot.Equals(newSnapshot),$"newSnapshot与oldSnapshot不同，准备下一轮...");
+                var pattern = @"\s*\[[\d]+条\]\s*";
+                if (Regex.IsMatch(newSnapshot,pattern))
+                {
+                    clickConversionItem.Click();
                 }
             }
 
@@ -691,22 +699,7 @@ namespace WeChatAuto.Components
             callBack.Invoke(context);
         }
 
-        private void __CloseCheckBoxList()
-        {
-            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='取消多选'][@ClassName='mmui::XButton']";
-            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
-            if (buttonRetry.Success)
-            {
-                var button = buttonRetry.Result;
-                var point = button.BoundingRectangle.Center().Confusion(3, 5);
-                Mouse.Position = point;
-                RandomWait.Wait(100, 300);
-                SupperMouseKey.MoveTo(point.Confusion(3, 5));
-                RandomWait.Wait(100, 600);
-                SupperMouseKey.LeftClick();
-                RandomWait.Wait(100, 600);
-            }
-        }
+
 
         private List<SimpleMessageBubble> _FetchMessageCore(UIA3Automation automation, CancellationToken token, AutomationElement clickConversionItem, AutomationElement messageListRoot, HeaderInfo title, MessageMonitorOptions options)
         {
@@ -737,7 +730,7 @@ namespace WeChatAuto.Components
                     return result;
                 this._Client.MoveWinToMainCenter(subWin);
                 RandomWait.Wait(300, 1200);
-                result = __FetchMessageFromHistory(subWin, token, title, options, automation);
+                result = __FetchMessageFromHistory(subWin, token, title, options, automation);   //从历史窗口中获取数据
                 this._Client.ChatContent.CloseSearchWindowCore(automation, title.Title); //关闭窗口
             }
 
@@ -752,6 +745,7 @@ namespace WeChatAuto.Components
             AutomationElement item = null;
             while (index < WeAutomation.Config.MessageStabilityRetryNumber)
             {
+                token.ThrowIfCancellationRequested();
                 var items = conversationRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 item = items.Select(u => u.AsListBoxItem()).Where(u => u.IsSelected).FirstOrDefault();
                 if (item == null || item.BoundingRectangle.Y + item.BoundingRectangle.Height > conversationRoot.BoundingRectangle.Y + conversationRoot.BoundingRectangle.Height)   //会话列表中被挤下去.
@@ -775,6 +769,11 @@ namespace WeChatAuto.Components
                 {
                     item.Click();
                     index = 0;
+                    if (item != null)
+                    {
+                        _ConversationSnapshot[who] = item.Name;
+                        System.Diagnostics.Debug.WriteLine($"维定器获取快照：{_ConversationSnapshot[who]}");
+                    }
                     continue;
                 }
 
@@ -783,13 +782,19 @@ namespace WeChatAuto.Components
                 index++;
             }
             //保存会话最后的快照，如果执行结束后，检查与快照不一致，又重新一轮.
-            if (item != null)
+            var checkItemsRetry = Retry.WhileNull(() => conversationRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (checkItemsRetry.Success)
             {
-                _ConversationSnapshot[who] = item.Name;
+                var checkItems = checkItemsRetry.Result;
+                item = checkItems.Select(u => u.AsListBoxItem()).Where(u => u.IsSelected).FirstOrDefault();
+                if (item != null)
+                {
+                    _ConversationSnapshot[who] = item.Name;
+                }
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.MoveTo(historyButton.BoundingRectangle.Center().Confusion(5, 5));
             }
-            SupperMouseKey.LeftClick();
-            RandomWait.Wait(300, 900);
-            SupperMouseKey.MoveTo(historyButton.BoundingRectangle.Center().Confusion(5, 5));
         }
 
         private static void PreMove(Button historyButton)
@@ -827,6 +832,7 @@ namespace WeChatAuto.Components
             var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
             while (index < 6)   //退出机理： 或者消息数不够，重试6次，或者特性匹配达到阈值.
             {
+                token.ThrowIfCancellationRequested();
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
                 var thisPageList = new List<string>();
                 foreach (var item in items)
@@ -848,7 +854,7 @@ namespace WeChatAuto.Components
                     lastItems = thisPageList;
                     if (fetchCount == -1)
                     {
-                        var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList);
+                        var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, token);
                         if (exitFlag)
                         {
                             result = result.Take(result.Count - compareList.Count).ToList();
@@ -857,7 +863,7 @@ namespace WeChatAuto.Components
                     }
                     else
                     {
-                        var exitFlag = __FirstWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, ref fetchCount);
+                        var exitFlag = __FirstWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, ref fetchCount, token);
                         if (exitFlag)
                             break;
                     }
@@ -871,12 +877,13 @@ namespace WeChatAuto.Components
 
 
         //仅负责处理数据，并做退出判断
-        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList)
+        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, CancellationToken token)
         {
             var processItems = root.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
 
             foreach (var item in processItems)
             {
+                token.ThrowIfCancellationRequested();
                 SimpleMessageBubble message = new SimpleMessageBubble();
                 if (item.ClassName.Equals("mmui::ChatItemView"))
                 {
@@ -904,9 +911,11 @@ namespace WeChatAuto.Components
 
         private bool __FeatureCompare(List<SimpleMessageBubble> compareList, List<SimpleMessageBubble> result)
         {
+            System.Diagnostics.Debug.WriteLine($"compareList={string.Join(",",compareList.Select(r=>r.Message))}");
+            System.Diagnostics.Debug.WriteLine($"result={string.Join(",",result.Select(r=>r.Message))}");
             if (compareList == null || compareList.Count() == 0)
-                return false;
-            if (result.Count <= compareList.Count)
+                return true;
+            if (result.Count < compareList.Count)
                 return false;
             List<SimpleMessageBubble> tempList = result.Select(u => u.Clone()).ToList();
             tempList.Reverse();
@@ -916,12 +925,13 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        private bool __FirstWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, ref int fetchCount)
+        private bool __FirstWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, ref int fetchCount, CancellationToken token)
         {
             var processItems = root.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
 
             foreach (var item in processItems)
             {
+                token.ThrowIfCancellationRequested();
                 SimpleMessageBubble message = new SimpleMessageBubble();
                 if (item.ClassName.Equals("mmui::ChatItemView"))
                 {
@@ -1195,135 +1205,6 @@ namespace WeChatAuto.Components
             message.MessageType = MessageType.其他;
         }
 
-        private List<SimpleMessageBubble> _GenerateSimpleMessageBubbles(AutomationElement[] newItems, AutomationElement messageListRoot, string title, UIA3Automation automation, MessageMonitorOptions options)
-        {
-            var newList = new List<SimpleMessageBubble>();
-            foreach (var item in newItems)
-            {
-                if (newItems.Count() == 1)
-                {
-                    //如果是长文本,整个屏就只有一条，可能在不可点击犯围
-                    var index = 0;
-                    while (item.BoundingRectangle.Y < messageListRoot.BoundingRectangle.Y && index <= 2)
-                    {
-                        SupperMouseKey.Scroll(1);
-                        index++;
-                        RandomWait.Wait(100, 600);
-                    }
-                }
-                else
-                {
-                    if (item.BoundingRectangle.Y < messageListRoot.BoundingRectangle.Y || item.BoundingRectangle.Y + 75 > messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height)  //因为不在处理范围，处理不了,事实之前循环已经处理.
-                        continue;
-                }
-                if (item.ControlType == ControlType.CheckBox)
-                {
-                    //真正的消息
-                    //如果有图片消息，或者红包/转账消息，则取消-->处理-->再勾选.
-                    SimpleMessageBubble message = new SimpleMessageBubble();
-                    string[] aryMessage = item.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    string who = aryMessage[0].Trim();
-                    message.Who = who;
-                    message.SendDate = DateTime.Now;
-                    string maybeType = aryMessage.Length > 1 ? aryMessage[1] : "";
-                    string content = item.Name.Trim().Substring(who.Length).Trim();
-                    if (who == this._Client.NickName)
-                    {
-                        who = "我";
-                    }
-                    message.Who = who;
-                    __ProcessMessageType(maybeType, message, content, item.Name.Trim());
-                    if (message.MessageType == MessageType.图片 && options != null && options.FetchImage)
-                    {
-                        __ProcessImage(item, messageListRoot, automation, message);
-                    }
-                    if (message.MessageType == MessageType.红包 && options != null && options.ClickRedEnvelope)
-                    {
-                        __ProcessRedEnvelope(item, messageListRoot, automation);
-                    }
-                    if (message.MessageType == MessageType.微信转账 && options != null && options.ClickRedEnvelope)
-                    {
-                        __ProcessTransfer(item, messageListRoot, automation);
-                    }
-                    //alexzhao 1234
-                    newList.Add(message);
-                }
-                if (item.ControlType == ControlType.ListItem)
-                {
-                    //其他消息，如：系统消息
-                    //时间
-                    //收取红包
-                    //拒绝红包
-                    //拍一拍
-                    //加入群聊
-                    //移出群聊
-                    //撤回了一条消息
-                    //其他消息
-                    //剔除时间
-                    string pattern = @"\s*(?:[01]\d|2[0-3]):[0-5]\d$";
-                    if (Regex.IsMatch(item.Name, pattern))
-                        continue;
-                    SimpleMessageBubble message = new SimpleMessageBubble();
-                    message.Who = "系统";
-                    message.Message = item.Name.Trim();
-                    message.MessageType = MessageType.其他;   //先统一为其他，以后再分出来.
-                    message.SendDate = DateTime.Now;
-                    newList.Add(message);
-                }
-            }
-
-            // if (!_HistoryDoneList.Keys.Contains(title))
-            //     _HistoryDoneList.TryAdd(title, false);
-
-            // if (!_HistoryDoneList[title])
-            // {
-            //     var historyList = MessageCacheHelper.GetTodayLastMessages(title, 5);  //历史消息中最后5条，因为首次可能会与历史重复.
-            //     newList = newList.Where(x => !historyList.Contains(x, new MessageComparer())).ToList();
-
-            //     _HistoryDoneList.TryUpdate(title, true, false);
-            // }
-            return newList;
-        }
-
-        private void __ProcessImage(AutomationElement item, AutomationElement messageListRoot, UIA3Automation automation, SimpleMessageBubble message)
-        {
-            int[] runtimeId = item.Properties.RuntimeId.Value;
-            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='取消多选'][@ClassName='mmui::XButton']";
-            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
-            if (buttonRetry.Success)
-            {
-                var button = buttonRetry.Result;
-                var point = button.BoundingRectangle.Center().Confusion(3, 5);
-                Mouse.Position = point;
-                RandomWait.Wait(100, 300);
-                SupperMouseKey.MoveTo(point.Confusion(3, 5));
-                RandomWait.Wait(300, 900);
-                SupperMouseKey.LeftClick();
-                RandomWait.Wait(300, 900);
-            }
-            //点击图片右键.
-            var index = 0;
-            var items = messageListRoot.FindAllChildren();
-            var clickItem = items.FirstOrDefault(x => x.Properties.RuntimeId.Value.SequenceEqual(runtimeId));
-            if (clickItem == null)
-            {
-                _Logger.Error("处理图片数据时发生错误,请检查原因！");
-                return;
-            }
-            while (index < 3)
-            {
-                this._Client.MainWindow.Focus();
-                if (__ClickImageCore(automation, clickItem, message))
-                {
-                    break;
-                }
-                index++;
-            }
-
-            //处理后，继续变成checkbox状态
-            this._Client.MainWindow.Focus();
-            __ProcessPopMenuCore(automation, clickItem);
-        }
 
         private void __ProcessRedEnvelope(AutomationElement item, AutomationElement messageListRoot, UIA3Automation automation)
         {
@@ -1334,357 +1215,6 @@ namespace WeChatAuto.Components
         {
 
         }
-
-        private void __ProcessMessageType(string maybeType, SimpleMessageBubble message, string content, string allContent)
-        {
-            maybeType = maybeType.Trim();
-            message.Message = content;
-            if (string.IsNullOrWhiteSpace(maybeType))
-            {
-                message.MessageType = MessageType.文字;
-                return;
-            }
-            if (maybeType == "图片")
-            {
-                message.MessageType = MessageType.图片;
-                return;
-            }
-            //处理语音
-            var pattern = @"^语音\d+""秒(.+)$";
-            var match = Regex.Match(maybeType, pattern);
-            if (match.Success)
-            {
-                message.MessageType = MessageType.语音;
-                message.Message = match.Groups[1].Value;
-                return;
-            }
-            //处理视频 消息
-            if (maybeType == "视频")
-            {
-                message.MessageType = MessageType.视频;
-                return;
-            }
-            if (maybeType == "文件")
-            {
-                message.MessageType = MessageType.文件;
-                return;
-            }
-            if (maybeType.StartsWith("聊天记录") && maybeType.Contains("的聊天记录"))
-            {
-                message.MessageType = MessageType.聊天记录;
-                return;
-            }
-            if (maybeType.StartsWith("位置"))
-            {
-                message.MessageType = MessageType.位置;
-                return;
-            }
-            if (maybeType.EndsWith("个人名片"))
-            {
-                message.MessageType = MessageType.个人名片;
-                message.Message = content;
-                return;
-            }
-            if (maybeType.StartsWith("视频号") && !maybeType.EndsWith("直播中"))
-            {
-                message.MessageType = MessageType.视频号;
-                return;
-            }
-            if (maybeType.StartsWith("视频号") && maybeType.EndsWith("直播中"))
-            {
-                message.MessageType = MessageType.视频号直播;
-                return;
-            }
-
-            if (allContent.EndsWith("微信红包"))
-            {
-                message.Who = "_系统_";
-                message.MessageType = MessageType.红包;
-                message.Message = allContent;
-                return;
-            }
-            if (allContent.EndsWith("微信转账"))
-            {
-                message.Who = "_系统_";
-                message.MessageType = MessageType.微信转账;
-                message.Message = allContent;
-                return;
-            }
-            if (maybeType.StartsWith("小程序"))
-            {
-                message.MessageType = MessageType.小程序;
-                return;
-            }
-            if (maybeType.StartsWith("[链接]"))
-            {
-                message.MessageType = MessageType.链接;
-                return;
-            }
-            if (maybeType.StartsWith("动画表情") || maybeType.EndsWith("表情"))
-            {
-                message.MessageType = MessageType.表情;
-                return;
-            }
-            if (maybeType.StartsWith("笔记"))
-            {
-                message.MessageType = MessageType.笔记;
-                return;
-            }
-            message.MessageType = MessageType.文字;  //以上皆不是，归为文本.
-        }
-
-        //如果聊天窗口顶部有未读消息按钮，则点击获取消息.
-        private void _ProcessUpBlanceMessage(UIA3Automation automation, CancellationToken token, AutomationElement clickConversionItem, AutomationElement messageListRoot)
-        {
-            token.ThrowIfCancellationRequested();
-            var blanceButton = messageListRoot.GetSibling(1);
-            if (blanceButton != null && blanceButton.ControlType == ControlType.Button)
-            {
-                var centerPoint = messageListRoot.BoundingRectangle.Center();
-                var point = blanceButton.BoundingRectangle.Center();
-                if (point.Y < centerPoint.Y)  //如果未读消息按钮在消息列表上方，则点击它
-                {
-                    Mouse.Position = point.Confusion(10, 3);
-                    RandomWait.Wait(100, 300);
-                    SupperMouseKey.MoveTo(point.Confusion(5, 3));
-                    RandomWait.Wait(300, 900);
-                    SupperMouseKey.LeftClick();
-                    RandomWait.Wait(300, 900);
-                }
-            }
-        }
-
-        internal bool _ProcessPopMenu(UIA3Automation automation, AutomationElement messageListRoot)
-        {
-            var messages = messageListRoot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-            if (messages.Count() > 1)
-            {
-                foreach (var item in messages)
-                {
-                    if (ExcludeMessage(item))
-                        continue;
-                    if ((item.BoundingRectangle.Y >= messageListRoot.BoundingRectangle.Y) &&
-                        (item.BoundingRectangle.Y + 85 <= messageListRoot.BoundingRectangle.Y + messageListRoot.BoundingRectangle.Height))
-                    {
-                        var result = __ProcessPopMenuCore(automation, item);
-                        if (result)
-                            return true;
-                    }
-                }
-                return false;
-            }
-            else
-            {
-                //长文本处理
-                var index = 0;
-                var item = messages[0];
-                while (index < 6)
-                {
-                    if (item.BoundingRectangle.Y >= messageListRoot.BoundingRectangle.Y)
-                    {
-                        var result = __ProcessPopMenuCore(automation, item);
-                        if (result)
-                            return true;
-                    }
-                    index++;
-                    MouseScrollHelper.UpStep(messageListRoot.BoundingRectangle.Center().Confusion(10, 10), 1);
-                }
-                return false;
-            }
-        }
-
-        private bool __ProcessPopMenuCore(UIA3Automation automation, AutomationElement item)
-        {
-            var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
-            if (!title.CanTalk())
-                return false;
-            var point = Point.Empty;
-            if (title.HeaderType == ChatType.群聊)
-            {
-                //群聊
-                var rect = item.BoundingRectangle;
-                point = new Point(rect.X + 90 + 15, rect.Y + 35 + 22);  //中心
-            }
-            else
-            {
-                //好友或者微信好友
-                var rect = item.BoundingRectangle;
-                point = new Point(rect.X + 90 + 24, rect.Y + 10 + 22);  //中心
-            }
-            //尝试左边
-            Mouse.Position = point.Confusion(5, 5);
-            RandomWait.Wait(100, 300);
-            SupperMouseKey.MoveTo(point.Confusion(5, 5));
-            RandomWait.Wait(300, 900);
-            SupperMouseKey.RightClick();
-            RandomWait.Wait(300, 900);
-            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
-            var menuWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            if (menuWinRetry.Success)
-            {
-                var menuWin = menuWinRetry.Result.AsWindow();
-                var menuItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("多选")));
-                if (menuItem != null)
-                {
-                    menuItem.Click();
-                    RandomWait.Wait(300, 900);
-                    return true;
-                }
-            }
-            else
-            {
-                //如果左边不行，再尝试右边
-                return __TryRightSideClick(automation, item);
-            }
-
-            return false;
-        }
-
-        private bool __ClickImageCore(UIA3Automation automation, AutomationElement item, SimpleMessageBubble message)
-        {
-            var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
-            if (!title.CanTalk())
-                return false;
-            var point = Point.Empty;
-            if (title.HeaderType == ChatType.群聊)
-            {
-                //群聊
-                var rect = item.BoundingRectangle;
-                point = new Point(rect.X + 90 + 15, rect.Y + 35 + 22);  //中心
-            }
-            else
-            {
-                //好友或者微信好友
-                var rect = item.BoundingRectangle;
-                point = new Point(rect.X + 90 + 24, rect.Y + 10 + 22);  //中心
-            }
-            //尝试左边
-            Mouse.Position = point.Confusion(5, 5);
-            RandomWait.Wait(100, 300);
-            SupperMouseKey.MoveTo(point.Confusion(5, 5));
-            RandomWait.Wait(300, 900);
-            SupperMouseKey.RightClick();  //右键.
-            RandomWait.Wait(300, 900);
-            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
-            var menuWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(0.6), TimeSpan.FromMilliseconds(200));
-            if (menuWinRetry.Success)
-            {
-                var menuWin = menuWinRetry.Result.AsWindow();
-                var copyItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("复制")));
-                copyItem.Click();
-                RandomWait.Wait(300, 900);
-                var isImage = System.Windows.Clipboard.ContainsImage();
-                if (isImage)
-                {
-                    Bitmap bitmap = (Bitmap)System.Windows.Forms.Clipboard.GetImage();
-                    message.Image = bitmap;
-                    path = Path.Combine(AppContext.BaseDirectory, "ImageCaches");
-                    if (!Directory.Exists(path))
-                    {
-                        Directory.CreateDirectory(path);
-                    }
-                    path = Path.Combine(path, $"{Guid.NewGuid().ToString("N")}.png");
-                    bitmap.Save(path, ImageFormat.Png);
-                    message.ImageFile = path;
-                }
-                return true;
-            }
-            else
-            {
-                //如果左边不行，再尝试右边
-                return __TryClickRithgSide(automation, item, message);
-            }
-        }
-
-        private bool __TryRightSideClick(UIA3Automation automation, AutomationElement item)
-        {
-            var rect = item.BoundingRectangle;
-            var point = new Point(rect.X + rect.Width - 90 - 24, rect.Y + 10 + 22);  //中心
-            Mouse.Position = point.Confusion(5, 5);
-            RandomWait.Wait(100, 300);
-            SupperMouseKey.MoveTo(point.Confusion(5, 5));
-            RandomWait.Wait(300, 900);
-            SupperMouseKey.RightClick();
-            RandomWait.Wait(300, 900);
-            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
-            var menuWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            if (menuWinRetry.Success)
-            {
-                var menuWin = menuWinRetry.Result.AsWindow();
-                var menuItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("多选")));
-                if (menuItem != null)
-                {
-                    menuItem.Click();
-                    RandomWait.Wait(300, 900);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private bool __TryClickRithgSide(UIA3Automation automation, AutomationElement item, SimpleMessageBubble message)
-        {
-            var rect = item.BoundingRectangle;
-            var point = new Point(rect.X + rect.Width - 90 - 24, rect.Y + 10 + 22);  //中心
-            Mouse.Position = point.Confusion(5, 5);
-            RandomWait.Wait(100, 300);
-            SupperMouseKey.MoveTo(point.Confusion(5, 5));
-            RandomWait.Wait(300, 900);
-            SupperMouseKey.RightClick();
-            RandomWait.Wait(300, 900);
-            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
-            var menuWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            if (menuWinRetry.Success)
-            {
-                var menuWin = menuWinRetry.Result.AsWindow();
-                var copyItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("复制")));
-                copyItem.Click();
-                RandomWait.Wait(300, 900);
-                var isImage = System.Windows.Clipboard.ContainsImage();
-                if (isImage)
-                {
-                    Bitmap bitmap = (Bitmap)System.Windows.Forms.Clipboard.GetImage();
-                    message.Image = bitmap;
-                    path = Path.Combine(AppContext.BaseDirectory, "ImageCaches");
-                    if (!Directory.Exists(path))
-                    {
-                        Directory.CreateDirectory(path);
-                    }
-                    path = Path.Combine(path, $"{Guid.NewGuid().ToString("N")}.png");
-                    bitmap.Save(path, ImageFormat.Png);
-                    message.ImageFile = path;
-                }
-                return true;
-            }
-            return false;
-        }
-
-        private bool ExcludeMessage(AutomationElement item)
-        {
-            var message = item.Name;
-            if (message.Contains("邀请") && message.Contains("加入群聊"))
-                return true;
-            if (message.Contains("你将") && message.Contains("移出了群聊"))
-                return true;
-            if (message.Contains("你被") && message.Contains("移出了群聊"))
-                return true;
-            if (message.Contains("与群里其他人都不是朋友关系，请注意隐私安全"))
-                return true;
-            if (message.Contains("撤回了一条消息"))
-                return true;
-            string pattern = @"\s(?:[01]\d|2[0-3]):[0-5]\d$";
-            if (Regex.IsMatch(message, pattern))
-                return true;
-            if (message.Contains("拍了拍"))
-                return true;
-            if (message.Contains("领取了你的红包"))
-                return true;
-            if (message.Contains("你领取了") && message.Contains("的红包"))
-                return true;
-            return false;
-        }
-
-
 
         //仅用于测试.
         public async Task FetchFriendInfo(string who)
@@ -1848,9 +1378,21 @@ namespace WeChatAuto.Components
 
         #endregion
 
-        #region 会话切换监听
-        #endregion
-
+        private string __GetConversionShortTitle(string fullTitle)
+        {
+            string[] aryTitles = fullTitle.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string title = string.Empty;
+            foreach (var item in aryTitles)
+            {
+                string pattern = @"^(?:[01]\d|2[0-3]):[0-5]\d$";
+                if (Regex.IsMatch(item, pattern))
+                {
+                    continue;
+                }
+                title += item;
+            }
+            return title;
+        }
         private bool _CheckRuntime(List<TimeOnlyRange> timeList)
         {
             var now = TimeOnly.FromDateTime(DateTime.Now);

@@ -23,7 +23,7 @@ namespace WeChatAuto.Models
         [Key(2)]
         public string Message { get; set; }
         /// <summary>
-        /// 发送日期，大概日期，并不准确,因为微信本身也日期也不准确
+        /// 发送日期,仅精确到分钟
         /// </summary>
         [Key(3)]
         public DateTime SendDate { get; set; }
