@@ -666,9 +666,7 @@ namespace WeChatAuto.Components
                 }
                 //检查实时会话快照
                 var oldSnapshot = _ConversationSnapshot[title.Title];
-                System.Diagnostics.Debug.WriteLine($"oldSnapshot={oldSnapshot}");
                 var newSnapshot = clickConversionItem.Name;
-                System.Diagnostics.Debug.WriteLine($"newSnapshot={newSnapshot}");
                 if (oldSnapshot.Equals(newSnapshot))
                 {
                     break;
@@ -772,7 +770,6 @@ namespace WeChatAuto.Components
                     if (item != null)
                     {
                         _ConversationSnapshot[who] = item.Name;
-                        System.Diagnostics.Debug.WriteLine($"维定器获取快照：{_ConversationSnapshot[who]}");
                     }
                     continue;
                 }
@@ -911,8 +908,6 @@ namespace WeChatAuto.Components
 
         private bool __FeatureCompare(List<SimpleMessageBubble> compareList, List<SimpleMessageBubble> result)
         {
-            System.Diagnostics.Debug.WriteLine($"compareList={string.Join(",",compareList.Select(r=>r.Message))}");
-            System.Diagnostics.Debug.WriteLine($"result={string.Join(",",result.Select(r=>r.Message))}");
             if (compareList == null || compareList.Count() == 0)
                 return true;
             if (result.Count < compareList.Count)
