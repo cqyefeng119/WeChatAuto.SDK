@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using MessagePack;
 using WeAutoCommon.Enums;
@@ -6,7 +8,7 @@ using WeAutoCommon.Enums;
 namespace WeChatAuto.Models
 {
     [MessagePackObject]
-    public class SimpleMessageBubble
+    public class SimpleMessageBubble : IEquatable<SimpleMessageBubble>
     {
         /// <summary>
         /// 微信名
@@ -54,5 +56,49 @@ namespace WeChatAuto.Models
         {
             return $"who={this.Who} Message={this.Message} SendDate={this.SendDate.ToString("yyyy-MM-dd HH:mm")} Image={(this.Image != null ? "有图片" : "无")} MessageType={this.MessageType.ToString()} ImageFile={this.ImageFile}";
         }
+        /// <summary>
+        /// 得到特征值
+        /// </summary>
+        /// <returns></returns>
+        internal string GetFeature()
+        {
+            var date = SendDate;
+            if (date == default)
+            {
+                date = DateTime.Now;
+            }
+            return $"{Who}|{Message}|{date.ToString("yyyy-MM-dd HH:mm")}|{MessageType.ToString()}";
+        }
+
+        public SimpleMessageBubble Clone()
+        {
+            return new SimpleMessageBubble
+            {
+                Who = this.Who,
+                Message = this.Message,
+                SendDate = this.SendDate,
+                MessageType = this.MessageType,
+                ImageFile = this.ImageFile,
+                Image = this.Image,
+            };
+        }
+
+        public override int GetHashCode()
+        {
+            return GetFeature().GetHashCode();
+        }
+
+        public bool Equals(SimpleMessageBubble other)
+        {
+            if (other == null)
+                return false;
+            return this.GetFeature().Equals(other.GetFeature());
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as SimpleMessageBubble);
+        }
+
     }
 }
