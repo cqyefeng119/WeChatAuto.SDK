@@ -65,9 +65,12 @@ namespace WeChatAuto.Models
             var date = SendDate;
             if (date == default)
             {
-                date = DateTime.Now;
+                return $"{Who}|{Message}|{MessageType.ToString()}";
             }
-            return $"{Who}|{Message}|{date.ToString("yyyy-MM-dd HH:mm")}|{MessageType.ToString()}";
+            else
+            {
+                return $"{Who}|{Message}|{date.ToString("yyyy-MM-dd HH:mm")}|{MessageType.ToString()}";
+            }
         }
 
         public SimpleMessageBubble Clone()

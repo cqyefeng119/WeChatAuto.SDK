@@ -809,7 +809,7 @@ namespace WeChatAuto.Components
 
             List<SimpleMessageBubble> result = new List<SimpleMessageBubble>();  //本次最新的消息列表
             List<SimpleMessageBubble> compareList = new List<SimpleMessageBubble>();
-            compareList.AddRange(__GetTodayLastMessages(title.Title,3));   //取历史记录的最后三条,非系统消息，要求比较时特征值与位置都要正确.
+            compareList.AddRange(__GetTodayLastMessages(title.Title,3));   //取历史记录的最后三条,要求比较时特征值与位置都要正确.
 
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name='聊天记录']"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200)); //弹出窗口的消息根
             if (!rootRetry.Success)
@@ -827,6 +827,7 @@ namespace WeChatAuto.Components
             var index = 0;
             var lastItems = new List<string>();        //内容+runtimeid
             var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
+            var maxFetchNumber = 0;
             while (index < 6)   //退出机理： 或者消息数不够，重试6次，或者特性匹配达到阈值.
             {
                 token.ThrowIfCancellationRequested();
@@ -867,6 +868,11 @@ namespace WeChatAuto.Components
                 }
                 MouseScrollHelper.DownStep(scrollPoint.Confusion(5, 10), 2);
                 RandomWait.Wait(100, 400);
+                maxFetchNumber++;
+                if (maxFetchNumber>WeAutomation.Config.MaxHistoryFallbackthresholdNumber)
+                {
+                    break;
+                }
             }
             result.Reverse();  //反转，因为从下往上读的聊天记录.
             return result;
@@ -875,7 +881,6 @@ namespace WeChatAuto.Components
         private List<SimpleMessageBubble> __GetTodayLastMessages(string title,int lastCount)
         {
             var messages = MessageCacheHelper.GetTodayMessageCaches(title);
-            messages = messages.Where(r=>r.MessageType != MessageType.其他).ToList();
             if (messages.Count <= lastCount)
                 return messages;
             return messages.GetRange(messages.Count - lastCount,lastCount);
@@ -907,6 +912,7 @@ namespace WeChatAuto.Components
                     options.CustomProcessMessageAction.Invoke(item, message);
                 }
                 result.Add(message);
+                // var contentResult = result.Where(u=>u.MessageType != MessageType.其他).ToList();
                 if (__FeatureCompare(compareList, result))
                 {
                     return true;
@@ -993,7 +999,7 @@ namespace WeChatAuto.Components
                 if (item.Name.EndsWith("微信红包"))
                 {
                     message.Message = item.Name;
-                    message.SendDate = DateTime.Now;
+                    message.SendDate = default;
                     message.MessageType = MessageType.红包;
                     __ProcessRedEnvelope(item, messageListRoot, automation);
                     return;
@@ -1002,7 +1008,7 @@ namespace WeChatAuto.Components
                 if (item.Name.EndsWith("微信转账"))
                 {
                     message.Message = item.Name;
-                    message.SendDate = DateTime.Now;
+                    message.SendDate = default;
                     message.MessageType = MessageType.微信转账;
                     __ProcessTransfer(item, messageListRoot, automation);
                     return;
@@ -1205,7 +1211,7 @@ namespace WeChatAuto.Components
             //其他消息，如：系统消息,时间,收取红包,拒绝红包,拍一拍,加入群聊,移出群聊,撤回了一条消息,其他消息,
             message.Who = "系统";
             message.Message = item.Name.Trim();
-            message.SendDate = DateTime.Now;
+            message.SendDate = default;
             message.MessageType = MessageType.其他;
         }
 
