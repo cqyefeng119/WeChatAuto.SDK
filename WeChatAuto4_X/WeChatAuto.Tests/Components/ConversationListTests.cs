@@ -119,6 +119,21 @@ public class ConversationList
         Assert.True(result);
     }
 
+    [Theory(DisplayName = "打开子窗口")]
+    [InlineData("秋歌")]
+    [InlineData("师父")]
+    [InlineData("女女")]
+    [InlineData("AI.Net_test")]
+    [InlineData("梁世京")]
+    [InlineData("WeChatAuto.SDK官方技术支持")]
+    public async Task Test_Open_SubWin(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.OpenSubWin(who);
+        Assert.True(result != null);
+    }
+
     [Theory(DisplayName = "测试搜索（错误情况）")]
     [InlineData("秋歌2")]
     [InlineData("师父2")]

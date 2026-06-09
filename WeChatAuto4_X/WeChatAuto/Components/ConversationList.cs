@@ -22,7 +22,6 @@ using FlaUI.Core.Input;
 using System.Drawing;
 using FlaUI.Core;
 using FlaUI.Core.WindowsAPI;
-using System.Windows;
 using System.Configuration;
 
 
@@ -68,6 +67,64 @@ namespace WeChatAuto.Components
             }
 
             return result;
+        }
+        /// <summary>
+        /// 打开who指定的子窗口
+        /// </summary>
+        /// <param name="who"></param>
+        /// <returns></returns>
+        public async Task<Window> OpenSubWin(string who)
+        {
+            return await WeChatInvoker.Call(OpenSubWinCore, who);
+        }
+
+        internal Window OpenSubWinCore(UIA3Automation automation, string who)
+        {
+            if (!SearchWhoCore(automation, who))
+                return null;
+            var desktop = automation.GetDesktop();
+            var croot = ConversationRoot;
+            var subList = croot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByClassName("mmui::ChatSessionCell"))).ToList().Select(u => u.AsListBoxItem()).ToList();
+            var clickItem = subList.FirstOrDefault(x => x.IsSelected);
+            var subWinRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByClassName("mmui::ChatSingleWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByName(who)))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (subWinRetry.Success)
+            {
+                var subWin = subWinRetry.Result.AsWindow();
+                this._Client.MoveWinToMainCenter(subWin);
+
+                RandomWait.Wait(300, 900);
+                if (!CheckAnchorExist())
+                    clickItem.Click();
+
+                return subWin;
+            }
+
+            if (clickItem != null)
+            {
+                this._Client.MainWindow.Focus();
+                clickItem.DoubleClick();
+
+                subWinRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByClassName("mmui::ChatSingleWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByName(who)))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (subWinRetry.Success)
+                {
+                    var subWin = subWinRetry.Result.AsWindow();
+                    this._Client.MoveWinToMainCenter(subWin);
+                    RandomWait.Wait(300, 900);
+                    if (!CheckAnchorExist())
+                        clickItem.Click();
+
+                    return subWin;
+                }
+            }
+
+            return null;
+        }
+
+        internal bool CheckAnchorExist()
+        {
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Button[@Name='聊天记录'][@ClassName='mmui::XButton']";
+            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            return buttonRetry.Success;
         }
 
         //如果会话列表存在who,则直接点击.
@@ -170,7 +227,7 @@ namespace WeChatAuto.Components
             var edit = _Client.MainWindow.FindFirstByXPath(path);
             edit.Focus();
             edit.DrawHighlightExt();
-            Clipboard.SetText(who);
+            System.Windows.Clipboard.SetText(who);
             edit.Click();
             Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, FlaUI.Core.WindowsAPI.VirtualKeyShort.KEY_A);
             RandomWait.Wait(300, 800);

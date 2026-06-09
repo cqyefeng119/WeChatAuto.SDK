@@ -239,6 +239,13 @@ namespace WeChatAuto.Components
             RandomWait.Wait(300, 900);
         }
 
+        /// <summary>
+        /// 打开who指定的子窗口
+        /// </summary>
+        /// <param name="who"></param>
+        /// <returns></returns>
+        public async Task<Window> OpenSubWin(string who) => await this.Conversations.OpenSubWin(who);
+
         #endregion
 
         #region Navigator管理
@@ -515,7 +522,7 @@ namespace WeChatAuto.Components
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <param name="UIInvoker">UI的调度器，适用于把微信嵌入UI的场景使用，如：多微信切换Tab页等,SDK会给调用者注入一个微信名称</param>
         /// <param name="options">监听选项，具体请参见<see cref="MessageMonitorOptions"/></param>
-        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null, MessageMonitorOptions  options = null)
+        public async Task AddMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, List<TimeOnlyRange> range, bool IsOpenMonitor = false, CancellationToken userToken = default, Action<string> UIInvoker = null, MessageMonitorOptions options = null)
             => await this.MessageMonitor.AddMessageListener(nickNames, callBack, range, IsOpenMonitor, userToken, UIInvoker, options);
         /// <summary>
         /// 暂停消息监听

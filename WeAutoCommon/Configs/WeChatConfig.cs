@@ -14,7 +14,6 @@ namespace WeAutoCommon.Configs
     /// </summary>
     public class WeChatConfig
     {
-        public string WxVersion = "4.1.10.xx";
         /// <summary>
         /// 下载文件/图片默认保存路径
         /// </summary>
@@ -56,6 +55,10 @@ namespace WeAutoCommon.Configs
         /// 好友申请监听间隔时间，单位为秒
         /// </summary>
         public int MonitorNewFriendRequestInterval { get; set; } = 20;
+        /// <summary>
+        /// 监听群聊系统消息的间隔时间，单位为秒
+        /// </summary>
+        public int MonitorGroupInterval {get;set;} = 10;
         /// <summary>
         /// 会话列表鼠标滚动行数.
         /// </summary>
@@ -148,10 +151,6 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public int ProcessDpiAwareness { get; set; } = 1;
         /// <summary>
-        /// 是否启用微信语音消息发送功能
-        /// </summary>
-        public bool EnableSendVoiceMessage { get; set; } = false;
-        /// <summary>
         /// 是否一开始就初始化通讯录所有好友
         /// 如果以wxid为业务核心，强烈开启此选项.
         /// </summary>
@@ -173,13 +172,13 @@ namespace WeAutoCommon.Configs
         /// </summary>
         public int AvatorToWeixinButtonOffsetY = 50;
         /// <summary>
-        /// 可以命令本微信执行操作的用户,用于设定权限，只有在列表中的用户才被允许命令此微信执行操作
-        /// </summary>
-        public List<string> PrivilegedUser { get; set; } = new List<string>();
-        /// <summary>
-        /// 用于消息监听中，返回的历史消息最大记录数，因为事实上人工智能无须读完整个历史消息的。
+        /// 用于消息监听中，返回给回调函数历史消息最大记录数，因为事实上无须读完整个历史消息的。
         /// </summary>
         public int MaxHistoryMessageFetchNumber { get; set; } = 20;
+        /// <summary>
+        /// 为了预防全量搜索历史消息设置的阈值
+        /// </summary>
+        public int MaxHistoryFallbackthresholdNumber {get;set;} = 50;
         /// <summary>
         /// 消息监听中，首次运行取历史消息的最大数量.
         /// </summary>
@@ -187,7 +186,7 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 消息监听中，为了消息稳定下来重试次数
         /// </summary>
-        public int MessageStabilityRetryNumber { get; set; } = 3;
+        public int MessageStabilityRetryNumber { get; set; } = 5;
     }
 
     public static class Language

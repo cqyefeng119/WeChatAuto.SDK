@@ -57,15 +57,14 @@ namespace WeChatAuto.Components
         private readonly ConcurrentDictionary<string, bool> _MonitorList = new ConcurrentDictionary<string, bool>();
         private readonly ConcurrentDictionary<string, bool> _FriendSession = new ConcurrentDictionary<string, bool>();  //首次与非首次session.
         private readonly ConcurrentDictionary<string, string> _ConversationSnapshot = new ConcurrentDictionary<string, string>();  //会话的快照
-        private CancellationTokenSource messageCts = new CancellationTokenSource();
+        private CancellationTokenSource messageGlobalCts = new CancellationTokenSource();
         private Task messageRunningTask;
         private Action<string> UIInvoker;
         private int _IsContinue = 1;
         private int pauseTime = Random.Shared.Next(6 * 60 * 1_000, 10 * 60 * 1_000);  //6与10分钟的某个时间段
         //系统消息监听
         private int systemListnerStartedFlag = 0;   //系统消息监听启用标识
-        private readonly ConcurrentDictionary<string, bool> _SystemMonitorList = new ConcurrentDictionary<string, bool>();
-        private readonly List<UIThreadInvoker> _SystemMonitorTasks = new List<UIThreadInvoker>();
+        private readonly List<Thread> _SystemMonitors = new List<Thread>();
         #endregion
 
 
@@ -93,24 +92,49 @@ namespace WeChatAuto.Components
         /// 多线程监听变化，但是操作等，还得在微信单线程中执行.
         /// </summary>
         /// <param name="nickNames">群聊昵称</param>
-        /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="MessageContext"/></param>
+        /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="SystemMessageContext"/></param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
         /// <returns></returns>
-        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, CancellationToken userToken)
+        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
         {
             AddGroupSystemMessageListenerCore(nickNames, callBack, userToken);
             await Task.CompletedTask;
         }
-        private void AddGroupSystemMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<MessageContext> callBack, CancellationToken userToken)
+        private void AddGroupSystemMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
         {
             if (Interlocked.CompareExchange(ref this.systemListnerStartedFlag, 1, 0) == 1)
             {
                 return;
             }
-
+            var token = CancellationToken.None;
+            CancellationTokenSource linkdedCts = default;
             try
             {
+                if (userToken != default)
+                {
+                    linkdedCts = CancellationTokenSource.CreateLinkedTokenSource(messageGlobalCts.Token, userToken);
+                    token = linkdedCts.Token;
+                }
+                else
+                {
+                    token = messageGlobalCts.Token;
+                }
+                var subWinTitles = nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1 : nickNames.AsT2.ToList();
+                foreach (var who in subWinTitles)
+                {
+                    SystemMonitorOption options = new SystemMonitorOption();
+                    options.Who = who;
+                    options.Token = token;
+                    options.CallBack = callBack;
 
+                    Thread thread = new Thread(new ParameterizedThreadStart((obj) => __GroupSystemMonitorRun(obj).GetAwaiter().GetResult()));
+                    thread.Priority = ThreadPriority.BelowNormal;
+                    thread.SetApartmentState(ApartmentState.STA);
+                    thread.IsBackground = true;
+                    thread.Start(options);
+
+                    _SystemMonitors.Add(thread);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -120,6 +144,59 @@ namespace WeChatAuto.Components
             {
                 _Logger.Error($"监听系统消息发生错误：{ex.ToString()}");
             }
+            finally
+            {
+                if (linkdedCts != default)
+                    linkdedCts?.Dispose();
+            }
+        }
+        //群聊系统监控运行代码
+        private async Task __GroupSystemMonitorRun(object obj)
+        {
+            SystemMonitorOption options = obj as SystemMonitorOption;
+            var thradName = options.Who + "_GroupSystemMontitorRun";
+            using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromSeconds(WeAutomation.Config.MonitorGroupInterval));
+            try
+            {
+                var token = options.Token;
+                using UIA3Automation automation = new UIA3Automation();
+                while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
+                {
+                    try
+                    {
+                        //首先检查是否打开窗口
+                        var subWin = this._Client.Conversations.OpenSubWinCore(automation,options.Who);
+                        //不需要在前面
+                        this._Client.MainWindow.Focus();
+                        //检查系统消息
+
+                        //如果发现系统消息，发送给主窗口执行
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //do nothing.
+                    }
+                    catch (Exception ex)
+                    {
+                        _Logger.Error($"{thradName}出现错误:{ex.ToString()}");
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                //do nothing.
+            }
+            catch (Exception ex)
+            {
+                _Logger.Error($"{thradName}出现错误:{ex.ToString()}");
+            }
+        }
+
+        private class SystemMonitorOption
+        {
+            public string Who { get; set; }
+            public CancellationToken Token { get; set; }
+            public Action<SystemMessageContext> CallBack { get; set; }
         }
 
         /// <summary>
@@ -268,12 +345,12 @@ namespace WeChatAuto.Components
             CancellationTokenSource linkedCts = default;
             if (userToken != default)
             {
-                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(messageCts.Token, userToken);
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(messageGlobalCts.Token, userToken);
                 token = linkedCts.Token;
             }
             else
             {
-                token = messageCts.Token;
+                token = messageGlobalCts.Token;
             }
             (nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1.ToHashSet().ToList() : nickNames.AsT2.ToHashSet().ToList()).ForEach(u => _MonitorList.TryAdd(u, false));  //赋初始值.
             try
@@ -1467,7 +1544,7 @@ namespace WeChatAuto.Components
                 return;
             if (disposing)
             {
-                messageCts?.Cancel();
+                messageGlobalCts?.Cancel();
                 if (messageRunningTask != null)
                 {
                     if (!messageRunningTask.IsCompleted)
@@ -1481,7 +1558,7 @@ namespace WeChatAuto.Components
                     }
                 }
 
-                messageCts?.Dispose();
+                messageGlobalCts?.Dispose();
                 messageRunningTask?.Dispose();
             }
         }
