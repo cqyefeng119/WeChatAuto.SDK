@@ -671,9 +671,9 @@ namespace WeChatAuto.Components
                 {
                     break;
                 }
-                System.Diagnostics.Debug.WriteLineIf(!oldSnapshot.Equals(newSnapshot),$"newSnapshot与oldSnapshot不同，准备下一轮...");
+                System.Diagnostics.Debug.WriteLineIf(!oldSnapshot.Equals(newSnapshot), $"newSnapshot与oldSnapshot不同，准备下一轮...");
                 var pattern = @"\s*\[[\d]+条\]\s*";
-                if (Regex.IsMatch(newSnapshot,pattern))
+                if (Regex.IsMatch(newSnapshot, pattern))
                 {
                     clickConversionItem.Click();
                 }
@@ -809,7 +809,7 @@ namespace WeChatAuto.Components
 
             List<SimpleMessageBubble> result = new List<SimpleMessageBubble>();  //本次最新的消息列表
             List<SimpleMessageBubble> compareList = new List<SimpleMessageBubble>();
-            compareList.AddRange(__GetTodayLastMessages(title.Title,3));   //取历史记录的最后三条,要求比较时特征值与位置都要正确.
+            compareList.AddRange(__GetTodayLastMessages(title.Title, 3));   //取历史记录的最后三条,要求比较时特征值与位置都要正确.
 
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name='聊天记录']"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200)); //弹出窗口的消息根
             if (!rootRetry.Success)
@@ -869,7 +869,7 @@ namespace WeChatAuto.Components
                 MouseScrollHelper.DownStep(scrollPoint.Confusion(5, 10), 2);
                 RandomWait.Wait(100, 400);
                 maxFetchNumber++;
-                if (maxFetchNumber>WeAutomation.Config.MaxHistoryFallbackthresholdNumber)
+                if (maxFetchNumber > WeAutomation.Config.MaxHistoryFallbackthresholdNumber)
                 {
                     break;
                 }
@@ -878,12 +878,12 @@ namespace WeChatAuto.Components
             return result;
         }
 
-        private List<SimpleMessageBubble> __GetTodayLastMessages(string title,int lastCount)
+        private List<SimpleMessageBubble> __GetTodayLastMessages(string title, int lastCount)
         {
             var messages = MessageCacheHelper.GetTodayMessageCaches(title);
             if (messages.Count <= lastCount)
                 return messages;
-            return messages.GetRange(messages.Count - lastCount,lastCount);
+            return messages.GetRange(messages.Count - lastCount, lastCount);
         }
 
 
@@ -927,11 +927,22 @@ namespace WeChatAuto.Components
                 return true;
             if (result.Count < compareList.Count)
                 return false;
-            List<SimpleMessageBubble> tempList = result.Select(u => u.Clone()).ToList();
-            tempList.Reverse();
-            tempList = tempList.Take(compareList.Count()).ToList();
-            if (tempList.SequenceEqual(compareList))
-                return true;
+            //含不含有撤回消息
+            var regretList = result.Where(r => r.MessageType.Equals(MessageType.其他) && r.Who == "系统" && r.Message.Contains("撤回了一条消")).ToList();
+            if (regretList.Count == 0)
+            {
+                List<SimpleMessageBubble> tempList = result.Select(u => u.Clone()).ToList();
+                tempList.Reverse();
+                tempList = tempList.Take(compareList.Count()).ToList();
+                if (tempList.SequenceEqual(compareList))
+                    return true;
+            }
+            else
+            {
+                var cpList = compareList.Where(r => result.Contains(r)).ToList();
+                if (cpList.Count > 0)
+                    return true;
+            }
             return false;
         }
 
@@ -1063,10 +1074,10 @@ namespace WeChatAuto.Components
                 if (item.Name.StartsWith("图片"))
                 {
                     message.MessageType = MessageType.图片;
-                    __FetchImage(message, item, options, ratio, subWin, messageListRoot);
                     (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
                     message.SendDate = resultSplit.date;
                     message.Message = resultSplit.content;
+                    __FetchImage(message, item, options, ratio, subWin, messageListRoot);
                     return;
                 }
                 //视频
@@ -1110,6 +1121,8 @@ namespace WeChatAuto.Components
                 return;
             if (!options.FetchImage)
                 return;
+            if (excludeHistory(message))
+                return;
             var needHeight = (int)(49 * ratio);
             if (item.BoundingRectangle.Y + needHeight > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
             {
@@ -1148,6 +1161,15 @@ namespace WeChatAuto.Components
                 bitmap.Save(path, ImageFormat.Png);
                 message.ImageFile = path;
             }
+        }
+
+        private bool excludeHistory(SimpleMessageBubble message)
+        {
+            //从历史消息取15条，如果匹对得上，则返回真，不做图象获取.
+            var compareHistoryList = MessageCacheHelper.GetTodayLastMessages(message.Who, 15);
+            if (compareHistoryList.Contains(message))
+                return true;
+            return false;
         }
 
         // 得到语音实际内容.
