@@ -671,7 +671,7 @@ namespace WeChatAuto.Components
                 {
                     break;
                 }
-                System.Diagnostics.Debug.WriteIf(!oldSnapshot.Equals(newSnapshot),$"newSnapshot与oldSnapshot不同，准备下一轮...");
+                System.Diagnostics.Debug.WriteLineIf(!oldSnapshot.Equals(newSnapshot),$"newSnapshot与oldSnapshot不同，准备下一轮...");
                 var pattern = @"\s*\[[\d]+条\]\s*";
                 if (Regex.IsMatch(newSnapshot,pattern))
                 {
@@ -809,7 +809,7 @@ namespace WeChatAuto.Components
 
             List<SimpleMessageBubble> result = new List<SimpleMessageBubble>();  //本次最新的消息列表
             List<SimpleMessageBubble> compareList = new List<SimpleMessageBubble>();
-            compareList.AddRange(MessageCacheHelper.GetTodayLastMessages(title.Title, 3));   //取历史记录的最后三条，要求比较时特征值与位置都要正确.
+            compareList.AddRange(__GetTodayLastMessages(title.Title,3));   //取历史记录的最后三条,非系统消息，要求比较时特征值与位置都要正确.
 
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath("/Group/Group/Group/Group/List[@AutomationId='chat_log_message_list'][@ClassName='mmui::RecyclerListView'][@Name='聊天记录']"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200)); //弹出窗口的消息根
             if (!rootRetry.Success)
@@ -870,6 +870,15 @@ namespace WeChatAuto.Components
             }
             result.Reverse();  //反转，因为从下往上读的聊天记录.
             return result;
+        }
+
+        private List<SimpleMessageBubble> __GetTodayLastMessages(string title,int lastCount)
+        {
+            var messages = MessageCacheHelper.GetTodayMessageCaches(title);
+            messages = messages.Where(r=>r.MessageType != MessageType.其他).ToList();
+            if (messages.Count <= lastCount)
+                return messages;
+            return messages.GetRange(messages.Count - lastCount,lastCount);
         }
 
 
