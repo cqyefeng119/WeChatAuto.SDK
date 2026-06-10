@@ -209,8 +209,8 @@ namespace WeChatAuto.Components
             token.ThrowIfCancellationRequested();
             var thisMessageSnapshot = new List<string>();
             var result = new List<string>();
-            var path = "/Group/Group/Group/Custom/Group/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView']";
-            var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            var path = "/Group/Group/Group/Custom/Group/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView'] | /Group/Group/Group/Custom/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView']";
+            var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(200));
             if (rootRetry.Success)
             {
                 var root = rootRetry.Result.AsListBox();
