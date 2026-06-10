@@ -24,9 +24,8 @@ using System.Runtime.InteropServices;
 一个完整的流程
 */
 
-var wxName = "Alex";   //你的微信名
-//var groupName = "人工智能自动化技术讨论群";   //拉入的群名
-var groupName = "DroidMirror官方技术支持";   //拉入的群名
+var wxName = "AI.Net";   //你的微信名
+var groupName = "人工智能自动化技术讨论群";   //拉入的群名
 
 var serviceProvider = WeAutomation.Initialize(options =>
 {
