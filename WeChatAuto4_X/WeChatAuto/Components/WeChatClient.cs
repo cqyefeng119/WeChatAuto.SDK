@@ -24,6 +24,7 @@ using System.Linq;
 using System.IO;
 using WeChatAuto.Options;
 using RapidOCRLib;
+using System.Threading.Channels;
 
 
 namespace WeChatAuto.Components
@@ -34,14 +35,13 @@ namespace WeChatAuto.Components
     /// </summary>
     public class WeChatClient : IDisposable
     {
-        private const string version = "4.1.9.55";
         private readonly AutoLogger<WeChatClient> _logger;
         private IServiceProvider serviceProvider;
         private volatile bool _disposed = false;
         private Navigation _Navigation;
         private UIThreadInvoker _MainThreadInvoker;
         private ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
-        internal SemaphoreSlim monitorEvent = new SemaphoreSlim(1, 1);    //所有自动监听都应该受这个约束
+        private SemaphoreSlim monitorEvent;
 
         #region 比较稳定的字段
         public readonly Window MainWindow;
@@ -52,6 +52,19 @@ namespace WeChatAuto.Components
         public readonly string AvatorPath;
         public readonly int WechatIndex;
         public UIThreadInvoker MainThreadInvoker => _MainThreadInvoker;
+        #endregion
+
+        #region 系统消息监听Channel
+        private readonly Channel<(SystemMonitorOption option, List<string> messaages)> _SystemMonitorChannel = Channel.CreateBounded<(SystemMonitorOption option, List<string> messaages)>(new BoundedChannelOptions(100)
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.Wait,
+        });
+        public Channel<(SystemMonitorOption option, List<string> messaages)> SystemMonitorChannel => _SystemMonitorChannel;
+        private int _SystemMonitorChannelStarted = 0;
+        private readonly CancellationTokenSource _ActionTokenSource = new CancellationTokenSource();
+        private Task _SystemMonitorTask;
         #endregion
 
         /// <summary>
@@ -65,9 +78,11 @@ namespace WeChatAuto.Components
         /// <param name="uIThreadInvoker"></param>
         /// <param name="ownerInfo">个人信息</param>
         /// <param name="index">微信在任务栏的索引</param>
+        /// <param name="monitorEvent">任务统一器</param>
         public WeChatClient(int clientProcessId, IServiceProvider provider, WeChatClientFactory factory,
-         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo, int index)
+         Window window, UIThreadInvoker uIThreadInvoker, OwerInfo ownerInfo, int index, SemaphoreSlim monitorEvent)
         {
+            this.monitorEvent = monitorEvent;
             this._MainThreadInvoker = uIThreadInvoker;
             this.MainWindow = window;
             this.serviceProvider = provider;
@@ -96,6 +111,62 @@ namespace WeChatAuto.Components
             this.Moments = new Moments(this, _MainThreadInvoker, serviceProvider);
             this.Search = new Search(this, _MainThreadInvoker, serviceProvider);
             _RunCheckAddressBook();
+        }
+
+        internal async Task _InitializeSystemMonitorConsumption()
+        {
+            if (Interlocked.CompareExchange(ref _SystemMonitorChannelStarted, 1, 0) == 1)
+                return;
+            TaskCompletionSource tcs = new TaskCompletionSource();
+            _SystemMonitorTask = Task.Run(async () =>
+            {
+                try
+                {
+                    tcs.SetResult();
+                    var token = _ActionTokenSource.Token;
+                    await foreach (var message in _SystemMonitorChannel.Reader.ReadAllAsync(token))
+                    {
+                        try
+                        {
+                            await monitorEvent.WaitAsync(token);
+                            try
+                            {
+                                if (message.option.CallBack != null)
+                                {
+                                    SystemMonitorConsumptionActionCore(message);
+                                }
+                            }
+                            finally
+                            {
+                                monitorEvent.Release();
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error($"系统消息消费者发生错误，错误原因:{ex.ToString()}");
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    tcs?.TrySetCanceled();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"系统消息消费者发生错误，错误原因:{ex.ToString()}");
+                    tcs?.TrySetException(ex);
+                }
+            });
+            await tcs.Task;
+        }
+
+        private void SystemMonitorConsumptionActionCore((SystemMonitorOption option, List<string> messaages) message)
+        {
+            SystemMessageContext context = new SystemMessageContext(message.messaages, this, this.serviceProvider, message.option.Who);
+            message.option.CallBack.Invoke(context);
         }
 
         private void _RunCheckAddressBook()
@@ -774,6 +845,18 @@ namespace WeChatAuto.Components
             _disposed = true;
             if (disposing)
             {
+                SystemMonitorChannel.Writer.Complete();
+                _ActionTokenSource?.Cancel();
+                if (_SystemMonitorTask != null && !_SystemMonitorTask.IsCompleted)
+                {
+                    try
+                    {
+                        _SystemMonitorTask.Wait(TimeSpan.FromSeconds(3));
+                    }
+                    catch (AggregateException) { }
+                    catch (Exception) { }
+                }
+
                 MessageMonitor?.Dispose();
                 NewFriendMonitor?.Dispose();
             }

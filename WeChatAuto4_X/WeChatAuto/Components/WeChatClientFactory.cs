@@ -34,6 +34,7 @@ namespace WeChatAuto.Components
         private readonly Dictionary<string, WeChatClient> _wxClientList = new Dictionary<string, WeChatClient>();
         private bool _disposed = false;
         private readonly WeChatRecordVideo _recordVideo;
+        private SemaphoreSlim monitorEvent = new SemaphoreSlim(1, 1);    //所有自动监听都应该受这个约束
 
         public readonly static string MainActionThreadName = "wechatauto.sdk";
         public static UIThreadInvoker MainActionThreadInvoker;   //就是多微信的情况下，也是启用一个线程,因为这样虽然慢，但能实现更强的功能.
@@ -214,7 +215,7 @@ namespace WeChatAuto.Components
             var topWindowProcessId = _GetTopWindowProcessIdResult();  //当前微信的processid
             (OwerInfo info, Window window) result = __GetCurrentWxNickName(topWindowProcessId.Result, automation);
             result.window.Focus();
-            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info, index);
+            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info, index,monitorEvent);
             _wxClientList.Add(result.info.NickName, client);
         }
 

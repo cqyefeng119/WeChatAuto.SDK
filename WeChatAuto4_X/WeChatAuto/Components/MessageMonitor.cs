@@ -34,6 +34,7 @@ using System.Configuration;
 using System.Drawing.Imaging;
 using System.Globalization;
 using Emgu.CV;
+using System.Reflection.PortableExecutable;
 
 namespace WeChatAuto.Components
 {
@@ -88,7 +89,7 @@ namespace WeChatAuto.Components
         #region 消息监听
         /// <summary>
         /// <para>添加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能</para>
-        /// <para>注意：仅适用于群聊，不适用个人，另外，不支持注册监听后再新增待监听的群聊</para>
+        /// <para>注意：仅适用于群聊，不适用个人,个人请使用下面的开放式/固定式监听，另外，不支持注册监听后再新增待监听的群聊</para>
         /// 多线程监听变化，但是操作等，还得在微信单线程中执行.
         /// </summary>
         /// <param name="nickNames">群聊昵称</param>
@@ -97,10 +98,9 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
         {
-            AddGroupSystemMessageListenerCore(nickNames, callBack, userToken);
-            await Task.CompletedTask;
+            await AddGroupSystemMessageListenerCore(nickNames, callBack, userToken);
         }
-        private void AddGroupSystemMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
+        private async Task AddGroupSystemMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
         {
             if (Interlocked.CompareExchange(ref this.systemListnerStartedFlag, 1, 0) == 1)
             {
@@ -119,6 +119,9 @@ namespace WeChatAuto.Components
                 {
                     token = messageGlobalCts.Token;
                 }
+
+                await this._Client._InitializeSystemMonitorConsumption();  //初始化系统消息消费者.
+
                 var subWinTitles = nickNames.IsT0 ? new List<string>() { nickNames.AsT0 } : nickNames.IsT1 ? nickNames.AsT1 : nickNames.AsT2.ToList();
                 foreach (var who in subWinTitles)
                 {
@@ -128,7 +131,7 @@ namespace WeChatAuto.Components
                     options.CallBack = callBack;
 
                     Thread thread = new Thread(new ParameterizedThreadStart((obj) => __GroupSystemMonitorRun(obj).GetAwaiter().GetResult()));
-                    thread.Priority = ThreadPriority.BelowNormal;
+                    thread.Priority = ThreadPriority.Normal;
                     thread.SetApartmentState(ApartmentState.STA);
                     thread.IsBackground = true;
                     thread.Start(options);
@@ -160,17 +163,31 @@ namespace WeChatAuto.Components
             {
                 var token = options.Token;
                 using UIA3Automation automation = new UIA3Automation();
+                List<string> oldSnapshot = new List<string>();
+                bool firstFlag = true;
                 while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
                 {
                     try
                     {
                         //首先检查是否打开窗口
-                        var subWin = this._Client.Conversations.OpenSubWinCore(automation,options.Who);
-                        //不需要在前面
-                        this._Client.MainWindow.Focus();
+                        var subWin = this._Client.Conversations.OpenSubWinCore(automation, options.Who);
+                        if (subWin == null)
+                            continue;
                         //检查系统消息
-
+                        var messageList = new List<string>();
+                        __FetchSystemMessageSession(messageList, subWin, oldSnapshot);
                         //如果发现系统消息，发送给主窗口执行
+                        if (firstFlag)
+                        {
+                            //首次不取值.
+                            firstFlag = false;
+                            oldSnapshot = messageList;
+                            continue;
+                        }
+                        if (messageList.Count > 0)
+                        {
+                            await this._Client.SystemMonitorChannel.Writer.WriteAsync((options, messageList), token);
+                        }
                     }
                     catch (OperationCanceledException)
                     {
@@ -192,12 +209,28 @@ namespace WeChatAuto.Components
             }
         }
 
-        private class SystemMonitorOption
+        private void __FetchSystemMessageSession(List<string> messageList, Window subWin, List<string> oldSnapshot)
         {
-            public string Who { get; set; }
-            public CancellationToken Token { get; set; }
-            public Action<SystemMessageContext> CallBack { get; set; }
+            var path = "/Group/Group/Group/Custom/Group/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView']";
+            var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (rootRetry.Success)
+            {
+                var root = rootRetry.Result.AsListBox();
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByClassName("mmui::ChatItemView")));
+                //过滤掉时间
+                foreach (var item in items)
+                {
+                    var pattern = @"\s+\d{2}:\d{2})$";
+                    Match match = Regex.Match(item.Name, pattern);
+                    if (!match.Success)
+                    {
+                        messageList.Add(item.Name);
+                    }
+                }
+            }
         }
+
+
 
         /// <summary>
         /// <para>添加消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数</para>
@@ -1556,6 +1589,15 @@ namespace WeChatAuto.Components
                         catch (AggregateException) { }
                         catch (Exception) { }
                     }
+                }
+                foreach (var subThread in _SystemMonitors)
+                {
+                    try
+                    {
+                        subThread.Join(TimeSpan.FromSeconds(3));
+                    }
+                    catch (AggregateException) { }
+                    catch (Exception) { }
                 }
 
                 messageGlobalCts?.Dispose();
