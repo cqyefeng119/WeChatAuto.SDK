@@ -175,7 +175,7 @@ namespace WeChatAuto.Components
                             continue;
                         //检查系统消息
                         var messageList = new List<string>();
-                        __FetchSystemMessageSession(messageList, subWin, oldSnapshot);
+                        __FetchSystemMessageSession(messageList, subWin);
                         //如果发现系统消息，发送给主窗口执行
                         if (firstFlag)
                         {
@@ -184,9 +184,10 @@ namespace WeChatAuto.Components
                             oldSnapshot = messageList;
                             continue;
                         }
-                        if (messageList.Count > 0)
+                        var sessionList = messageList.Except(oldSnapshot).ToList();
+                        if (sessionList.Count > 0)
                         {
-                            await this._Client.SystemMonitorChannel.Writer.WriteAsync((options, messageList), token);
+                            await this._Client.SystemMonitorChannel.Writer.WriteAsync((options, sessionList), token);
                         }
                     }
                     catch (OperationCanceledException)
@@ -209,7 +210,7 @@ namespace WeChatAuto.Components
             }
         }
 
-        private void __FetchSystemMessageSession(List<string> messageList, Window subWin, List<string> oldSnapshot)
+        private void __FetchSystemMessageSession(List<string> messageList, Window subWin)
         {
             var path = "/Group/Group/Group/Custom/Group/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView']";
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));

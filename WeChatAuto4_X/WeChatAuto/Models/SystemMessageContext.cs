@@ -21,6 +21,9 @@ namespace WeChatAuto.Models
             ServiceProvider = serviceProvider;
             FromWho = from;
         }
+        /// <summary>
+        /// 本次消息的来源，为好友或者群聊名称.
+        /// </summary>
         public string FromWho { get; set; }
         /// <summary>
         /// 新消息气泡列表
