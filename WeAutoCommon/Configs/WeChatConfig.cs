@@ -58,7 +58,7 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 监听群聊系统消息的间隔时间，单位为秒
         /// </summary>
-        public int MonitorGroupInterval {get;set;} = 5;
+        public int MonitorGroupInterval {get;set;} = 10;
         /// <summary>
         /// 会话列表鼠标滚动行数.
         /// </summary>

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using OneOf;
+using WeAutoCommon.Utils;
 using Xunit.Abstractions;
 
 namespace WeChatAuto.Tests.Components;
@@ -108,7 +109,7 @@ public class ConversationList
     [InlineData("秋歌")]
     [InlineData("师父")]
     [InlineData("女女")]
-    [InlineData("AI.Net")]
+    [InlineData("AI.Net_test")]
     [InlineData("梁世京")]
     [InlineData("WeChatAuto.SDK官方技术支持")]
     public async Task Test_Search_Who(string who)
@@ -128,6 +129,7 @@ public class ConversationList
     [InlineData("WeChatAuto.SDK官方技术支持")]
     public async Task Test_Open_SubWin(string who)
     {
+        RandomWait.Wait(1000,2000);
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.OpenSubWin(who);

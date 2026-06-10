@@ -90,17 +90,16 @@ namespace WeChatAuto.Components
         /// <summary>
         /// <para>添加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能</para>
         /// <para>注意：仅适用于群聊，不适用个人,个人请使用下面的开放式/固定式监听，另外，不支持注册监听后再新增待监听的群聊</para>
-        /// 多线程监听变化，但是操作等，还得在微信单线程中执行.
+        /// <para>多线程监听变化，但是操作等，还得在微信单线程中执行.</para>
         /// </summary>
-        /// <param name="nickNames">群聊昵称</param>
+        /// <param name="nickNames">群聊昵称，可以多个</param>
         /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="SystemMessageContext"/></param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
-        /// <returns></returns>
-        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
+        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Func<SystemMessageContext, Task> callBack, CancellationToken userToken = default)
         {
             await AddGroupSystemMessageListenerCore(nickNames, callBack, userToken);
         }
-        private async Task AddGroupSystemMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Action<SystemMessageContext> callBack, CancellationToken userToken)
+        private async Task AddGroupSystemMessageListenerCore(OneOf<string, List<string>, string[]> nickNames, Func<SystemMessageContext, Task> callBack, CancellationToken userToken)
         {
             if (Interlocked.CompareExchange(ref this.systemListnerStartedFlag, 1, 0) == 1)
             {
@@ -173,21 +172,16 @@ namespace WeChatAuto.Components
                         var subWin = this._Client.Conversations.OpenSubWinCore(automation, options.Who);
                         if (subWin == null)
                             continue;
-                        //检查系统消息
-                        var messageList = new List<string>();
-                        __FetchSystemMessageSession(messageList, subWin);
-                        //如果发现系统消息，发送给主窗口执行
+                        var newMessages = __FetchSystemMessageSession(subWin, ref oldSnapshot, token);
                         if (firstFlag)
                         {
                             //首次不取值.
                             firstFlag = false;
-                            oldSnapshot = messageList;
                             continue;
                         }
-                        var sessionList = messageList.Except(oldSnapshot).ToList();
-                        if (sessionList.Count > 0)
+                        if (newMessages.Count > 0)
                         {
-                            await this._Client.SystemMonitorChannel.Writer.WriteAsync((options, sessionList), token);
+                            await this._Client.SystemMonitorChannel.Writer.WriteAsync((options, newMessages), token);
                         }
                     }
                     catch (OperationCanceledException)
@@ -210,25 +204,49 @@ namespace WeChatAuto.Components
             }
         }
 
-        private void __FetchSystemMessageSession(List<string> messageList, Window subWin)
+        private List<string> __FetchSystemMessageSession(Window subWin, ref List<string> oldSnapshot, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
+            var thisMessageSnapshot = new List<string>();
+            var result = new List<string>();
             var path = "/Group/Group/Group/Custom/Group/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView']";
             var rootRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
             if (rootRetry.Success)
             {
                 var root = rootRetry.Result.AsListBox();
+                //如果有最新消息
+                var existNewMessageButton = root.GetSibling(1);
+                if (existNewMessageButton != null && existNewMessageButton.ControlType == ControlType.Button && existNewMessageButton.Name.Contains("新消息"))
+                {
+                    //检查是不是最下面
+                    var centerPointY = root.BoundingRectangle.Center().Y;
+                    if (existNewMessageButton.BoundingRectangle.Y > centerPointY)
+                    {
+                        existNewMessageButton.AsButton().Click();
+                        RandomWait.Wait(300,900);
+                    }
+                }
                 var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByClassName("mmui::ChatItemView")));
                 //过滤掉时间
                 foreach (var item in items)
                 {
-                    var pattern = @"\s+\d{2}:\d{2})$";
+                    token.ThrowIfCancellationRequested();
+                    var pattern = @"\s*\d{2}:\d{2}$";
                     Match match = Regex.Match(item.Name, pattern);
                     if (!match.Success)
                     {
-                        messageList.Add(item.Name);
+                        thisMessageSnapshot.Add($"{item.Name}|{item.Properties.RuntimeId.ToUniqueString()}");
                     }
                 }
+                var exceptList = thisMessageSnapshot.Except(oldSnapshot).ToList();
+                oldSnapshot = thisMessageSnapshot;
+                if (exceptList.Count > 0)
+                {
+                    result = exceptList.Select(r => r.Split('|', StringSplitOptions.RemoveEmptyEntries)[0]).ToList();
+                }
             }
+
+            return result;
         }
 
 

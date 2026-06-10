@@ -12,6 +12,6 @@ namespace WeChatAuto.Options
     {
         public string Who { get; set; }
         public CancellationToken Token { get; set; }
-        public Action<SystemMessageContext> CallBack { get; set; }
+        public Func<SystemMessageContext,Task> CallBack { get; set; }
     }
 }

@@ -3,6 +3,8 @@ using WeChatAuto.Components;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 using WeAutoCommon.Utils;
+using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 /*************************************************************
 此demo为一个完整的自动化脚本，适用于自媒体自动接入好友
@@ -22,6 +24,10 @@ using WeAutoCommon.Utils;
 一个完整的流程
 */
 
+var wxName = "Alex";   //你的微信名
+//var groupName = "人工智能自动化技术讨论群";   //拉入的群名
+var groupName = "DroidMirror官方技术支持";   //拉入的群名
+
 var serviceProvider = WeAutomation.Initialize(options =>
 {
     options.EnableOCR = true;
@@ -34,10 +40,11 @@ var serviceProvider = WeAutomation.Initialize(options =>
 
 using var clientFactory = serviceProvider.GetRequiredService<WeChatClientFactory>();
 // 请修改为你的微信昵称
-var client = clientFactory.GetWeChatClient("AI.Net");
+var client = clientFactory.GetWeChatClient(wxName);
+// 注册拉好友监听
 await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendRequestAutoAcceptOptions
 {
-    KeyWord = new string[] {"test","wechatauto"},
+    KeyWord = new string[] { "test", "wechatauto" },
     Suffix = "test",
     Label = "wechatauto",
     PassedDelete = true,
@@ -69,10 +76,40 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
                 await RandomWait.WaitAsync(2000, 4000);
                 await client.AddOwnerChatGroupMember("人工智能自动化技术讨论群", item.Who);
                 await RandomWait.WaitAsync(2000, 4000);
-                await client.SendMessage("人工智能自动化技术讨论群", $"欢迎🎉🎉 {item.Who} 🎉🎉来到本群- “ {item.Who} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
+                await client.SendMessage(item.Who, "👉 请加上面发给你的群....群里都是专注人工智能在自动化应用的高手.....");
+                await RandomWait.WaitAsync(3000, 6000);
+                await client.SendMessage(item.Who, "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
                 await RandomWait.WaitAsync(1000, 3000);
-                await client.SendMessage("人工智能自动化技术讨论群",
-    """
+                await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
+                await RandomWait.WaitAsync(2000, 5000);
+                await client.SendMessage(item.Who, "感谢你的体验，如果你有任何问题，可以随时联系作者，或者加入VIP群进行更深入的学习交流，祝你生活愉快,我做为测试导航机器人将暂时陪你到这，下次回复的会是人类😊。。。不过，如果是技术问题请在群里聊，因为这个微信号是挂我的，挂我的，挂我的...😊");
+                await RandomWait.WaitAsync(1000, 2000);
+                await client.SendMessage(item.Who, "~~再次祝愿你工作顺利，生活愉快，活到硅基崛起的时候~~");
+            }
+        }
+    },
+});
+//注册系统监听-目的是发送好友入群欢迎信息，因为群人数多了，需要好友同意才能入群，所以只有监控好友入群时机.
+await client.AddGroupSystemMessageListener(groupName, async context =>
+{
+    var who = context.FromWho;
+    var sysMessageList = context.NewMessages;
+    foreach (var message in sysMessageList)
+    {
+        if (message.Contains("邀请") && message.Contains("加入了群聊"))
+        {
+            var regex = new Regex("\"([^\"]+)\"(?=加入了群聊)");
+
+            var match = regex.Match(message);
+            if (match.Success)
+            {
+                var wxNames = match.Groups[1].Value.Split('、');
+                foreach (var name in wxNames)
+                {
+                    await client.SendMessage(groupName, $"欢迎🎉🎉 {name} 🎉🎉来到本群- “ {name} ”老仙，德配天地，威震寰宇，古今无比！", "所有人");
+                    await RandomWait.WaitAsync(1000, 3000);
+                    await client.SendMessage(groupName,
+        """
 
 群规（请务必阅读）
 
@@ -93,21 +130,16 @@ await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendReq
  对 AI + 自动化 的独立思考与专业见解
 
 🎉 理性讨论，观点自由；聚焦技术，拒绝灌水。祝你在本群玩得开心😊
-""", item.Who);
-                await RandomWait.WaitAsync(1000, 3000);
-                await client.SendMessage(item.Who, "怎么样?....是不是很Cool?呵呵😊,WeChatAuto.SDK为UI Tree自动化+OCR视觉混合方案，并且天生为人工智能而生，下面我把我的源码发给你，给你看看优美的API设计，另外你接入LLM大模型后将更智能哦🎉🎉🚀🚀");
-                await RandomWait.WaitAsync(1000, 3000);
-                await client.SendFile(item.Who, new string[] { $"{AppContext.BaseDirectory}/Images/wechatauto_code.txt" });
-                await RandomWait.WaitAsync(2000, 5000);
-                await client.SendMessage(item.Who, "感谢你的体验，如果你有任何问题，可以随时联系作者，或者加入VIP群进行更深入的学习交流，祝你生活愉快,我做为测试导航机器人将暂时陪你到这，下次回复的会是人类😊。。。不过，如果是技术问题请在群里聊，因为这个微信号是挂我的，挂我的，挂我的...😊");
-                await RandomWait.WaitAsync(1000, 2000);
-                await client.SendMessage(item.Who, "~~再见~~");
+""", name);
+
+                }
+                RandomWait.Wait(800, 1200);
+                await client.SendMessage(groupName,$"菜鸟,有新大佬来了，请以非常热情、夸张、有感染力的语气来欢迎他，要让新人感受到全群都在欢迎他，可以适当使用大量感叹号、表情符号、拟声词、庆祝语气;可以把新人描述成“贵宾”、“大神”、“重量级嘉宾”、“天降紫微星”等夸张称呼;内容要积极、友善、幽默。输出仅包含欢迎词正文，不要附加解释,另外，虽然我@了你，你无须回复，直接向新人按上面的要求打招呼","菜鸟");
+                RandomWait.Wait(1500, 4000);
             }
         }
-    },
+    }
 });
-
-
 
 
 await Task.Delay(-1);

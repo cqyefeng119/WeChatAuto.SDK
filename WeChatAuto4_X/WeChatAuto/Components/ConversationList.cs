@@ -80,24 +80,19 @@ namespace WeChatAuto.Components
 
         internal Window OpenSubWinCore(UIA3Automation automation, string who)
         {
-            if (!SearchWhoCore(automation, who))
-                return null;
             var desktop = automation.GetDesktop();
-            var croot = ConversationRoot;
-            var subList = croot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByClassName("mmui::ChatSessionCell"))).ToList().Select(u => u.AsListBoxItem()).ToList();
-            var clickItem = subList.FirstOrDefault(x => x.IsSelected);
             var subWinRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByClassName("mmui::ChatSingleWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByName(who)))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
             if (subWinRetry.Success)
             {
                 var subWin = subWinRetry.Result.AsWindow();
-                this._Client.MoveWinToMainCenter(subWin);
-
                 RandomWait.Wait(300, 900);
-                if (!CheckAnchorExist())
-                    clickItem.Click();
-
                 return subWin;
             }
+            if (!SearchWhoCore(automation, who))
+                return null;
+            var croot = ConversationRoot;
+            var subList = croot.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByClassName("mmui::ChatSessionCell"))).ToList().Select(u => u.AsListBoxItem()).ToList();
+            var clickItem = subList.FirstOrDefault(x => x.IsSelected);
 
             if (clickItem != null)
             {
@@ -227,13 +222,15 @@ namespace WeChatAuto.Components
             var edit = _Client.MainWindow.FindFirstByXPath(path);
             edit.Focus();
             edit.DrawHighlightExt();
-            System.Windows.Clipboard.SetText(who);
-            edit.Click();
-            Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, FlaUI.Core.WindowsAPI.VirtualKeyShort.KEY_A);
-            RandomWait.Wait(300, 800);
-            Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
-            Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, VirtualKeyShort.KEY_V);
-            RandomWait.Wait(300, 800);
+            //System.Windows.Clipboard.SetText(who);
+            edit.AsTextBox().Text = who;
+            RandomWait.Wait(300, 1200);
+            // edit.Click();
+            // Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, FlaUI.Core.WindowsAPI.VirtualKeyShort.KEY_A);
+            // RandomWait.Wait(300, 800);
+            // Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
+            // Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, VirtualKeyShort.KEY_V);
+            // RandomWait.Wait(300, 800);
             //等候浮动菜单出来
             var popWinResult = Retry.WhileNull(() =>
             {

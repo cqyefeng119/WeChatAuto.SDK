@@ -153,6 +153,23 @@ public class MonitorTest
         await Task.Delay(-1);
     }
 
+    [Fact(DisplayName = "测试监听系统信息")]
+    public async Task Test_System_message_Monitor()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.AddGroupSystemMessageListener("DroidMirror官方技术支持", async context =>
+        {
+            var who = context.FromWho;
+            var client = context.Client;
+            System.Diagnostics.Debug.WriteLine($"{string.Join(' ', context.NewMessages)}");
+            await client.SendMessage(who,$"动作:{string.Join(' ', context.NewMessages)}");
+        });
+        await Task.Delay(-1);
+    }
+
+
+
     [Theory(DisplayName = "测试获取好友信息选项")]
     [InlineData("AI.Net_test")]
     [InlineData("秋歌")]

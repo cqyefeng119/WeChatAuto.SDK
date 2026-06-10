@@ -133,7 +133,7 @@ namespace WeChatAuto.Components
                             {
                                 if (message.option.CallBack != null)
                                 {
-                                    SystemMonitorConsumptionActionCore(message);
+                                    await SystemMonitorConsumptionActionCore(message);
                                 }
                             }
                             finally
@@ -163,10 +163,10 @@ namespace WeChatAuto.Components
             await tcs.Task;
         }
 
-        private void SystemMonitorConsumptionActionCore((SystemMonitorOption option, List<string> messaages) message)
+        private async Task SystemMonitorConsumptionActionCore((SystemMonitorOption option, List<string> messaages) message)
         {
             SystemMessageContext context = new SystemMessageContext(message.messaages, this, this.serviceProvider, message.option.Who);
-            message.option.CallBack.Invoke(context);
+            await message.option.CallBack.Invoke(context);
         }
 
         private void _RunCheckAddressBook()
@@ -529,6 +529,15 @@ namespace WeChatAuto.Components
         #endregion
 
         #region  监听管理
+        /// <summary>
+        /// <para>添加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能</para>
+        /// <para>注意：仅适用于群聊，不适用个人,个人请使用下面的开放式/固定式监听，另外，不支持注册监听后再新增待监听的群聊</para>
+        /// 多线程监听变化，但是操作等，还得在微信单线程中执行.
+        /// </summary>
+        /// <param name="nickNames">群聊昵称，可以多个</param>
+        /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="SystemMessageContext"/></param>
+        /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
+        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Func<SystemMessageContext,Task> callBack, CancellationToken userToken = default) => await this.MessageMonitor.AddGroupSystemMessageListener(nickNames, callBack, userToken);
         /// <summary>
         /// 添加消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
         /// 参考<see cref="MessageContext"/>
