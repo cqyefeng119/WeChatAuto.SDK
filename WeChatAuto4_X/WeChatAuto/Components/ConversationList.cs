@@ -243,6 +243,7 @@ namespace WeChatAuto.Components
                 var popupList = popWinResult.Result;
                 popupList.DrawHighlightExt();
                 var firstItem = popupList.FindFirstChild();
+                var fistFlag = true;
                 if (firstItem.Name.Equals("群聊") ||
                     firstItem.Name.Equals("联系人") ||
                     firstItem.Name.Equals("最常使用"))
@@ -251,7 +252,15 @@ namespace WeChatAuto.Components
                     var index = 0;
                     while (item == null || !item.Name.Trim().Equals(who) || index < 30)
                     {
-                        item = firstItem.GetSibling(1);
+                        if (fistFlag)
+                        {
+                            item = firstItem.GetSibling(1);
+                            fistFlag = false;
+                        }
+                        else
+                        {
+                            item = item.GetSibling(1);
+                        }
                         if (item == null)
                             break;
                         if (item.Name.Trim().Equals(who))
@@ -263,6 +272,7 @@ namespace WeChatAuto.Components
                             return true;
                         }
                         index++;
+                        System.Diagnostics.Debug.WriteLine($"name={item.Name}");
                         if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
                             break;
                     }
@@ -279,7 +289,15 @@ namespace WeChatAuto.Components
                     var index = 0;
                     while (item == null || !item.Name.Trim().Equals(who) || index < 30)
                     {
-                        item = firstItem.GetSibling(1);
+                        if (fistFlag)
+                        {
+                            item = firstItem.GetSibling(1);
+                            fistFlag = false;
+                        }
+                        else
+                        {
+                            item = item.GetSibling(1);
+                        }
                         if (item == null)
                             break;
                         if (item.Name.Trim().Equals(who))
