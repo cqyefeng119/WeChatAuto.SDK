@@ -24,9 +24,8 @@ using System.Runtime.InteropServices;
 一个完整的流程
 */
 
-var wxName = "Alex";   //你的微信名
-//var groupName = "人工智能自动化技术讨论群";   //拉入的群名
-var groupName = "DroidMirror官方技术支持";   //拉入的群名
+var wxName = "AI.Net";   //你的微信名
+var groupName = "人工智能自动化技术讨论群";   //拉入的群名
 
 var serviceProvider = WeAutomation.Initialize(options =>
 {
@@ -39,7 +38,7 @@ var serviceProvider = WeAutomation.Initialize(options =>
 });
 
 using var clientFactory = serviceProvider.GetRequiredService<WeChatClientFactory>();
-// 请修改为你的微信昵称
+//获取想自动化的微信名客户端，所有操作基于这个微信客户端操作.
 var client = clientFactory.GetWeChatClient(wxName);
 // 注册拉好友监听
 await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendRequestAutoAcceptOptions

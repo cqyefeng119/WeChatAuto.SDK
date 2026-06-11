@@ -537,7 +537,7 @@ namespace WeChatAuto.Components
         /// <param name="nickNames">群聊昵称，可以多个</param>
         /// <param name="callBack">回调函数,由用户提供,参数：消息上下文<see cref="SystemMessageContext"/></param>
         /// <param name="userToken">取消令牌,请参考<see cref="CancellationToken"/>,可以自行取消消息监听</param>
-        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Func<SystemMessageContext,Task> callBack, CancellationToken userToken = default) => await this.MessageMonitor.AddGroupSystemMessageListener(nickNames, callBack, userToken);
+        public async Task AddGroupSystemMessageListener(OneOf<string, List<string>, string[]> nickNames, Func<SystemMessageContext, Task> callBack, CancellationToken userToken = default) => await this.MessageMonitor.AddGroupSystemMessageListener(nickNames, callBack, userToken);
         /// <summary>
         /// 添加消息监听，用户需要提供一个回调函数，当有消息时，会调用此回调函数
         /// 参考<see cref="MessageContext"/>
