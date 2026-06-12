@@ -129,11 +129,27 @@ public class ConversationList
     [InlineData("WeChatAuto.SDK官方技术支持")]
     public async Task Test_Open_SubWin(string who)
     {
-        RandomWait.Wait(1000,2000);
+        RandomWait.Wait(1000, 2000);
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.OpenSubWin(who);
         Assert.True(result != null);
+    }
+
+    [Theory(DisplayName = "打开子窗口-错误情况")]
+    [InlineData("秋歌2")]
+    [InlineData("师父2")]
+    [InlineData("女女2")]
+    [InlineData("AI.Net_test")]
+    [InlineData("梁世京2")]
+    [InlineData("WeChatAuto.SDK官方技术支持2")]
+    public async Task Test_Open_SubWin_error(string who)
+    {
+        RandomWait.Wait(1000, 2000);
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.OpenSubWin(who);
+        Assert.True(result == null);
     }
 
     [Theory(DisplayName = "测试搜索（错误情况）")]
