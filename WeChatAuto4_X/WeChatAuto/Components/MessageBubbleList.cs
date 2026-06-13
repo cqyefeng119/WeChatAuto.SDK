@@ -369,39 +369,6 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        //处理没有日期-时间格式的.
-        private bool __ProcessNoneTime(List<ChatSimpleMessage> list, string input, List<DateTime> dates)
-        {
-            var minDate = dates.Min();  //最小日期
-            var pattern = @"^(.+?)\s(.*?)\s(\d{4}年\d{1,2}月\d{1,2}日\s\d{1,2}:\d{2})$";
-            var match = Regex.Match(input, pattern, RegexOptions.Singleline);
-            if (match.Success)
-            {
-                var fullDateStr = match.Groups[3].Value;
-                pattern = @"(\d{4}年\d{1,2}月\d{1,2}日)";
-                var dateStr = Regex.Match(fullDateStr, pattern).Groups[1].Value;
-                var date = DateTime.ParseExact(dateStr, "yyyy年M月d日", CultureInfo.InvariantCulture);
-                if (date < minDate)
-                    return true;
-
-                if (dates.Contains(date))
-                {
-                    ChatSimpleMessage item = new ChatSimpleMessage();
-                    item.Who = match.Groups[1].Value;
-                    item.Message = match.Groups[2].Value;
-                    item.SendDateTime = match.Groups[3].Value;
-                    item.DateTime = date;
-                    item.UniqueString = GetMd5(input);
-                    list.Add(item);
-                }
-            }
-            else
-            {
-                _logger.Error($"格式分析错误，未能加进消息列表，input={input}");
-            }
-            return false;
-        }
-
         private bool _IsToday(DateTime startDate)
         {
             return startDate.Date == DateTime.Today;
