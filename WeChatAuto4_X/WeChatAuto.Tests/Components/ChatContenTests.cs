@@ -188,8 +188,6 @@ public class ChatContenTests
         Assert.True(true);
     }
 
-
-
     //WASAPI
     [Fact(DisplayName = "显示WASAPI设备")]
     public void Test_ListWasapiDevices()

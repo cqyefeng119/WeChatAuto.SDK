@@ -680,11 +680,6 @@ namespace WeChatAuto.Components
             result.Add(startDate);
             result.Add(endDate);
 
-            // for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
-            // {
-            //     result.Add(date);
-            // }
-
 
             return result;
         }

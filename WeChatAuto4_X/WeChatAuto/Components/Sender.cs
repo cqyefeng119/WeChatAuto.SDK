@@ -529,9 +529,10 @@ namespace WeChatAuto.Components
 			Window subWin = _GetPopupHistoryWin(automation, title, historyButton);
 			if (subWin == null)
 				return;
-			int targetX = _Client.MainWindow.BoundingRectangle.X + (int)((_Client.MainWindow.BoundingRectangle.Width - subWin.BoundingRectangle.Width) / 2);
-			int targetY = _Client.MainWindow.BoundingRectangle.Y + (int)((_Client.MainWindow.BoundingRectangle.Height - subWin.BoundingRectangle.Height) / 2);
-			subWin.Move(targetX, targetY);  //移动子窗口至主窗口中间
+			// int targetX = _Client.MainWindow.BoundingRectangle.X + (int)((_Client.MainWindow.BoundingRectangle.Width - subWin.BoundingRectangle.Width) / 2);
+			// int targetY = _Client.MainWindow.BoundingRectangle.Y + (int)((_Client.MainWindow.BoundingRectangle.Height - subWin.BoundingRectangle.Height) / 2);
+			// subWin.Move(targetX, targetY);  //移动子窗口至主窗口中间
+			_Client.MoveWinToMainCenter(subWin);
 			RandomWait.Wait(600, 1200);
 			if (refer.Date != DateOnly.MinValue)
 			{
@@ -540,7 +541,7 @@ namespace WeChatAuto.Components
 					return;
 			}
 			//筛选内容.
-			_FilterContent(refer, subWin);
+			_FilterContent(refer, subWin);   //筛选框填入内容
 			_FindContent(refer, subWin);
 			if (refer.IsCloseSearchWin)
 			{
@@ -606,14 +607,12 @@ namespace WeChatAuto.Components
 					//这里弹窗
 					_PopupMenu(refer);
 				}
-
-
 			}
 		}
 
 		private void _PopupMenu(ChatRefer refer)
 		{
-			var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/Group/List[@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView'][@Name='消息'] | /Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/List[@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView'][@Name='消息']";;
+			var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/Group/List[@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView'][@Name='消息'] | /Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/List[@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView'][@Name='消息']"; ;
 			var listRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
 			if (listRetry.Success)
 			{
@@ -766,10 +765,12 @@ namespace WeChatAuto.Components
 					if (container != null)
 					{
 						using Mat mat1 = this._Client.OcrEngee.GetMatFromElement(container);
-						Rectangle rectangle = new Rectangle(0, 25, mat1.Width, mat1.Height - 25);
+						var dpi100Top = 20;   //dpi在100%时候顶部距离
+						var baseTop = (int)(dpi100Top * DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle));
+						Rectangle rectangle = new Rectangle(0, baseTop, mat1.Width, mat1.Height - baseTop);
 						using Mat mat2 = new Mat(mat1, rectangle);  //将上面的裁剪25,以保持日期列
 						var clickPoint = this._Client.OcrEngee.GetPointFromDateTime(mat2, date, 15, false);
-						clickPoint = new Point(clickPoint.X + container.BoundingRectangle.X, clickPoint.Y + 25 + container.BoundingRectangle.Y);
+						clickPoint = new Point(clickPoint.X + container.BoundingRectangle.X, clickPoint.Y + baseTop + container.BoundingRectangle.Y);
 						SupperMouseKey.MoveTo(clickPoint);
 						RandomWait.Wait(800, 1200);
 						SupperMouseKey.LeftClick();
