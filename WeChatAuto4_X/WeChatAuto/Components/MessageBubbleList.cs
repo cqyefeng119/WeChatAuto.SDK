@@ -61,8 +61,6 @@ namespace WeChatAuto.Components
             return buttonRetry.Success ? buttonRetry.Result : null;
         }
 
-
-
         /// <summary>
         /// 根据日期获取聊天历史
         /// </summary>
@@ -71,10 +69,6 @@ namespace WeChatAuto.Components
         /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
         public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime date = default)
         {
-            if (date == default)
-            {
-                date = DateTime.Now;
-            }
             if (string.IsNullOrWhiteSpace(who))
             {
                 var chatInfo = await _Client.ChatContent.ChatHeader.GetTitle();
@@ -88,7 +82,7 @@ namespace WeChatAuto.Components
                 await _Client.SearchFriend(who);
             }
             RandomWait.Wait(300, 1000);
-            return await GetChatHistory((new List<DateTime>() { date }).Select(x => x.Date).ToList());
+            return await GetChatHistory(date);
         }
         /// <summary>
         /// 获取一段时间的聊天历史记录，包括日期-时间，其他的获取消息历史的api仅支持日期
@@ -99,10 +93,11 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime startDate, DateTime endDate)
         {
-            List<DateTime> result = GetDates(startDate, endDate);
-            if (result.Count() == 0)
+            if (endDate < startDate)
+                throw new ArgumentException("结束日期不能小于开始日期");
+            if (endDate.Date > DateTime.Today)
             {
-                return new List<ChatSimpleMessage>();
+                endDate = DateTime.Today.AddDays(1).AddTicks(-1);
             }
             if (string.IsNullOrWhiteSpace(who))
             {
@@ -118,47 +113,27 @@ namespace WeChatAuto.Components
                 await _Client.Conversations.Search(who);
             }
             RandomWait.Wait(300, 1200);
-            return await GetChatHistory(result);
+            return await WeChatInvoker.Call(GetAllChatHistoryCore, startDate, endDate);
         }
 
-        /// <summary>
-        /// 获取多个指定日期的聊天历史记录
-        /// </summary>
-        /// <param name="who">微信名称，可以是好友/群聊的微信名称</param>
-        /// <param name="range">指定的多个日期</param>
-        /// <returns></returns>
-        public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, List<DateTime> range)
-        {
-            if (range.Count() == 0)
-            {
-                return new List<ChatSimpleMessage>();
-            }
-            if (string.IsNullOrWhiteSpace(who))
-            {
-                var chatInfo = await _Client.ChatContent.ChatHeader.GetTitle();
-                if (!chatInfo.CanTalk())
-                {
-                    return new List<ChatSimpleMessage>();
-                }
-            }
-            else
-            {
-                await _Client.Conversations.Search(who);
-            }
-            RandomWait.Wait(300, 1200);
-            return await GetChatHistory(range.Select(x => x.Date).ToList());
-        }
         /// <summary>
         /// 根据日期获取当前聊天窗口的聊天历史
         /// </summary>
-        /// <param name="dates">查询日期列表</param>
+        /// <param name="date">查询日期,如果为空则为当天日期</param>
         /// <returns>返回<see cref="ChatSimpleMessage"/>列表</returns>
-        public async Task<List<ChatSimpleMessage>> GetChatHistory(List<DateTime> dates = default)
+        public async Task<List<ChatSimpleMessage>> GetChatHistory(DateTime date = default)
         {
-            return await WeChatInvoker.Call(GetAllChatHistoryCore, dates);
+            if (date == default || date.Date > DateTime.Today.Date)
+            {
+                date = DateTime.Today;
+            }
+            var start = date.Date;
+            var end = date.Date.AddDays(1).AddTicks(-1);
+
+            return await WeChatInvoker.Call(GetAllChatHistoryCore, start, end);
         }
 
-        internal List<ChatSimpleMessage> GetAllChatHistoryCore(UIA3Automation automation, List<DateTime> dates)
+        internal List<ChatSimpleMessage> GetAllChatHistoryCore(UIA3Automation automation, DateTime starDate, DateTime endDate)
         {
             var invokeButton = HistoryButton;
             if (invokeButton == null)
@@ -167,10 +142,10 @@ namespace WeChatAuto.Components
             if (!title.CanTalk())
                 return new List<ChatSimpleMessage>();
             __ClickChatHistoryButton(invokeButton);
-            return __FetchChatHistoryList(automation, dates, title.Title);
+            return __FetchChatHistoryList(automation, starDate, endDate, title.Title);
         }
 
-        private List<ChatSimpleMessage> __FetchChatHistoryList(UIA3Automation automation, List<DateTime> dates, string title)
+        private List<ChatSimpleMessage> __FetchChatHistoryList(UIA3Automation automation, DateTime startDate, DateTime endDate, string title)
         {
             var desktop = automation.GetDesktop();
             var winResult = Retry.WhileNull(() => desktop.FindAllChildren(cf => cf.ByClassName("mmui::SearchMsgUniqueChatWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByProcessId(_Client.MainWindow.Properties.ProcessId)))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
@@ -199,58 +174,17 @@ namespace WeChatAuto.Components
                 subWin.DrawHighlightExt();
                 try
                 {
-                    var root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("chat_log_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
-                    if (root.Items.Count() == 0)
-                        return new List<ChatSimpleMessage>();
-                    var chatItems = root.Items.Where(x => x.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(x.Name) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
-                    if (chatItems.Count() == 0)
+                    List<ChatSimpleMessage> list;
+                    if (_IsToday(startDate))
                     {
-                        Mouse.Position = root.BoundingRectangle.SafeRandomPoint();
-                        Mouse.Scroll(-5);
-                        RandomWait.Wait(100, 300);
-                        chatItems = root.Items.Where(x => x.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(x.Name) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
-                    }
-                    ListBoxItem chatItem = null;
-                    foreach (var item in chatItems)
-                    {
-                        var value = item.Name;
-                        var pattern = @"\s\d{4}年\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}$";
-                        if (Regex.Match(value, pattern).Success)
-                        {
-                            chatItem = item;
-                            break;
-                        }
-                    }
-                    if (chatItem == null)
-                        return new List<ChatSimpleMessage>();
-                    chatItem.DrawHighlightExt();
-                    var initOffsetX = WeAutomation.Config.HistoryMessageOffset_X + chatItem.BoundingRectangle.X;
-                    var initOffsetY = WeAutomation.Config.HistoryMessageOffset_Y + chatItem.BoundingRectangle.Y;
-                    var point = new Point(initOffsetX, initOffsetY);
-                    Mouse.Position = point;
-                    RandomWait.Wait(100, 400);
-
-                    Mouse.RightClick();  //得到完整的UI Tree列表
-                    RandomWait.Wait(100, 300);
-                    var menuWinRetry = Retry.WhileNull(() => subWin.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin").And(cf.ByClassName("mmui::XMenu")))).AsWindow(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
-                    if (menuWinRetry.Success)
-                    {
-                        menuWinRetry.Result.DrawHighlightExt();
-                        var menuWin = menuWinRetry.Result;
-                        var selectItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("多选")));
-                        if (selectItem == null)
-                            return new List<ChatSimpleMessage>();
-                        selectItem.DrawHighlightExt();
-                        RandomWait.Wait(300, 900);
-                        selectItem.Click();
-                        RandomWait.Wait(300, 900);
-                        root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("chat_log_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
-                        return __FetchChatHistoryListCore(root, dates);
+                        list = __FetchHistoryDataFromToday(subWin, startDate, endDate);
                     }
                     else
                     {
-                        return new List<ChatSimpleMessage>();
+                        //选择日期筛选....获取历史记录
+                        list = __FetchHistoryDataFromFilterDate(subWin, startDate, endDate);
                     }
+                    return list;
                 }
                 catch (Exception ex)
                 {
@@ -267,8 +201,71 @@ namespace WeChatAuto.Components
                 return new List<ChatSimpleMessage>();
             }
         }
+
+        private List<ChatSimpleMessage> __FetchHistoryDataFromFilterDate(Window subWin, DateTime startDate, DateTime endDate)
+        {
+            return null;
+        }
+
+        private List<ChatSimpleMessage> __FetchHistoryDataFromToday(Window subWin, DateTime startDate, DateTime endDate)
+        {
+            var root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("chat_log_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
+            if (root.Items.Count() == 0)
+                return new List<ChatSimpleMessage>();
+            var chatItems = root.Items.Where(x => x.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(x.Name) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+            if (chatItems.Count() == 0)
+            {
+                Mouse.Position = root.BoundingRectangle.SafeRandomPoint();
+                Mouse.Scroll(-5);
+                RandomWait.Wait(100, 300);
+                chatItems = root.Items.Where(x => x.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(x.Name) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+            }
+            ListBoxItem chatItem = null;
+            foreach (var item in chatItems)
+            {
+                var value = item.Name;
+                var pattern = @"\s\d{4}年\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}$";
+                if (Regex.Match(value, pattern).Success)
+                {
+                    chatItem = item;
+                    break;
+                }
+            }
+            if (chatItem == null)
+                return new List<ChatSimpleMessage>();
+            chatItem.DrawHighlightExt();
+            var initOffsetX = WeAutomation.Config.HistoryMessageOffset_X + chatItem.BoundingRectangle.X;
+            var initOffsetY = WeAutomation.Config.HistoryMessageOffset_Y + chatItem.BoundingRectangle.Y;
+            var point = new Point(initOffsetX, initOffsetY);
+            Mouse.Position = point;
+            RandomWait.Wait(100, 400);
+
+            Mouse.RightClick();  //得到完整的UI Tree列表
+            RandomWait.Wait(100, 300);
+            var menuWinRetry = Retry.WhileNull(() => subWin.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin").And(cf.ByClassName("mmui::XMenu")))).AsWindow(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (menuWinRetry.Success)
+            {
+                menuWinRetry.Result.DrawHighlightExt();
+                var menuWin = menuWinRetry.Result;
+                var selectItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("多选")));
+                if (selectItem == null)
+                    return new List<ChatSimpleMessage>();
+                selectItem.DrawHighlightExt();
+                RandomWait.Wait(300, 900);
+                selectItem.Click();
+                RandomWait.Wait(300, 900);
+                root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("chat_log_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
+                return __FetchChatHistoryListCore(root, startDate, endDate);
+            }
+            else
+            {
+                return new List<ChatSimpleMessage>();
+            }
+
+        }
+
         //往下翻页，得到所有日期的字段.
-        private List<ChatSimpleMessage> __FetchChatHistoryListCore(ListBox root, List<DateTime> dates)
+        private List<ChatSimpleMessage> __FetchChatHistoryListCore(ListBox root, DateTime startDate, DateTime endDate)
         {
             var list = new List<ChatSimpleMessage>();
             var scollPoint = root.BoundingRectangle.SafeRandomPoint();
@@ -327,7 +324,7 @@ namespace WeChatAuto.Components
                     RandomWait.Wait(30, 80);
                     item.DrawHighlightExt();
 
-                    exit = __AddToList(list, item.Name, dates);
+                    exit = __ProcessWithTime(list, item.Name, startDate, endDate);
                     if (exit)
                         break;
                 }
@@ -341,22 +338,8 @@ namespace WeChatAuto.Components
             return list;
         }
 
-        private bool __AddToList(List<ChatSimpleMessage> list, string input, List<DateTime> dates)
+        private bool __ProcessWithTime(List<ChatSimpleMessage> list, string input, DateTime startDate, DateTime endDate)
         {
-            if (dates.Count == 2)
-            {
-                if (dates[0].TimeOfDay > TimeSpan.MinValue || dates[1].TimeOfDay > TimeSpan.MinValue)
-                {
-                    return __ProcessWithTime(list, input, dates);
-                }
-            }
-            return __ProcessNoneTime(list, input, dates);
-        }
-
-        private bool __ProcessWithTime(List<ChatSimpleMessage> list, string input, List<DateTime> dates)
-        {
-            var minDate = dates.Min();  //最小日期-时间
-            var maxDate = dates.Max();  //最大日期-时间
             var pattern = @"^(.+?)\s(.*?)\s(\d{4}年\d{1,2}月\d{1,2}日\s\d{1,2}:\d{2})$";
             var match = Regex.Match(input, pattern, RegexOptions.Singleline);
             if (match.Success)
@@ -365,10 +348,10 @@ namespace WeChatAuto.Components
                 pattern = @"(\d{4}年\d{1,2}月\d{1,2}日\s\d{1,2}:\d{2})";
                 var dateStr = Regex.Match(fullDateStr, pattern).Groups[1].Value;
                 var date = DateTime.ParseExact(dateStr, "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture);
-                if (date < minDate)
+                if (date < startDate)
                     return true;
 
-                if (date >= minDate && date <= maxDate)
+                if (date >= startDate && date <= endDate)
                 {
                     ChatSimpleMessage item = new ChatSimpleMessage();
                     item.Who = match.Groups[1].Value;
@@ -417,6 +400,11 @@ namespace WeChatAuto.Components
                 _logger.Error($"格式分析错误，未能加进消息列表，input={input}");
             }
             return false;
+        }
+
+        private bool _IsToday(DateTime startDate)
+        {
+            return startDate.Date == DateTime.Today;
         }
 
         public static string GetMd5(string input)

@@ -519,14 +519,6 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime startDate, DateTime endDate) => await ChatContent.GetChatHistory(who, startDate, endDate);
 
-        /// <summary>
-        /// 获取多个指定日期的聊天历史记录
-        /// </summary>
-        /// <param name="who">微信名称，可以是好友/群聊的微信名称,可以为空，如果为空，则获取当前聊天窗口的历史记录</param>
-        /// <param name="range">指定的多个日期</param>
-        /// <returns></returns>
-        public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, List<DateTime> range) => await ChatContent.GetChatHistory(who, range);
-
         #endregion
 
         #region  监听管理
