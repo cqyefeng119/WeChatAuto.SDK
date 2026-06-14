@@ -29,6 +29,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
 using System.Text;
 using Emgu.CV;
+using System.Reflection.PortableExecutable;
 
 namespace WeChatAuto.Components
 {
@@ -236,6 +237,7 @@ namespace WeChatAuto.Components
                 oldSnap = newSnap;
                 if (exceptList.Count() > 0)
                 {
+                    index = 0;
                     var exitFlag = __ScrollFetchContent(exceptList, subWin, root, startDate, endDate, result);
                     if (exitFlag)
                         break;
@@ -270,12 +272,16 @@ namespace WeChatAuto.Components
             ChatSimpleMessage message = new ChatSimpleMessage();
             message.DateTime = date;
             message.SendDateTime = date.ToString("yyyy年M月d日 HH:mm");
-            string[] aryContent = content.Split(' ',StringSplitOptions.RemoveEmptyEntries);
-            message.Who = aryContent[0].Trim();
-            message.Message = aryContent[1].Trim();
-            message.UniqueString = GetMd5(content);
 
-            result.Add(message);
+            var pattern = @"^(.+?)\s(.*?)\s*((?:星期[一二三四五六日天]|昨天|前天|\d{1,2}月\d{1,2}日)?\s*\d{1,2}:\d{2})$";
+            var match = Regex.Match(content, pattern, RegexOptions.Singleline);
+            if (match.Success)
+            {
+                message.Who = match.Groups[1].Value.Trim();
+                message.Message = match.Groups[2].Value.Trim();
+                message.UniqueString = GetMd5(content);
+                result.Add(message);
+            }
         }
 
         private List<ChatSimpleMessage> __FetchHistoryDataFromToday(Window subWin, DateTime startDate, DateTime endDate)
@@ -567,7 +573,7 @@ namespace WeChatAuto.Components
             return root;
         }
 
-        public static bool IsWechatDateText(string text)
+        private bool IsWechatDateText(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return false;
@@ -576,7 +582,7 @@ namespace WeChatAuto.Components
                 RegexOptions.Compiled);
             return DateRegex.IsMatch(text.Trim());
         }
-        public DateTime __GetDateFromName(string content)
+        private DateTime __GetDateFromName(string content)
         {
             var pattern = "";
             var prefix = "";
@@ -637,7 +643,7 @@ namespace WeChatAuto.Components
             throw new ArgumentException($"未知日期格式，请联系作者改正....");
         }
 
-        public DateTime GetDateByWeekday(string weekDay, DateTime? baseDate = null)
+        private DateTime GetDateByWeekday(string weekDay, DateTime? baseDate = null)
         {
             var today = (baseDate ?? DateTime.Now).Date;
 
