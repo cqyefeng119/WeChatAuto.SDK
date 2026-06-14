@@ -58,7 +58,7 @@ public class MessageBubbleListTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var list = await client.GetChatHistory(who, DateTime.Parse("2026-05-27 07:00"), DateTime.Parse("2026-05-27 08:00"));
+        var list = await client.GetChatHistory(who, DateTime.Parse("2026-06-13 19:20"), DateTime.Parse("2026-06-13 19:30"));
         Assert.True(list.Count != 0);
         list.ForEach(item =>
         {
