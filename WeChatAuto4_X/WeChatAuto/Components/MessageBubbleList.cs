@@ -28,6 +28,7 @@ using MessagePack.Formatters;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
 using System.Text;
+using Emgu.CV;
 
 namespace WeChatAuto.Components
 {
@@ -193,7 +194,7 @@ namespace WeChatAuto.Components
                 }
                 finally
                 {
-                    subWin.Close();
+                    subWin?.Close();
                 }
             }
             else
@@ -204,7 +205,77 @@ namespace WeChatAuto.Components
 
         private List<ChatSimpleMessage> __FetchHistoryDataFromFilterDate(Window subWin, DateTime startDate, DateTime endDate)
         {
-            return null;
+            List<ChatSimpleMessage> result = new List<ChatSimpleMessage>();
+            //日期筛选
+            var isSelected = _SelectDate(DateOnly.FromDateTime(startDate), subWin);
+            if (!isSelected)
+            {
+                isSelected = _SelectDate(DateOnly.FromDateTime(endDate), subWin);
+                if (!isSelected)
+                    return result;
+            }
+            //获取历史记录.
+            __FetchHistoryDataFromFilterDateCore(subWin, startDate, endDate, result);
+
+            return result;
+        }
+
+        private void __FetchHistoryDataFromFilterDateCore(Window subWin, DateTime startDate, DateTime endDate, List<ChatSimpleMessage> result)
+        {
+            ListBox root = __ChangeToCheckBoxState(subWin, startDate, endDate);   //改成checkbox状态
+            if (root.Items.Count() == 0)
+                return;
+            var index = 0;
+            var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
+            var oldSnap = new List<string>();
+            while (index < WeAutomation.Config.HistoryRetryNumber)
+            {
+                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                var newSnap = items.Select(u => u.Name.Trim() + u.Properties.RuntimeId.ToUniqueString()).ToList();
+                var exceptList = newSnap.Except(oldSnap).ToList();
+                oldSnap = newSnap;
+                if (exceptList.Count() > 0)
+                {
+                    var exitFlag = __ScrollFetchContent(exceptList, subWin, root, startDate, endDate, result);
+                    if (exitFlag)
+                        break;
+                }
+
+                index++;
+                MouseScrollHelper.DownStep(scrollPoint.Confusion(10, 6), 5);
+            }
+        }
+
+        private bool __ScrollFetchContent(List<string> exceptList, Window subWin, ListBox root, DateTime startDate, DateTime endDate, List<ChatSimpleMessage> result)
+        {
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox)).Where(u => exceptList.Contains(u.Name.Trim() + u.Properties.RuntimeId.ToUniqueString())).ToList();
+            foreach (var item in items)
+            {
+                DateTime date = __GetDateFromName(item.Name.Trim());
+                if (date > endDate)
+                    return true;
+                if (date < startDate)
+                    continue;
+                if (date >= startDate && date <= endDate)
+                {
+                    __GenerateMessage(result, date, item.Name);
+                }
+            }
+
+            return false;
+        }
+
+        private void __GenerateMessage(List<ChatSimpleMessage> result, DateTime date, string content)
+        {
+            ChatSimpleMessage message = new ChatSimpleMessage();
+            message.DateTime = date;
+            message.SendDateTime = date.ToString("yyyy年M月d日 HH:mm");
+            string[] aryContent = content.Split(' ',StringSplitOptions.RemoveEmptyEntries);
+            message.Who = aryContent[0].Trim();
+            message.Message = aryContent[1].Trim();
+            message.UniqueString = GetMd5(content);
+
+            result.Add(message);
         }
 
         private List<ChatSimpleMessage> __FetchHistoryDataFromToday(Window subWin, DateTime startDate, DateTime endDate)
@@ -234,8 +305,9 @@ namespace WeChatAuto.Components
             if (chatItem == null)
                 return new List<ChatSimpleMessage>();
             chatItem.DrawHighlightExt();
-            var initOffsetX = WeAutomation.Config.HistoryMessageOffset_X + chatItem.BoundingRectangle.X;
-            var initOffsetY = WeAutomation.Config.HistoryMessageOffset_Y + chatItem.BoundingRectangle.Y;
+            var dpi = DpiHelper.GetScaleForWindow(_Client.MainWindow.Properties.NativeWindowHandle);
+            var initOffsetX = (int)(WeAutomation.Config.HistoryMessageOffset_X * dpi + chatItem.BoundingRectangle.X);
+            var initOffsetY = (int)(WeAutomation.Config.HistoryMessageOffset_Y * dpi) + chatItem.BoundingRectangle.Y;
             var point = new Point(initOffsetX, initOffsetY);
             Mouse.Position = point;
             RandomWait.Wait(100, 400);
@@ -262,6 +334,84 @@ namespace WeChatAuto.Components
                 return new List<ChatSimpleMessage>();
             }
 
+        }
+
+        private bool _SelectDate(DateOnly date, Window window)
+        {
+            var yearStr = date.Year.ToString() + "年";
+            var monthStr = date.Month.ToString() + "月";
+            var path = "/Group/Group/Group/Group/Group/Group/Tab/TabItem[@AutomationId='qt_scrollarea_viewport.button_container.record_type_datetime'][@Name='日期']";
+            var tabItemRetry = Retry.WhileNull(() => window.FindFirstByXPath(path), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+            if (tabItemRetry.Success)
+            {
+                var item = tabItemRetry.Result;
+                var point = item.BoundingRectangle.SafeRandomPoint();
+                SupperMouseKey.LeftClick(point);
+                RandomWait.Wait(300, 900);
+                var popupWinRetry = Retry.WhileNull(() => window.Automation.GetDesktop().FindFirstByXPath("/Window[@Name='Weixin']/Group/Text[@Name='选择发送日期']"), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+                if (popupWinRetry.Success)
+                {
+                    var smallTitle = popupWinRetry.Result;
+                    var popWin = smallTitle.GetParent().GetParent();
+                    popWin.DrawHighlightExt();
+                    //检查年份与月份，如果月份不合适，则选择月份.
+                    var yearButton = smallTitle.GetSibling(1);  //目前暂时实现不跨年，会员提示再改
+                    var monthButton = yearButton.GetSibling(1);
+                    var currentMonth = monthButton.FindFirstChild(cf => cf.ByControlType(ControlType.Text)).Name.Trim();
+                    if (currentMonth != monthStr)
+                    {
+                        point = monthButton.BoundingRectangle.SafeRandomPoint();
+                        SupperMouseKey.MoveTo(point);
+                        RandomWait.Wait(800, 1500);
+                        SupperMouseKey.LeftClick();
+                        //等候需要的月份出现.
+                        RandomWait.Wait(600, 1200);
+                        var monthWinRetry = Retry.WhileNull(() => popWin.FindFirstChild(cf => cf.ByName("Weixin")), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+                        if (monthWinRetry.Success)
+                        {
+                            var childItem = monthWinRetry.Result.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName(monthStr)));
+                            if (childItem != null)
+                            {
+                                point = childItem.BoundingRectangle.SafeRandomPoint();
+                                SupperMouseKey.MoveTo(point);
+                                RandomWait.Wait(150, 900);
+                                SupperMouseKey.LeftClick();
+                                RandomWait.Wait(100, 300);
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    //ocr识别日期，然后点击,注意：有些日期可能没有记录，点击不进去
+                    var container = monthButton.GetSibling(1);
+                    if (container != null)
+                    {
+                        using Mat mat1 = this._Client.OcrEngee.GetMatFromElement(container);
+                        var dpi100Top = 20;   //dpi在100%时候顶部距离
+                        var baseTop = (int)(dpi100Top * DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle));
+                        Rectangle rectangle = new Rectangle(0, baseTop, mat1.Width, mat1.Height - baseTop);
+                        using Mat mat2 = new Mat(mat1, rectangle);  //将上面的裁剪25,以保持日期列
+                        var clickPoint = this._Client.OcrEngee.GetPointFromDateTime(mat2, date, 15, false);
+                        clickPoint = new Point(clickPoint.X + container.BoundingRectangle.X, clickPoint.Y + baseTop + container.BoundingRectangle.Y);
+                        SupperMouseKey.MoveTo(clickPoint);
+                        RandomWait.Wait(800, 1200);
+                        SupperMouseKey.LeftClick();
+                        RandomWait.Wait(200, 800);
+                        //检查日期是否可以点击.
+                        var findResult = Retry.WhileNotNull(() => window.Automation.GetDesktop().FindFirstByXPath("/Window[@Name='Weixin']/Group/Text[@Name='选择发送日期']"), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+
+                        return findResult.Success ? findResult.Result : false;
+                    }
+                    return false;
+                }
+            }
+            return false;
         }
 
         //往下翻页，得到所有日期的字段.
@@ -368,7 +518,161 @@ namespace WeChatAuto.Components
             }
             return false;
         }
+        private ListBox __ChangeToCheckBoxState(Window subWin, DateTime startDate, DateTime endDate)
+        {
+            var root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("search_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
+            var chatItems = root.Items.Where(u => u.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(u.Name) && u.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+            if (chatItems.Count() == 0)
+            {
+                Mouse.Position = root.BoundingRectangle.SafeRandomPoint();
+                Mouse.Scroll(5);
+                RandomWait.Wait(100, 300);
+                chatItems = root.Items.Where(x => x.ControlType == ControlType.ListItem && !string.IsNullOrWhiteSpace(x.Name) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+            }
+            ListBoxItem chatItem = null;
+            foreach (var item in chatItems)
+            {
+                var value = item.Name;
+                if (IsWechatDateText(item.Name.Trim()))
+                {
+                    chatItem = item;
+                    break;
+                }
+            }
+            if (chatItem == null)
+                throw new Exception("未能弹出右键菜单，请联系作者....");
 
+            chatItem.DrawHighlightExt();
+            var dpi = DpiHelper.GetScaleForWindow(_Client.MainWindow.Properties.NativeWindowHandle);
+            var initOffsetX = (int)(WeAutomation.Config.HistoryMessageOffset_X * dpi + chatItem.BoundingRectangle.X);
+            var initOffsetY = (int)(WeAutomation.Config.HistoryMessageOffset_Y * dpi) + chatItem.BoundingRectangle.Y;
+            var point = new Point(initOffsetX, initOffsetY);
+            Mouse.Position = point;
+            RandomWait.Wait(100, 400);
+
+            Mouse.RightClick();  //得到完整的UI Tree列表
+            RandomWait.Wait(100, 300);
+            var menuWinRetry = Retry.WhileNull(() => subWin.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByName("Weixin").And(cf.ByClassName("mmui::XMenu")))).AsWindow(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (menuWinRetry.Success)
+            {
+                menuWinRetry.Result.DrawHighlightExt();
+                var menuWin = menuWinRetry.Result;
+                var selectItem = menuWin.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("多选")));
+                selectItem.DrawHighlightExt();
+                RandomWait.Wait(300, 900);
+                selectItem.Click();
+                RandomWait.Wait(300, 900);
+                root = subWin.FindFirstDescendant(cf => cf.ByAutomationId("search_message_list").And(cf.ByClassName("mmui::RecyclerListView")).And(cf.ByControlType(ControlType.List))).AsListBox();
+            }
+            return root;
+        }
+
+        public static bool IsWechatDateText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+            Regex DateRegex = new(
+                @"(?:星期[一二三四五六日天]|昨天|前天|\d{1,2}月\d{1,2}日)?\s*\d{1,2}:\d{2}$",
+                RegexOptions.Compiled);
+            return DateRegex.IsMatch(text.Trim());
+        }
+        public DateTime __GetDateFromName(string content)
+        {
+            var pattern = "";
+            var prefix = "";
+            var time = "";
+            //先检查昨天、前天
+            pattern = @"(昨天|前天)\s*(\d{1,2}:\d{2})$";
+            Match match = Regex.Match(content, pattern);
+            if (match.Success)
+            {
+                prefix = match.Groups[1].Value.Trim();
+                time = match.Groups[2].Value.Trim();
+                if (prefix.Equals("昨天"))
+                {
+                    var dateStr = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd") + " " + time;
+                    var date = DateTime.TryParseExact(dateStr, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var _date) ? _date : DateTime.MinValue;
+                    return date;
+                }
+                if (prefix.Equals("前天"))
+                {
+                    var dateStr = DateTime.Today.AddDays(-2).ToString("yyyy-MM-dd") + " " + time;
+                    var date = DateTime.TryParseExact(dateStr, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var _date) ? _date : DateTime.MinValue;
+                    return date;
+                }
+            }
+            //再检查周一...周日
+            pattern = @"(星期[一二三四五六日天])\s*(\d{1,2}:\d{2})$";
+            match = Regex.Match(content, pattern);
+            if (match.Success)
+            {
+                prefix = match.Groups[1].Value.Trim();
+                time = match.Groups[2].Value.Trim();
+                var dateStr = GetDateByWeekday(prefix, DateTime.Now).ToString("yyyy-MM-dd") + " " + time;
+                var date = DateTime.TryParseExact(dateStr, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var _date) ? _date : DateTime.MinValue;
+                return date;
+            }
+            //再检查M月d日 HH:mm
+            pattern = @"(\d{1,2}月\d{1,2}日)\s*(\d{1,2}:\d{2})$";
+            match = Regex.Match(content, pattern);
+            if (match.Success)
+            {
+                prefix = match.Groups[1].Value.Trim();
+                time = match.Groups[2].Value.Trim();
+                var dateStr = DateTime.Today.Year + "年" + prefix + " " + time;
+                var date = DateTime.TryParseExact(dateStr, "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var _date) ? _date : DateTime.MinValue;
+                return date;
+            }
+
+            //最后为今天日期
+            pattern = @"\s*(\d{1,2}:\d{2})$";
+            match = Regex.Match(content, pattern);
+            if (match.Success)
+            {
+                time = match.Groups[1].Value.Trim();
+                var dateStr = DateTime.Now.ToString("yyyy年M月d日") + " " + time;
+                var date = DateTime.TryParseExact(dateStr, "yyyy年M月d日 HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var _date) ? _date : DateTime.MinValue;
+                return date;
+            }
+            throw new ArgumentException($"未知日期格式，请联系作者改正....");
+        }
+
+        public DateTime GetDateByWeekday(string weekDay, DateTime? baseDate = null)
+        {
+            var today = (baseDate ?? DateTime.Now).Date;
+
+            DayOfWeek target = weekDay switch
+            {
+                "星期一" => DayOfWeek.Monday,
+                "星期二" => DayOfWeek.Tuesday,
+                "星期三" => DayOfWeek.Wednesday,
+                "星期四" => DayOfWeek.Thursday,
+                "星期五" => DayOfWeek.Friday,
+                "星期六" => DayOfWeek.Saturday,
+                "星期日" => DayOfWeek.Sunday,
+                "星期天" => DayOfWeek.Sunday,
+                _ => throw new ArgumentException($"未知星期格式: {weekDay}")
+            };
+
+            // 找到本周周一
+            int offset = today.DayOfWeek == DayOfWeek.Sunday
+                ? -6
+                : DayOfWeek.Monday - today.DayOfWeek;
+
+            var monday = today.AddDays(offset);
+
+            return monday.AddDays(target switch
+            {
+                DayOfWeek.Monday => 0,
+                DayOfWeek.Tuesday => 1,
+                DayOfWeek.Wednesday => 2,
+                DayOfWeek.Thursday => 3,
+                DayOfWeek.Friday => 4,
+                DayOfWeek.Saturday => 5,
+                DayOfWeek.Sunday => 6,
+                _ => 0
+            });
+        }
         private bool _IsToday(DateTime startDate)
         {
             return startDate.Date == DateTime.Today;

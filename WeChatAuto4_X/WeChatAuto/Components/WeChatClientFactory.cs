@@ -215,7 +215,7 @@ namespace WeChatAuto.Components
             var topWindowProcessId = _GetTopWindowProcessIdResult();  //当前微信的processid
             (OwerInfo info, Window window) result = __GetCurrentWxNickName(topWindowProcessId.Result, automation);
             result.window.Focus();
-            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info, index,monitorEvent);
+            var client = new WeChatClient(topWindowProcessId.Result, _serviceProvider, this, result.window, MainActionThreadInvoker, result.info, index, monitorEvent);
             _wxClientList.Add(result.info.NickName, client);
         }
 
@@ -239,7 +239,8 @@ namespace WeChatAuto.Components
                     var toolBar = wxTempwindow.FindFirstDescendant(cf => cf.ByAutomationId("MainView.main_tabbar").And(cf.ByName("导航")).And(cf.ByControlType(ControlType.ToolBar)));
                     var button = toolBar.FindFirstChild(cf => cf.ByName("微信").And(cf.ByClassName("mmui::XTabBarItem")).And(cf.ByControlType(ControlType.Button)));
                     var point1 = button.GetClickablePoint();
-                    var point2 = new Point(point1.X, point1.Y - WeAutomation.Config.AvatorToWeixinButtonOffsetY);
+                    var topInterval = (int)(WeAutomation.Config.AvatorToWeixinButtonOffsetY * DpiHelper.GetScaleForWindow(wxTempwindow.Properties.NativeWindowHandle));
+                    var point2 = new Point(point1.X, point1.Y - topInterval);
                     //Mouse.MoveTo(point2);
                     Mouse.Position = point2;
                     Mouse.LeftClick();
