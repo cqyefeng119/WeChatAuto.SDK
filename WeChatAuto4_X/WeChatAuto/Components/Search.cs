@@ -37,6 +37,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Windows.Controls;
 using WeChatAuto.Options;
 using System.IO;
+using Emgu.CV.Structure;
 
 namespace WeChatAuto.Components
 {
@@ -263,7 +264,25 @@ namespace WeChatAuto.Components
                 SupperMouseKey.LeftClick();
                 RandomWait.Wait(300, 900);
                 __ConfigAddInfomation(win, result, friend, options, token);
-                result.Add(friend, FriendAddResult.Adding);
+                //可能是待验证状态，或者是直接通过状态
+                path = "/Group/Group/Group/Group/Group/Group/Group/Group/Button[@AutomationId='content_v_view.ProfileActionUi.add_friend_button'][@Name='等待验证'][@ClassName='mmui::XOutlineButton']";
+                RandomWait.Wait(2000, 4000);
+                var validButtonRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (validButtonRetry.Success)
+                {
+                    result.Add(friend, FriendAddResult.Adding);
+                }
+                else
+                {
+                    //可能是已添加状态
+                    path = "/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Text[@Name='微信号：'][@AutomationId='right_v_view.user_info_center_view.basic_line_view.basic_line.key_text']";
+                    var labelRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                    if (labelRetry.Success)
+                    {
+                        __ProcessAlreadFriendInfomation(win, friend, labelRetry.Result, token);
+                        result.Add(friend, FriendAddResult.Added);
+                    }
+                }
                 return;
             }
             token.ThrowIfCancellationRequested();
@@ -272,7 +291,8 @@ namespace WeChatAuto.Components
             var wxLabelRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
             if (wxLabelRetry.Success)
             {
-                __ProcessAlreadFriendInfomation(win, result, friend, wxLabelRetry.Result, token);
+                __ProcessAlreadFriendInfomation(win, friend, wxLabelRetry.Result, token);
+                result.Add(friend, FriendAddResult.Friend);
             }
         }
         private void __ConfigAddInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AddFriendsOptions options, CancellationToken token)
@@ -418,7 +438,7 @@ namespace WeChatAuto.Components
         }
 
 
-        private void __ProcessAlreadFriendInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AutomationElement wxLabel, CancellationToken token)
+        private void __ProcessAlreadFriendInfomation(Window win, string friend, AutomationElement wxLabel, CancellationToken token)
         {
             //更新缓存数据.
             FriendInfo friendInfo = new FriendInfo();
@@ -426,11 +446,20 @@ namespace WeChatAuto.Components
             if (wxid != null)
                 friendInfo.WxId = wxid.Name;
             var oldFriendInfo = this._Client.GetFriendWithWxIDFromCache(friendInfo.WxId);
-            var path = "/Group/Group/Group/Group/Group/Group/Group[@AutomationId='content_v_view'][@ClassName='mmui::ProfileResizeVBoxView']";
+            var path = "/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Text[@AutomationId='right_v_view.nickname_button_view.display_name_text'][@ClassName='mmui::XTextView']";
+            var labelRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (labelRetry.Success)
+            {
+                var label = labelRetry.Result.AsLabel();
+                friendInfo.NickName = label.Name;
+                friendInfo.MemoName = label.Name;
+            }
+
+            //获取pane的root
+            path = "/Group/Group/Group/Group/Group/Group/Group[@AutomationId='content_v_view'][@ClassName='mmui::ProfileResizeVBoxView']";
             var rootRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
             if (!rootRetry.Success)
             {
-                result.Add(friend, FriendAddResult.Friend);
                 return;
             }
             var root = rootRetry.Result;
@@ -449,7 +478,6 @@ namespace WeChatAuto.Components
             {
                 item = item.GetSibling(1);
                 friendInfo.NickName = item?.Name;
-                friendInfo.MemoName = item?.Name;   //暂时一样，后面会改
             }
             //头像
             path = "//Button[@AutomationId='head_image_v_view.head_view_']";
@@ -495,7 +523,6 @@ namespace WeChatAuto.Components
             friendInfo.AddDateTime = oldFriendInfo?.AddDateTime;
 
             this._Client.AddOrUpdateFriendFromCache(friendInfo);
-            result.Add(friend, FriendAddResult.Friend);
         }
     }
 }

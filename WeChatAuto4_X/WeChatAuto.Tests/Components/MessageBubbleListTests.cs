@@ -22,7 +22,7 @@ public class MessageBubbleListTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var list = await client.GetChatHistory(DateTime.Parse("2026-06-10"));
+        var list = await client.GetChatHistory(DateTime.Parse("2026-06-12"));
         Assert.True(list.Count != 0);
         list.ForEach(item =>
         {

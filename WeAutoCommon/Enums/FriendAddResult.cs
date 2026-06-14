@@ -16,7 +16,9 @@ namespace WeAutoCommon.Enums
         Friend = 0,
         [Description("不允许被查询，或者通过手机号查询不到")]
         No_Find = 1,
-        [Description("已增加")]
+        [Description("增加中,需对方通过验证")]
         Adding = 2,
+        [Description("一增加就通过，可能以前增加后自己又删除，或者对方设置权限允许通过")]
+        Added = 3,
     }
 }
