@@ -224,14 +224,15 @@ namespace WeChatAuto.Components
         private void __FetchHistoryDataFromFilterDateCore(Window subWin, DateTime startDate, DateTime endDate, List<ChatSimpleMessage> result)
         {
             ListBox root = __ChangeToCheckBoxState(subWin, startDate, endDate);   //改成checkbox状态
-            if (root.Items.Count() == 0)
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+            if (items.Count() == 0)
                 return;
             var index = 0;
             var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
             var oldSnap = new List<string>();
             while (index < WeAutomation.Config.HistoryRetryNumber)
             {
-                var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
                 var newSnap = items.Select(u => u.Name.Trim() + u.Properties.RuntimeId.ToUniqueString()).ToList();
                 var exceptList = newSnap.Except(oldSnap).ToList();
                 oldSnap = newSnap;
