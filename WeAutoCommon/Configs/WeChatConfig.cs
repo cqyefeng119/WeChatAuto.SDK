@@ -158,11 +158,11 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 历史消息X偏移距离
         /// </summary>
-        public int HistoryMessageOffset_X = 95;
+        public int HistoryMessageOffset_X = 77;
         /// <summary>
         /// 历史消息Y偏移距离
         /// </summary>
-        public int HistoryMessageOffset_Y = 50;
+        public int HistoryMessageOffset_Y = 40;
         /// <summary>
         /// 历史消息滚动时重试次数
         /// </summary>
@@ -170,7 +170,7 @@ namespace WeAutoCommon.Configs
         /// <summary>
         /// 头像按钮距离微信按钮的Y轴偏移量
         /// </summary>
-        public int AvatorToWeixinButtonOffsetY = 50;
+        public int AvatorToWeixinButtonOffsetY = 40;
         /// <summary>
         /// 用于消息监听中，返回给回调函数历史消息最大记录数，因为事实上无须读完整个历史消息的。
         /// </summary>
