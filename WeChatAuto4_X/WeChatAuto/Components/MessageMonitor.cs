@@ -948,7 +948,7 @@ namespace WeChatAuto.Components
             var fetchCount = -1;
             if (!_FriendSession[title.Title])
             {
-                //启动监听后第一次运行，不受特性匹配规则约速，并且取设定条数消息.
+                //启动监听后第一次运行，不受特性匹配规则约速，并且取设定条目数消息.
                 fetchCount = WeAutomation.Config.MessageFirstFetchNumber;
                 _FriendSession[title.Title] = true;
             }
@@ -981,7 +981,7 @@ namespace WeChatAuto.Components
                     lastItems = thisPageList;
                     if (fetchCount == -1)
                     {
-                        var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, token);
+                        var exitFlag = __ProcessMessageWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, token,title);
                         if (exitFlag)
                         {
                             result = result.Take(result.Count - compareList.Count).ToList();
@@ -990,7 +990,7 @@ namespace WeChatAuto.Components
                     }
                     else
                     {
-                        var exitFlag = __FirstWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, ref fetchCount, token);
+                        var exitFlag = __FirstFetchWithOCR(exceptList, items, options, ratio, result, automation, root, subWin, compareList, ref fetchCount, token,title);
                         if (exitFlag)
                             break;
                     }
@@ -1017,7 +1017,7 @@ namespace WeChatAuto.Components
 
 
         //仅负责处理数据，并做退出判断
-        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, CancellationToken token)
+        private bool __ProcessMessageWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, CancellationToken token,HeaderInfo headerInfo)
         {
             var processItems = root.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
 
@@ -1033,7 +1033,7 @@ namespace WeChatAuto.Components
                 else
                 {
                     //非系统消息.
-                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot, subWin);
+                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot, subWin,headerInfo);
                 }
                 //自定义处理消息
                 if (options != null && options.CustomProcessMessageAction != null)
@@ -1041,7 +1041,6 @@ namespace WeChatAuto.Components
                     options.CustomProcessMessageAction.Invoke(item, message);
                 }
                 result.Add(message);
-                // var contentResult = result.Where(u=>u.MessageType != MessageType.其他).ToList();
                 if (__FeatureCompare(compareList, result))
                 {
                     return true;
@@ -1075,7 +1074,7 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        private bool __FirstWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, ref int fetchCount, CancellationToken token)
+        private bool __FirstFetchWithOCR(List<string> exceptList, AutomationElement[] root, MessageMonitorOptions options, decimal ratio, List<SimpleMessageBubble> result, UIA3Automation automation, AutomationElement messageListRoot, Window subWin, List<SimpleMessageBubble> compareList, ref int fetchCount, CancellationToken token,HeaderInfo headerInfo)
         {
             var processItems = root.Where(r => exceptList.Contains($"{r.Name}_{r.Properties.RuntimeId.ToUniqueString()}"));
 
@@ -1091,7 +1090,7 @@ namespace WeChatAuto.Components
                 else
                 {
                     //非系统消息.
-                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot, subWin);
+                    __ProcessMessageWithOCRCore(item, options, ratio, message, automation, messageListRoot, subWin,headerInfo);
                     fetchCount--;
                 }
                 result.Add(message);
@@ -1101,7 +1100,7 @@ namespace WeChatAuto.Components
             return false;
         }
         // 处理非系统消息
-        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message, UIA3Automation automation, AutomationElement messageListRoot, Window subWin)
+        private void __ProcessMessageWithOCRCore(AutomationElement item, MessageMonitorOptions options, decimal ratio, SimpleMessageBubble message, UIA3Automation automation, AutomationElement messageListRoot, Window subWin,HeaderInfo headerInfo)
         {
             var title = __OcrMessageTitle(item, ratio);
             message.Who = title;
@@ -1206,7 +1205,7 @@ namespace WeChatAuto.Components
                     (string content, DateTime date) resultSplit = __ParseHistoryItem(item.Name.Trim());
                     message.SendDate = resultSplit.date;
                     message.Message = resultSplit.content;
-                    __FetchImage(message, item, options, ratio, subWin, messageListRoot);
+                    __FetchImage(message, item, options, ratio, subWin, messageListRoot,headerInfo);
                     return;
                 }
                 //视频
@@ -1244,13 +1243,13 @@ namespace WeChatAuto.Components
             message.Message = split.content;
         }
 
-        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options, decimal ratio, Window subWin, AutomationElement root)
+        private void __FetchImage(SimpleMessageBubble message, AutomationElement item, MessageMonitorOptions options, decimal ratio, Window subWin, AutomationElement root,HeaderInfo headerInfo)
         {
             if (options == null)
                 return;
             if (!options.FetchImage)
                 return;
-            if (excludeHistory(message))
+            if (excludeHistory(message,headerInfo))
                 return;
             var needHeight = (int)(49 * ratio);
             if (item.BoundingRectangle.Y + needHeight > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
@@ -1292,10 +1291,10 @@ namespace WeChatAuto.Components
             }
         }
 
-        private bool excludeHistory(SimpleMessageBubble message)
+        private bool excludeHistory(SimpleMessageBubble message,HeaderInfo headerInfo)
         {
             //从历史消息取15条，如果匹对得上，则返回真，不做图象获取.
-            var compareHistoryList = MessageCacheHelper.GetTodayLastMessages(message.Who, 15);
+            var compareHistoryList = MessageCacheHelper.GetTodayLastMessages(headerInfo.Title, 15);
             if (compareHistoryList.Contains(message))
                 return true;
             return false;

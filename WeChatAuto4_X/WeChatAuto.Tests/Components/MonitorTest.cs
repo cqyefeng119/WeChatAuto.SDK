@@ -70,7 +70,7 @@ public class MonitorTest
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.AddMessageListener(new string[] { "AI.Net_test", "DroidMirror官方技术支持", "秋歌" }, (context) =>
+        await client.AddMessageListener(new string[] { "AI.Net", "DroidMirror官方技术支持", "秋歌" }, (context) =>
         {
             _output.WriteLine("======= 最新消息 ======");
             foreach (var item in context.NewMessages)
