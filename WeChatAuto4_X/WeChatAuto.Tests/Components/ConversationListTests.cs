@@ -105,6 +105,42 @@ public class ConversationList
         }
     }
 
+    [Fact(DisplayName = "测试置顶")]
+    public async Task Test_Top_Most()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.SetTopMost("秋歌", true);
+        Assert.True(result);
+    }
+
+    [Fact(DisplayName = "测试反置顶")]
+    public async Task Test_Invert_Top_Most()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.SetTopMost("秋歌", false);
+        Assert.True(result);
+    }
+
+    [Fact(DisplayName = "测试消息免打扰")]
+    public async Task Test_dont_DisturbCore()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.SetDoNotDisturb("秋歌", true);
+        Assert.True(result);
+    }
+
+    [Fact(DisplayName = "测试取消消息免打扰")]
+    public async Task Test_invert_dont_disturb()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.SetDoNotDisturb("秋歌", false);
+        Assert.True(result);
+    }
+
     [Theory(DisplayName = "测试搜索")]
     [InlineData("秋歌")]
     [InlineData("师父")]

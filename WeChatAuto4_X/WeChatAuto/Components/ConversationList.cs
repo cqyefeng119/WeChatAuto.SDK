@@ -46,6 +46,175 @@ namespace WeChatAuto.Components
             _Client = client;
             _serviceProvider = serviceProvider;
         }
+
+        /// <summary>
+        /// 设置会话消息免打扰
+        /// </summary>
+        /// <param name="setting">如果为:true,则设置会话消息免打扰，如果为:false,则：允许消息通知</param>
+        /// <param name="who">要设置的 好友/群聊 名称,可以为空,如果为空，则为当前窗口设置免打扰</param>
+        /// <returns>免打扰的状态</returns>
+        public async Task<bool> SetDoNotDisturb(string who, bool setting = true)
+        {
+            if (!string.IsNullOrWhiteSpace(who))
+            {
+                var result = await WeChatInvoker.Call(SearchWhoCore, who);
+                if (!result)
+                    return false;
+            }
+            return await WeChatInvoker.Call(SetDoNotDisturbCore, setting);
+        }
+
+        private bool SetDoNotDisturbCore(UIA3Automation automation, bool setting)
+        {
+            var root = this.ConversationRoot;
+            var item = root.Items.FirstOrDefault(x => x.IsSelected);
+            if (item == null)
+                return false;
+            //可能位置不正确,先调整位置
+            __ChangeItemPosition(root, item);
+            //弹菜单
+            item.RightClick();
+            RandomWait.Wait(600, 1200);
+            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
+            var popupWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (popupWinRetry.Success)
+            {
+                var popupMenu = popupWinRetry.Result;
+                var menuItem = popupMenu.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("允许消息通知").Or(cf.ByName("消息免打扰"))));
+                if (setting)  //设置消息免打扰
+                {
+                    if (menuItem.Name.Equals("允许消息通知"))
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                        return true;
+                    }
+                    if (menuItem.Name.Equals("消息免打扰"))
+                    {
+                        menuItem.Click();
+                        RandomWait.Wait(300, 900);
+                        return true;
+                    }
+                }
+                else
+                {
+                    //取消消息免打扰
+                    if (menuItem.Name.Equals("消息免打扰"))
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                        return true;
+                    }
+                    if (menuItem.Name.Equals("允许消息通知"))
+                    {
+                        menuItem.Click();
+                        RandomWait.Wait(300, 900);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 设置会话置顶
+        /// </summary>
+        /// <param name="setting">true:聊天置顶;false:取消聊天置顶</param>
+        /// <param name="who">要设置的 好友/群聊 名称,可以为空,如果为空，则为当前窗口置顶</param>
+        /// <returns>是否是置顶状态</returns>
+        public async Task<bool> SetTopMost(string who, bool setting = true)
+        {
+            if (!string.IsNullOrWhiteSpace(who))
+            {
+                var result = await WeChatInvoker.Call(SearchWhoCore, who);
+                if (!result)
+                    return false;
+            }
+            return await WeChatInvoker.Call(SetTopMostCore, setting);
+        }
+
+        private bool SetTopMostCore(UIA3Automation automation, bool setting)
+        {
+            var root = this.ConversationRoot;
+            var item = root.Items.FirstOrDefault(x => x.IsSelected);
+            if (item == null)
+                return false;
+            //可能位置不正确,先调整位置
+            __ChangeItemPosition(root, item);
+            //弹菜单
+            item.RightClick();
+            RandomWait.Wait(600, 1200);
+            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
+            var popupWinRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (popupWinRetry.Success)
+            {
+                var popupMenu = popupWinRetry.Result;
+                var menuItem = popupMenu.FindFirstChild(cf => cf.ByControlType(ControlType.MenuItem));
+                if (setting)  //设置置顶
+                {
+                    if (menuItem.Name.Equals("取消置顶"))
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                        return true;
+                    }
+                    if (menuItem.Name.Equals("置顶"))
+                    {
+                        menuItem.Click();
+                        RandomWait.Wait(300, 900);
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (menuItem.Name.Equals("置顶"))
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                        return true;
+                    }
+                    if (menuItem.Name.Equals("取消置顶"))
+                    {
+                        menuItem.Click();
+                        RandomWait.Wait(300, 900);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static void __ChangeItemPosition(ListBox root, ListBoxItem item)
+        {
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            var index = 0;
+            while (index < 3)
+            {
+                if (item.BoundingRectangle.Y < root.BoundingRectangle.Y)
+                {
+                    MouseScrollHelper.UpStep(point, 3);
+                }
+                else
+                {
+                    if (item.BoundingRectangle.Y >= root.BoundingRectangle.Y && item.BoundingRectangle.Y + item.BoundingRectangle.Height <= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                        break;
+                }
+                index++;
+            }
+            index = 0;
+            while (index < 3)
+            {
+                if (item.BoundingRectangle.Y + item.BoundingRectangle.Height > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                {
+                    MouseScrollHelper.DownStep(point, 3);
+                }
+                else
+                {
+                    if (item.BoundingRectangle.Y >= root.BoundingRectangle.Y && item.BoundingRectangle.Y + item.BoundingRectangle.Height <= root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                        break;
+                }
+                index++;
+            }
+        }
+
         /// <summary>
         /// 搜索好友/群聊
         /// </summary>

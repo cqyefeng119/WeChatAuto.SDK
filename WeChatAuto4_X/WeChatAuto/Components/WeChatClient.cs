@@ -410,6 +410,21 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Down(Func<AutomationElement[], Rectangle, bool> callBack) => await this.Conversations.Down(callBack);
 
+        /// <summary>
+        /// 设置会话消息免打扰
+        /// </summary>
+        /// <param name="setting">如果为:true,则设置会话消息免打扰，如果为:false,则：允许消息通知</param>
+        /// <param name="who">要设置的 好友/群聊 名称,可以为空,如果为空，则为当前窗口设置免打扰</param>
+        /// <returns>执行消息免打扰结果</returns>
+        public async Task<bool> SetDoNotDisturb(string who, bool setting = true) => await this.Conversations.SetDoNotDisturb(who, setting);
+        /// <summary>
+        /// 设置会话置顶
+        /// </summary>
+        /// <param name="setting">true:聊天置顶;false:取消聊天置顶</param>
+        /// <param name="who">要设置的 好友/群聊 名称,可以为空,如果为空，则为当前窗口设置置顶</param>
+        /// <returns>执行会话置顶结果</returns>
+        public async Task<bool> SetTopMost(string who, bool setting = true) => await this.Conversations.SetTopMost(who, setting);
+
         #endregion
 
         #region 消息管理
