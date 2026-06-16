@@ -587,10 +587,10 @@ namespace WeChatAuto.Components
         /// 3. 找到菜单
         /// 4. 找到发送人
         /// </summary>
-        /// <param name="to">要转发给谁</param>
+        /// <param name="to">要转发给谁,可以多人/群</param>
         /// <param name="chatSimpleMessage">要转发的消息<see cref="ChatSimpleMessage"/></param>
         /// <param name="prevScrollNumber">如果当前页找不到，往前翻页的次数</param>
-        public async Task<bool> ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, string to, int prevScrollNumber = 3) => await this.ChatContent.MessageBubbleList.ForwardSingleMessage(chatSimpleMessage, to, prevScrollNumber);
+        public async Task<bool> ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, OneOf<string, string[]> to, int prevScrollNumber = 30) => await this.ChatContent.MessageBubbleList.ForwardSingleMessage(chatSimpleMessage, to, prevScrollNumber);
 
         /// <summary>
         /// 转发单条消息
@@ -599,7 +599,7 @@ namespace WeChatAuto.Components
         /// <param name="message">要转发的消息内容</param>
         /// <param name="to">要转发给谁</param>
         /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
-        public async Task<bool> ForwardSingleMessage(string who, string message, string to, int prevScrollNumber = 3) => await this.ChatContent.MessageBubbleList.ForwardSingleMessage(who, message, to, prevScrollNumber);
+        public async Task<bool> ForwardSingleMessage(string who, string message, OneOf<string, string[]> to, int prevScrollNumber = 30) => await this.ChatContent.MessageBubbleList.ForwardSingleMessage(who, message, to, prevScrollNumber);
 
         #endregion
 

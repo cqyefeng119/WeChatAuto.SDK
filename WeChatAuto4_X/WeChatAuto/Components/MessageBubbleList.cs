@@ -32,6 +32,10 @@ using Emgu.CV;
 using System.Reflection.PortableExecutable;
 using System.Threading;
 using OneOf.Types;
+using NAudio.SoundFont;
+using FlaUI.Core.Exceptions;
+using System.Threading.Channels;
+using OneOf;
 
 namespace WeChatAuto.Components
 {
@@ -1065,6 +1069,7 @@ namespace WeChatAuto.Components
 
         /// <summary>
         /// 转发单条消息
+        /// 注意：仅限于本窗口单条转发消息
         /// 流程：
         /// 1. 找到这一条消息,倒序找，这里注意一点，如果找不到消息，自动往前滚动，如果找不到，则不会转发此消息,日志显示错误，但不会报错.
         /// 2. 右键点击这一条消息
@@ -1074,20 +1079,197 @@ namespace WeChatAuto.Components
         /// <param name="to">要转发给谁</param>
         /// <param name="chatSimpleMessage">要转发的消息<see cref="ChatSimpleMessage"/></param>
         /// <param name="prevScrollNumber">如果当前页找不到，往前翻页的次数</param>
-        public async Task<bool> ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, string to, int prevScrollNumber = 3)
-        {
-            return await Task.FromResult(true);
-        }
+        public async Task<bool> ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, OneOf<string, string[]> to, int prevScrollNumber = 30)
+        => await ForwardSingleMessage(chatSimpleMessage.Who, chatSimpleMessage.Message, to, prevScrollNumber);
 
         /// <summary>
         /// 转发单条消息
         /// </summary>
         /// <param name="who">要转发的好友昵称</param>
         /// <param name="message">要转发的消息内容</param>
-        /// <param name="to">要转发给谁</param>
+        /// <param name="to">要转发给谁,可以多人/群</param>
         /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
-        public async Task<bool> ForwardSingleMessage(string who, string message, string to, int prevScrollNumber = 3)
-          => await ForwardSingleMessage(new ChatSimpleMessage { Who = who, Message = message }, to, prevScrollNumber);
+        public async Task<bool> ForwardSingleMessage(string who, string message, OneOf<string, string[]> to, int prevScrollNumber = 30)
+        {
+            return await WeChatInvoker.Call(ForwardSingleMessageCore, who, message, to, prevScrollNumber);
+        }
+
+        private bool ForwardSingleMessageCore(UIA3Automation automation, string who, string message, OneOf<string, string[]> to, int prevScrollNumber)
+        {
+            if (string.IsNullOrWhiteSpace(who))
+                return false;
+            var root = this.MessageRoot;
+            if (root == null)
+                return false;
+            ClickIfExistNewMessage(root);
+            var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+            if (!title.CanTalk())
+                return false;
+            var index = 0; //调整位置
+            AutomationElement item = null;
+            AutomationElement[] items = null;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            while (index < 6)
+            {
+                items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                item = items.FirstOrDefault(x => !x.ClassName.Equals("mmui::ChatItemView") && !x.ClassName.Equals("mmui::ChatFolderItemView") && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+                if (item != null)
+                {
+                    break;
+                }
+                MouseScrollHelper.UpStep(point, 3);
+                index++;
+            }
+            if (item == null)
+                return false;
+            var menuFlag = SelectMultiMenu(automation, title, item);
+            if (!menuFlag)
+                return false;
+            index = 0;
+            while (index < prevScrollNumber)
+            {
+                items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                foreach (var subItem in items)
+                {
+                    var subCheckBox = subItem.AsCheckBox();
+                    if (subCheckBox.Patterns.Toggle.IsSupported)
+                    {
+                        var pattern = subCheckBox.Patterns.Toggle;
+                        if (pattern.Pattern.ToggleState == ToggleState.On)
+                        {
+                            var clkPoint = subItem.BoundingRectangle.SafeRandomPoint();
+                            Mouse.Position = clkPoint;
+                            RandomWait.Wait(100, 300);
+                            SupperMouseKey.MoveTo(Mouse.Position.Confusion(5, 5));
+                            RandomWait.Wait(300, 900);
+                            SupperMouseKey.LeftClick();
+                        }
+                    }
+                }
+                foreach (var subItem in items)
+                {
+                    var subCheckBox = subItem.AsCheckBox();
+                    var aryContent = subItem.Name.Split(' ');
+                    if (aryContent.Length < 2)
+                        continue;
+                    if (aryContent[0].Equals(who) && aryContent[1].Equals(message))
+                    {
+                        //调整位置
+                        var count = 0;
+                        while (count < 6)
+                        {
+                            if (subCheckBox.BoundingRectangle.Y >= root.BoundingRectangle.Y)
+                            {
+                                break;
+                            }
+                            MouseScrollHelper.UpStep(point, 3);
+                            count++;
+                        }
+                        var pattern = subCheckBox.Patterns.Toggle;
+                        if (pattern.Pattern.ToggleState != ToggleState.On)
+                        {
+                            var clkPoint = subItem.BoundingRectangle.SafeRandomPoint();
+                            Mouse.Position = clkPoint;
+                            RandomWait.Wait(100, 300);
+                            SupperMouseKey.MoveTo(Mouse.Position.Confusion(5, 5));
+                            RandomWait.Wait(300, 900);
+                            SupperMouseKey.LeftClick();
+                        }
+                        OnlyForwardSingleMessageCore(automation, to);
+                        return true;
+                    }
+                }
+
+                MouseScrollHelper.UpStep(point, 3);
+                index++;
+            }
+
+            CloseMultiMenu();  //关闭多选窗口
+            return false;
+        }
+
+        internal void OnlyForwardSingleMessageCore(UIA3Automation automation, OneOf<string, string[]> to)
+        {
+            var toWhos = to.IsT0 ? new List<string> { to.AsT0 } : to.AsT1.ToList();
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='逐条转发'][@ClassName='mmui::MultiSelectToolIButtonTexttem']";
+            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (buttonRetry.Success)
+            {
+                var button = buttonRetry.Result.AsButton();
+                Mouse.Position = button.BoundingRectangle.SafeRandomPoint();
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(Mouse.Position.Confusion(5, 5));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 900);
+                path = "/Window[@Name='微信发送给'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
+                var edit = this._Client.MainWindow.FindFirstByXPath(path);
+                if (edit != null)
+                {
+                    foreach (var who in toWhos)
+                    {
+                        path = "/Window[@Name='微信发送给'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
+                        edit = this._Client.MainWindow.FindFirstByXPath(path);
+                        var groupRoot = edit.GetParent();
+                        var clearButton = groupRoot.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("清空")).And(cf.ByClassName("mmui::XButton")));
+                        if (clearButton != null)
+                        {
+                            clearButton.Click();
+                            RandomWait.Wait(300, 900);
+                        }
+                        edit = this._Client.MainWindow.FindFirstByXPath(path);
+                        edit.AsTextBox().Text = who;
+                        RandomWait.Wait(800, 2000);
+                        path = "/Window[@Name='微信发送给'][@ClassName='mmui::SessionPickerWindow']/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_search_result_list']";
+                        var searchRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                        if (searchRetry.Success)
+                        {
+                            var searchList = searchRetry.Result.AsListBox();
+                            var items = searchList.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox));
+                            var item = items.FirstOrDefault(x => x.Name.Trim().Equals(who.Trim()));
+                            if (item != null)
+                            {
+                                if (item.Patterns.Toggle.IsSupported)
+                                {
+                                    if (item.Patterns.Toggle.Pattern.ToggleState != ToggleState.On)
+                                    {
+                                        var point = item.BoundingRectangle.SafeRandomPoint();
+                                        Mouse.Position = point;
+                                        RandomWait.Wait(100, 300);
+                                        SupperMouseKey.MoveTo(point.Confusion(10, 5));
+                                        RandomWait.Wait(300, 900);
+                                        SupperMouseKey.LeftClick();
+                                        RandomWait.Wait(600, 1500);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    //查询是否有数据
+                    path = "/Window[@Name='微信发送给'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Button[@AutomationId='confirm_btn']";
+                    var confirmRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                    if (confirmRetry.Success)
+                    {
+                        var confirm = confirmRetry.Result;
+                        if (confirm.IsEnabled)
+                        {
+                            var point = confirm.BoundingRectangle.SafeRandomPoint();
+                            Mouse.Position = point;
+                            RandomWait.Wait(100, 300);
+                            SupperMouseKey.MoveTo(point.Confusion(10, 5));
+                            RandomWait.Wait(300, 900);
+                            SupperMouseKey.LeftClick();
+                            RandomWait.Wait(600, 1500);
+                        }
+                    }
+                    else
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                        RandomWait.Wait(600, 1500);
+                    }
+                }
+            }
+        }
 
 
         /// <summary>

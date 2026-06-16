@@ -87,4 +87,17 @@ public class MessageBubbleListTests
         Assert.True(result);
     }
 
+    [Theory(DisplayName = "测试转发单条消息")]
+    [InlineData("AI.Net", "我来一条：这个是测试一")]
+    [InlineData("Alex", "谁敢相信？困扰无数人的养生真谛，竟然全被这几句大白话讲透了！")]
+    [InlineData("秋歌","昨天数学课堂作业没写完，今天语文没写完[擦汗]")]
+    [InlineData("Alex","还不算啊，老婆")]
+    public async Task Test_Forward_Sinble_message(string who, string message)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.ForwardSingleMessage(who, message, new string[] { "AI.Net", "文件传输助手" },40);
+        Assert.True(result);
+    }
+
 }
