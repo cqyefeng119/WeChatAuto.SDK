@@ -758,15 +758,27 @@ namespace WeChatAuto.Components
             var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
             if (!title.CanTalk())
                 return false;
-            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
-            var item = items.FirstOrDefault(x => !x.ClassName.Equals("mmui::ChatItemView") && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+            var index = 0; //调整位置
+            AutomationElement item = null;
+            AutomationElement[] items = null;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            while (index < 6)
+            {
+                items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                item = items.FirstOrDefault(x => !x.ClassName.Equals("mmui::ChatItemView") && !x.ClassName.Equals("mmui::ChatFolderItemView") && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+                if (item != null)
+                {
+                    break;
+                }
+                MouseScrollHelper.UpStep(point, 3);
+                index++;
+            }
             if (item == null)
                 return false;
             var menuFlag = SelectMultiMenu(automation, title, item);
             if (!menuFlag)
                 return false;
-            var index = 0;
-            var point = root.BoundingRectangle.SafeRandomPoint();
+            index = 0;
             while (index < prevScrollNumber)
             {
                 items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox).And(cf.ByClassName("mmui::ChatItemView").Not()));
@@ -844,7 +856,7 @@ namespace WeChatAuto.Components
                 if (menuItem != null)
                 {
                     menuItem.Click();
-                    RandomWait.Wait(300, 900);
+                    RandomWait.Wait(300, 1200);
                 }
             }
         }
@@ -887,6 +899,7 @@ namespace WeChatAuto.Components
 
         private bool TryLeftRightClick(AutomationElement item, int baseX, int baseY)
         {
+            RandomWait.Wait(300, 1200);
             var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);
             var point = new Point(item.BoundingRectangle.X + (int)(baseX * ratio), item.BoundingRectangle.Y + (int)(baseY * ratio));
             Mouse.Position = point;

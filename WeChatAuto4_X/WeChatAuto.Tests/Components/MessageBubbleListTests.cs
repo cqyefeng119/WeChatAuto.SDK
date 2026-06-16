@@ -67,15 +67,24 @@ public class MessageBubbleListTests
         _output.WriteLine($"总共有:{list.Count}条消息");
     }
 
-    [Theory(DisplayName = "测试拍一拍")]
+    [Theory(DisplayName = "测试拍一拍-群聊")]
     [InlineData("智影工坊_test")]
     [InlineData("AI.Net")]
-    [InlineData("Alex")]
-    public async Task Test_Tap_who(string who)
+    public async Task Test_Tap_who_group(string who)
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.TapWho(who);
         Assert.True(result);
     }
+    [Theory(DisplayName = "测试拍一拍-好友")]
+    [InlineData("秋歌")]
+    public async Task Test_Tap_who_single(string who)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.TapWho(who);
+        Assert.True(result);
+    }
+
 }
