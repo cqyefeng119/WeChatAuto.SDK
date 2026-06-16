@@ -537,6 +537,70 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task<List<ChatSimpleMessage>> GetChatHistory(string who, DateTime startDate, DateTime endDate) => await ChatContent.GetChatHistory(who, startDate, endDate);
 
+        /// <summary>
+        /// 拍一拍
+        /// 注意：只能拍一拍当前聊天窗口的好友,一般结合消息监听或者<seealso cref="SearchFriend"/>使用.
+        /// 只有两个地方可以拍一拍：一个是群聊中，一个是好友聊天窗口（非企业微信,企业微信聊天不能拍一拍).
+        /// </summary>
+        /// <param name="who">要拍一拍的好友昵称</param>
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        /// <returns>是否成功拍一拍</returns>
+        public async Task<bool> TapWho(string who, int prevScrollNumber = 30) => await this.ChatContent.MessageBubbleList.TapWho(who, prevScrollNumber);
+
+        /// <summary>
+        /// 引用消息
+        /// 注意：引用消息只能是当前窗口的好友消息，一般结合消息监听或者<seealso cref="SearchFriend"/>使用.
+        /// </summary>
+        /// <param name="chatSimpleMessage">要引用的消息<see cref="ChatSimpleMessage"/></param>
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        public async Task<bool> ReferencedMessage(ChatSimpleMessage chatSimpleMessage, int prevScrollNumber = 30) => await this.ChatContent.MessageBubbleList.ReferencedMessage(chatSimpleMessage, prevScrollNumber);
+
+        /// <summary>
+        /// 引用消息
+        /// 注意：引用消息只能是当前窗口的好友消息，一般结合消息监听或者<seealso cref="SearchFriend"/>使用.        
+        /// </summary>
+        /// <param name="who">要引用的好友昵称</param>
+        /// <param name="message">要引用的消息内容</param>
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        public async Task<bool> ReferencedMessage(string who, string message, int prevScrollNumber = 30) => await this.ChatContent.MessageBubbleList.ReferencedMessage(who, message, prevScrollNumber);
+
+        /// <summary>
+        /// 引用最后一条消息
+        /// 注意：引用消息只能是当前窗口的好友消息，一般结合消息监听或者<seealso cref="SearchFriend"/>使用.    
+        /// 注意，只能引用有的消息，不会翻页，如果消息不在当前页，则不会引用
+        /// </summary>
+        public async Task<bool> ReferencedLastMessage() => await this.ChatContent.MessageBubbleList.ReferencedLastMessage();
+
+        /// <summary>
+        /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
+        /// </summary>
+        /// <param name="to">要转发给谁</param>
+        /// <param name="isCapture">是否要转发的内容进行截图，默认是true</param>
+        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有十条，则转发所有消息</param>
+        public async Task<bool> ForwardMultipleMessage(string to, bool isCapture = true, int rowCount = 5) => await this.ChatContent.MessageBubbleList.ForwardMultipleMessage(to, isCapture, rowCount);
+
+        /// <summary>
+        /// 转发单条消息
+        /// 流程：
+        /// 1. 找到这一条消息,倒序找，这里注意一点，如果找不到消息，自动往前滚动，如果找不到，则不会转发此消息,日志显示错误，但不会报错.
+        /// 2. 右键点击这一条消息
+        /// 3. 找到菜单
+        /// 4. 找到发送人
+        /// </summary>
+        /// <param name="to">要转发给谁</param>
+        /// <param name="chatSimpleMessage">要转发的消息<see cref="ChatSimpleMessage"/></param>
+        /// <param name="prevScrollNumber">如果当前页找不到，往前翻页的次数</param>
+        public async Task<bool> ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, string to, int prevScrollNumber = 3) => await this.ChatContent.MessageBubbleList.ForwardSingleMessage(chatSimpleMessage, to, prevScrollNumber);
+
+        /// <summary>
+        /// 转发单条消息
+        /// </summary>
+        /// <param name="who">要转发的好友昵称</param>
+        /// <param name="message">要转发的消息内容</param>
+        /// <param name="to">要转发给谁</param>
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        public async Task<bool> ForwardSingleMessage(string who, string message, string to, int prevScrollNumber = 3) => await this.ChatContent.MessageBubbleList.ForwardSingleMessage(who, message, to, prevScrollNumber);
+
         #endregion
 
         #region  监听管理

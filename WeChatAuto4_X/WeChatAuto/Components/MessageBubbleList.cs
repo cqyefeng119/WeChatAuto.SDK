@@ -30,6 +30,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Emgu.CV;
 using System.Reflection.PortableExecutable;
+using System.Threading;
+using OneOf.Types;
 
 namespace WeChatAuto.Components
 {
@@ -44,6 +46,8 @@ namespace WeChatAuto.Components
         private ChatContent _ChatContent;
         private WeChatClient _Client;
         internal Button HistoryButton => _GetHistoryButton();   //实时获取聊天记录按钮
+        internal ListBox MessageRoot => _GetMessageRoot();
+
         internal MessageBubbleList(WeChatClient client, UIThreadInvoker uiThreadInvoker, ChatContent content, IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -51,6 +55,16 @@ namespace WeChatAuto.Components
             this._Client = client;
             _uiThreadInvoker = uiThreadInvoker;
             _ChatContent = content;
+        }
+
+        /// <summary>
+        /// 聊天消息根,要注意:4.1.9.xx与4.1.10.xx的UI Tree结构不同
+        /// </summary>
+        internal ListBox _GetMessageRoot()
+        {
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView'] | /Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/List[@Name='消息'][@AutomationId='chat_message_list'][@ClassName='mmui::RecyclerListView']";
+            var rootRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            return rootRetry.Success ? rootRetry.Result.AsListBox() : null;
         }
 
         internal Button _GetHistoryButton()
@@ -718,128 +732,271 @@ namespace WeChatAuto.Components
             RandomWait.Wait(300, 900);
         }
 
-
-
-
-        /// <summary>
-        /// 获取气泡列表,不包括系统消息
-        /// 注意：可能速度比较慢,但是信息比较全
-        /// </summary>
-        public List<MessageBubble> GetVisibleBubbles()
-        {
-            return null;
-        }
-        public List<MessageBubble> GetVisibleBubblesByPolling(UIThreadInvoker privateThreadInvoker)
-        {
-            return null;
-        }
-        /// <summary>
-        /// 获取可见气泡列表,仅返回气泡标题
-        /// </summary>
-        /// <returns>可见气泡列表,仅返回气泡标题</returns>
-        public List<ChatSimpleMessage> GetVisibleChatSimpleMessages()
-        {
-            return null;
-        }
-        /// <summary>
-        /// 获取气泡列表
-        /// </summary>
-        /// <returns>气泡列表<see cref="MessageBubble"/></returns>
-        public List<MessageBubble> GetVisibleNativeBubbles()
-        {
-            return null;
-        }
-        //通过私有线程获取气泡列表
-        public List<MessageBubble> GetVisibleNativeBubblesByPolling(UIThreadInvoker privateThreadInvoker)
-        {
-            return null;
-        }
-        /// <summary>
-        /// 收藏消息
-        /// </summary>
-        /// <param name="chatSimpleMessage">要收藏的消息<see cref="ChatSimpleMessage"/></param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void CollectMessage(ChatSimpleMessage chatSimpleMessage, int prevPageCount = 3)
-        {
-
-        }
-        /// <summary>
-        /// 收藏指定的消息
-        /// 注意，只能收藏有的消息，不会翻页，如果消息不在当前页，则不会收藏
-        /// </summary>
-        /// <param name="lastRowIndex">要收藏的消息的索引</param>
-        public void CollectMessage(int lastRowIndex)
-        {
-
-        }
         /// <summary>
         /// 拍一拍
-        /// 注意：此动作仅适用于群聊中,并且只能拍别人，不适用于单聊
+        /// 注意：只能拍一拍当前聊天窗口的好友
+        /// 只有两个地方可以拍一拍：一个是群聊中，一个是好友聊天窗口（非企业微信).
         /// </summary>
         /// <param name="who">要拍一拍的好友昵称</param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void TapWho(string who, int prevPageCount = 3)
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        /// <returns>是否成功拍一拍</returns>
+        public async Task<bool> TapWho(string who, int prevScrollNumber = 30)
         {
-            // _uiThreadInvoker.Run(automation =>
-            // {
-            //     _PopupWhoMenuCore(who, _TapWhoCore, prevPageCount);
-            // })
-            // .GetAwaiter().GetResult();
+            return await WeChatInvoker.Call(TapWhoCore, who, prevScrollNumber);
+        }
+
+        internal bool TapWhoCore(UIA3Automation automation, string who, int prevScrollNumber)
+        {
+            if (string.IsNullOrWhiteSpace(who))
+                return false;
+            if (who.Trim().Equals(this._Client.NickName))
+                return false;
+            var root = this.MessageRoot;
+            if (root == null)
+                return false;
+            ClickIfExistNewMessage(root);
+            var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+            if (!title.CanTalk())
+                return false;
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+            var item = items.FirstOrDefault(x => !x.ClassName.Equals("mmui::ChatItemView") && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+            if (item == null)
+                return false;
+            var menuFlag = SelectMultiMenu(automation, title, item);
+            if (!menuFlag)
+                return false;
+            var index = 0;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            while (index < prevScrollNumber)
+            {
+                items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox).And(cf.ByClassName("mmui::ChatItemView").Not()));
+                var result = false;
+                foreach (var x in items)
+                {
+                    var aryContent = x.Name.Split(" ");
+                    if (aryContent[0].Equals(who) && x.BoundingRectangle.Y >= root.BoundingRectangle.Y)
+                    {
+                        var runtime = x.Properties.RuntimeId.Value;
+                        CloseMultiMenu();
+                        RandomWait.Wait(100, 300);
+                        TapCore(runtime, root);
+                        result = true;
+                        break;
+                    }
+                }
+                if (result)
+                {
+                    CloseMultiMenu();
+                    return true;
+                }
+                MouseScrollHelper.UpStep(point.Confusion(5, 10), 3);
+                index++;
+            }
+
+            return false;
+        }
+
+        private void TapCore(int[] runtimeId, ListBox root)
+        {
+            var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByClassName("mmui::ChatItemView").Not()));
+            var item = items.FirstOrDefault(cf => cf.Properties.RuntimeId.Value.SequenceEqual(runtimeId));
+            if (item == null)
+                return;
+            var index = 0;
+            var baseX = 37;
+            var baseY = 26;
+            var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);
+            var maybeY = (int)(46 * ratio);
+            //调整位置.
+            while (index < 3)
+            {
+                if (item.BoundingRectangle.Y >= root.BoundingRectangle.Y && (item.BoundingRectangle.Y + maybeY <= root.BoundingRectangle.Y + root.BoundingRectangle.Height))
+                {
+                    break;
+                }
+                if (item.BoundingRectangle.Y < root.BoundingRectangle.Y)
+                {
+                    MouseScrollHelper.UpStep(root.BoundingRectangle.SafeRandomPoint(), 3);
+                }
+                else
+                {
+                    if (item.BoundingRectangle.Y + maybeY > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                    {
+                        MouseScrollHelper.DownStep(root.BoundingRectangle.SafeRandomPoint(), 3);
+                    }
+                }
+
+                index++;
+            }
+            var point = new Point(item.BoundingRectangle.X + (int)(baseX * ratio), item.BoundingRectangle.Y + (int)(baseY * ratio));
+            Mouse.Position = point;
+            RandomWait.Wait(100, 300);
+            SupperMouseKey.MoveTo(point.Confusion(5, 5));
+            RandomWait.Wait(300, 900);
+            SupperMouseKey.RightClick();
+            RandomWait.Wait(300, 1200);
+            var path = "/Window[@Name='Weixin'][@ClassName='mmui::XMenu']";
+            var menuRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (menuRetry.Success)
+            {
+                var menu = menuRetry.Result;
+                var menuItem = menu.FindFirstChild(cf => cf.ByName("拍一拍")).AsMenuItem();
+                if (menuItem != null)
+                {
+                    menuItem.Click();
+                    RandomWait.Wait(300, 900);
+                }
+            }
         }
 
         /// <summary>
-        /// 收藏消息
+        /// 弹出并选择右键---》选择多选
         /// </summary>
-        /// <param name="who">要收藏的好友昵称</param>
-        /// <param name="message">要收藏的消息内容</param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void CollectMessage(string who, string message, int prevPageCount = 3)
+        internal bool SelectMultiMenu(UIA3Automation automation, HeaderInfo title, AutomationElement item)
         {
-
+            var result = false;
+            if (title.HeaderType == ChatType.群聊)
+            {
+                //先左边尝试
+                result = _TryLeftGroupChatMenu(automation, item);
+                if (result)
+                    return true;
+                //再右边尝试
+                return _TryRightChatMenu(automation, item);
+            }
+            else
+            {
+                if (title.HeaderType == ChatType.好友 || title.HeaderType == ChatType.企业微信)
+                {
+                    //先左边尝试
+                    result = TryLeftFriendChatMenu(automation, item);
+                    if (result)
+                        return true;
+                    //再右边尝试
+                    return _TryRightChatMenu(automation, item);
+                }
+            }
+            return result;
         }
+
+        private bool _TryLeftGroupChatMenu(UIA3Automation automation, AutomationElement item)
+            => TryLeftRightClick(item, 90, 47);
+
+        private bool TryLeftFriendChatMenu(UIA3Automation automation, AutomationElement item)
+            => TryLeftRightClick(item, 90, 26);
+
+        private bool TryLeftRightClick(AutomationElement item, int baseX, int baseY)
+        {
+            var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);
+            var point = new Point(item.BoundingRectangle.X + (int)(baseX * ratio), item.BoundingRectangle.Y + (int)(baseY * ratio));
+            Mouse.Position = point;
+            RandomWait.Wait(100, 300);
+            SupperMouseKey.MoveTo(point.Confusion(4, 2));
+            RandomWait.Wait(300, 900);
+            SupperMouseKey.RightClick();
+            RandomWait.Wait(300, 1200);
+            //检查菜单是否打开.
+            var menuRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath("/Window[@Name='Weixin'][@ClassName='mmui::XMenu']"), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (menuRetry.Success)
+            {
+                var menuRoot = menuRetry.Result;
+                var menu = menuRoot.FindFirstChild(cf => cf.ByName("多选"));
+                menu.Click();
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool _TryRightChatMenu(UIA3Automation automation, AutomationElement item)
+        {
+            var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);
+            var baseX = 90;
+            var baseY = 26;
+            var point = new Point(item.BoundingRectangle.X + item.BoundingRectangle.Width - (int)(baseX * ratio), item.BoundingRectangle.Y + (int)(baseY * ratio));
+            Mouse.Position = point;
+            RandomWait.Wait(100, 300);
+            SupperMouseKey.MoveTo(point.Confusion(4, 2));
+            RandomWait.Wait(300, 900);
+            SupperMouseKey.RightClick();
+            RandomWait.Wait(300, 1200);
+            //检查菜单是否打开.
+            var menuRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath("/Window[@Name='Weixin'][@ClassName='mmui::XMenu']"), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (menuRetry.Success)
+            {
+                var menuRoot = menuRetry.Result;
+                var menu = menuRoot.FindFirstChild(cf => cf.ByName("多选"));
+                menu.Click();
+                return true;
+            }
+
+            return false;
+        }
+
+        internal void CloseMultiMenu()
+        {
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='取消多选'][@ClassName='mmui::XButton']";
+            var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            if (buttonRetry.Success)
+            {
+                var button = buttonRetry.Result.AsButton();
+                button.Click();
+                RandomWait.Wait(300, 900);
+            }
+        }
+
+        internal void ClickIfExistNewMessage(ListBox root)
+        {
+            //如果有最新消息
+            var existNewMessageButton = root.GetSibling(1);
+            if (existNewMessageButton != null && existNewMessageButton.ControlType == ControlType.Button && existNewMessageButton.Name.Contains("新消息"))
+            {
+                //检查是不是最下面
+                var centerPointY = root.BoundingRectangle.Center().Y;
+                if (existNewMessageButton.BoundingRectangle.Y > centerPointY)
+                {
+                    existNewMessageButton.AsButton().Click();
+                    RandomWait.Wait(300, 900);
+                }
+            }
+        }
+
 
         /// <summary>
         /// 引用消息
         /// </summary>
         /// <param name="chatSimpleMessage">要引用的消息<see cref="ChatSimpleMessage"/></param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void ReferencedMessage(ChatSimpleMessage chatSimpleMessage, int prevPageCount = 3)
-        {
-
-        }
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        public async Task<bool> ReferencedMessage(ChatSimpleMessage chatSimpleMessage, int prevScrollNumber = 30)
+            => await ReferencedMessage(chatSimpleMessage.Who, chatSimpleMessage.Message, prevScrollNumber);
         /// <summary>
         /// 引用最后一条消息
         /// 注意，只能引用有的消息，不会翻页，如果消息不在当前页，则不会引用
         /// </summary>
-        /// <param name="lastRowIndex">最后一条消息的索引</param>
-        public void ReferencedMessage(int lastRowIndex)
+        public async Task<bool> ReferencedLastMessage()
         {
-
+            return await Task.FromResult(true);
         }
         /// <summary>
         /// 引用消息
         /// </summary>
         /// <param name="who">要引用的好友昵称</param>
         /// <param name="message">要引用的消息内容</param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void ReferencedMessage(string who, string message, int prevPageCount = 3)
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        public async Task<bool> ReferencedMessage(string who, string message, int prevScrollNumber = 30)
         {
-
+            return await Task.FromResult(true);
         }
 
         /// <summary>
         /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
-        /// 注意：
-        /// 转发会做如下预处理：
-        /// 1、图片，会自动测试是否能够转发，直到能转发为止;
-        /// 2、视频，会自动下载，并且测试是否能够转发，直到能转发为止
-        /// 3、语音，会自行语音转文字
         /// </summary>
         /// <param name="to">要转发给谁</param>
         /// <param name="isCapture">是否要转发的内容进行截图，默认是true</param>
         /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有十条，则转发所有消息</param>
-        public void ForwardMultipleMessage(string to, bool isCapture = true, int rowCount = 5)
+        public async Task<bool> ForwardMultipleMessage(string to, bool isCapture = true, int rowCount = 5)
         {
+            return await Task.FromResult(true);
             // var result = _uiThreadInvoker.Run(automation =>
             // {
             //     List<ListBoxItem> _WillProcessItems = _GetWillForwardMessageList(rowCount);  //得到所有要转发的消息
@@ -896,37 +1053,28 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 转发单条消息
         /// 流程：
-        /// 1. 找到这一条消息,倒序找，这里注意一点，如果找不到消息，往前翻三页找不到，则不会转发此消息,日志显示错误，但不会报错.
+        /// 1. 找到这一条消息,倒序找，这里注意一点，如果找不到消息，自动往前滚动，如果找不到，则不会转发此消息,日志显示错误，但不会报错.
         /// 2. 右键点击这一条消息
         /// 3. 找到菜单
         /// 4. 找到发送人
         /// </summary>
         /// <param name="to">要转发给谁</param>
         /// <param name="chatSimpleMessage">要转发的消息<see cref="ChatSimpleMessage"/></param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, string to, int prevPageCount = 3)
+        /// <param name="prevScrollNumber">如果当前页找不到，往前翻页的次数</param>
+        public async Task<bool> ForwardSingleMessage(ChatSimpleMessage chatSimpleMessage, string to, int prevScrollNumber = 3)
         {
-
+            return await Task.FromResult(true);
         }
-        /// <summary>
-        /// 转发最后的第index条消息,1表示最后一条消息，2表示倒数第二条消息
-        /// 注意，只能转发有的消息，不会翻页，如果消息不在当前页，则不会转发
-        /// </summary>
-        /// <param name="lastRowIndex">最后一条消息的索引</param>
-        /// <param name="to"></param>
-        public void ForwardSingleMessage(int lastRowIndex, string to)
-        {
 
-        }
         /// <summary>
         /// 转发单条消息
         /// </summary>
         /// <param name="who">要转发的好友昵称</param>
         /// <param name="message">要转发的消息内容</param>
         /// <param name="to">要转发给谁</param>
-        /// <param name="prevPageCount">如果当前页找不到，往前翻页的次数</param>
-        public void ForwardSingleMessage(string who, string message, string to, int prevPageCount = 3)
-          => ForwardSingleMessage(new ChatSimpleMessage { Who = who, Message = message }, to, prevPageCount);
+        /// <param name="prevScrollNumber">如果当前页找不到，往前滚动的次数</param>
+        public async Task<bool> ForwardSingleMessage(string who, string message, string to, int prevScrollNumber = 3)
+          => await ForwardSingleMessage(new ChatSimpleMessage { Who = who, Message = message }, to, prevScrollNumber);
 
 
         /// <summary>
