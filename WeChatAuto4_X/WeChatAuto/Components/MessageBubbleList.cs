@@ -36,6 +36,7 @@ using NAudio.SoundFont;
 using FlaUI.Core.Exceptions;
 using System.Threading.Channels;
 using OneOf;
+using WeChatAuto.Options;
 
 namespace WeChatAuto.Components
 {
@@ -1008,64 +1009,222 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
         /// </summary>
+        /// <param name="who">被转发消息的好友/群聊,可以为空，则转发本窗口的消息</param>
         /// <param name="to">要转发给谁</param>
-        /// <param name="isCapture">是否要转发的内容进行截图，默认是true</param>
-        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有十条，则转发所有消息</param>
-        public async Task<bool> ForwardMultipleMessage(string to, bool isCapture = true, int rowCount = 5)
+        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTyhpeEnums"/></param>
+        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息</param>
+        public async Task<bool> ForwardMultipleMessage(string who, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType = ForwardMessageTyhpeEnums.ForwardMerge, int rowCount = 5)
         {
-            return await Task.FromResult(true);
-            // var result = _uiThreadInvoker.Run(automation =>
-            // {
-            //     List<ListBoxItem> _WillProcessItems = _GetWillForwardMessageList(rowCount);  //得到所有要转发的消息
-
-            //     // 前置操作，如果有图片、视频、语音，则先处理
-            //     var r = EnsureSuccess(_PreImageVedioMessage(_WillProcessItems));
-            //     if (!r.Success) return r;
-
-            //     // 选择要转发多少条消息
-            //     r = EnsureSuccess(_SelectMultipleMessage(_WillProcessItems));
-            //     if (!r.Success) return r;
-
-            //     r = EnsureSuccess(_ProcessMaybeError());
-            //     if (!r.Success) return r;
-
-            //     // 转发消息
-            //     r = EnsureSuccess(_ForwardMessageCore(to));
-            //     if (!r.Success) return r;
-
-            //     r = EnsureSuccess(_ProcessMaybeError());
-            //     if (!r.Success) return r;
-
-            //     // 如果需要截图，则进行截图
-            //     if (isCapture)
-            //     {
-            //         r = EnsureSuccess(_CaptureMultipleMessage(_WillProcessItems, to));
-            //         if (!r.Success) return r;
-            //     }
-
-            //     return Result.Ok();
-            // })
-            // .GetAwaiter().GetResult();
-            // if (result.Success && isCapture)
-            // {
-            //     var from = this._ChatBody.ChatContent.ChatHeader.Title.Title; //得到发送者
-            //     this._ChatBody.ChatContent.MainWxWindow.PasteContentToWho(to).GetAwaiter().GetResult();
-            //     //转回from
-            //     this._ChatBody.ChatContent.MainWxWindow.FocusWho(from);
-            // }
-            // else
-            // {
-            //     _logger.Error($"转发失败: {result.Error}");
-            // }
+            if (string.IsNullOrWhiteSpace(who))
+            {
+                var chatInfo = await _Client.ChatContent.ChatHeader.GetTitle();
+                if (!chatInfo.CanTalk())
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                await _Client.SearchFriend(who);
+            }
+            RandomWait.Wait(300, 1000);
+            return await WeChatInvoker.Call(ForwardMultipleMessageCore, to, fType, rowCount);
         }
 
         /// <summary>
-        /// 检查结果，如果失败则返回失败，否则返回成功的结果以便继续链式调用
+        /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
+        /// 注意：只能转发本窗口的消息
         /// </summary>
-        private Result EnsureSuccess(Result result)
+        /// <param name="to">要转发给谁</param>
+        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTyhpeEnums"/></param>
+        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息</param>
+        public async Task<bool> ForwardMultipleMessage(OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType = ForwardMessageTyhpeEnums.ForwardMerge, int rowCount = 5)
         {
-            return result.Success ? Result.Ok() : Result.Fail(result.Error);
+            return await WeChatInvoker.Call(ForwardMultipleMessageCore, to, fType, rowCount);
         }
+
+        private bool ForwardMultipleMessageCore(UIA3Automation automation, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType, int rowCount)
+        {
+            var toWhos = to.IsT0 ? new List<string> { to.AsT0 } : to.AsT1.ToList();
+            if (toWhos.Count == 0)
+                return false;
+            var root = this.MessageRoot;
+            if (root == null)
+                return false;
+            ClickIfExistNewMessage(root);
+            var title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+            if (!title.CanTalk())
+                return false;
+            _ToEndPosition(root);
+            var index = 0; //调整位置
+            AutomationElement item = null;
+            AutomationElement[] items = null;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            while (index < 12)
+            {
+                items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                item = items.FirstOrDefault(x => !x.ClassName.Equals("mmui::ChatItemView") && !x.ClassName.Equals("mmui::ChatFolderItemView") && x.BoundingRectangle.Y >= root.BoundingRectangle.Y);
+                if (item != null)
+                {
+                    break;
+                }
+                MouseScrollHelper.UpStep(point.Confusion(10, 10), 3);
+                index++;
+            }
+            if (item == null)
+                return false;
+            var menuFlag = SelectMultiMenu(automation, title, item);
+            if (!menuFlag)
+                return false;
+            //去掉当前checkbox选择
+            var itemCheck = root.FindAllChildren(x => x.ByControlType(ControlType.CheckBox)).Where(x => x.Properties.RuntimeId.Value.SequenceEqual(item.Properties.RuntimeId.Value)).FirstOrDefault();
+            if (itemCheck != null)
+            {
+                if (itemCheck.Patterns.Toggle.Pattern.ToggleState == ToggleState.On)
+                {
+                    var clkPoint = itemCheck.BoundingRectangle.SafeRandomPoint();
+                    Mouse.Position = clkPoint;
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(Mouse.Position.Confusion(5, 5));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    RandomWait.Wait(300, 900);
+                }
+            }
+            //checkbox打上勾
+            index = 0;
+            var count = 0;
+            var oldSnap = new List<string>();
+            while (index < 15)
+            {
+                var itemChecks = root.FindAllChildren(x => x.ByControlType(ControlType.CheckBox)).Where(x => x.BoundingRectangle.Y >= root.BoundingRectangle.Y && x.BoundingRectangle.Y + 40 <= root.BoundingRectangle.Y + root.BoundingRectangle.Height);
+                var newSnap = itemChecks.Select(x => x.Name + "_" + x.Properties.RuntimeId.ToUniqueString()).ToList();
+                var exceptList = newSnap.Except(oldSnap).ToList();
+                var result = false;
+                if (exceptList.Count > 0)
+                {
+                    index = 0;
+                    oldSnap = newSnap;
+                    exceptList.Reverse();
+                    //从下往上点.
+                    foreach (var str in exceptList)
+                    {
+                        itemCheck = itemChecks.Where(x => (x.Name + "_" + x.Properties.RuntimeId.ToUniqueString()).Equals(str)).FirstOrDefault();
+                        if (itemCheck != null)
+                        {
+                            var clkPoint = Point.Empty;
+                            if (itemCheck.BoundingRectangle.Y + itemCheck.BoundingRectangle.Height > root.BoundingRectangle.Y + root.BoundingRectangle.Height)
+                            {
+                                var rect = new Rectangle(itemCheck.BoundingRectangle.X, itemCheck.BoundingRectangle.Y, itemCheck.BoundingRectangle.Width, root.BoundingRectangle.Y + root.BoundingRectangle.Height - itemCheck.BoundingRectangle.Y);
+                                clkPoint = rect.SafeRandomPoint();
+                            }
+                            else
+                            {
+                                clkPoint = itemCheck.BoundingRectangle.SafeRandomPoint();
+                            }
+                            Mouse.Position = clkPoint;
+                            RandomWait.Wait(100, 300);
+                            SupperMouseKey.MoveTo(Mouse.Position.Confusion(5, 5));
+                            RandomWait.Wait(300, 900);
+                            SupperMouseKey.LeftClick();
+                            RandomWait.Wait(300, 900);
+                            count++;
+                            if (count >= rowCount)
+                            {
+                                result = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (result)
+                    break;
+
+                MouseScrollHelper.UpStep(point.Confusion(10, 10), 3);
+                index++;
+            }
+            //转发
+            var flag = OnlyForwardSingleMessageCore(automation, to, fType);
+            if (!flag)
+            {
+                CloseMultiMenu();  //关闭多选窗口
+            }
+            return flag;
+        }
+
+
+        private void _ToEndPosition(ListBox root)
+        {
+            var index = 0;
+            var point = root.BoundingRectangle.SafeRandomPoint();
+            var oldSnapshot = new List<string>();
+            while (index < 3)
+            {
+                var newSnapshot = root.FindAllChildren().Select(x => x.Name + "_" + x.Properties.RuntimeId.ToUniqueString()).ToList();
+                var excptList = newSnapshot.Except(oldSnapshot);
+                if (excptList.Count() > 0)
+                {
+                    oldSnapshot = newSnapshot;
+                    MouseScrollHelper.DownStep(point.Confusion(10, 10), 5);
+                    index = 0;
+                    continue;
+                }
+                MouseScrollHelper.DownStep(point.Confusion(10, 10), 5);
+                index++;
+            }
+        }
+        #region xx
+        // var result = _uiThreadInvoker.Run(automation =>
+        // {
+        //     List<ListBoxItem> _WillProcessItems = _GetWillForwardMessageList(rowCount);  //得到所有要转发的消息
+
+        //     // 前置操作，如果有图片、视频、语音，则先处理
+        //     var r = EnsureSuccess(_PreImageVedioMessage(_WillProcessItems));
+        //     if (!r.Success) return r;
+
+        //     // 选择要转发多少条消息
+        //     r = EnsureSuccess(_SelectMultipleMessage(_WillProcessItems));
+        //     if (!r.Success) return r;
+
+        //     r = EnsureSuccess(_ProcessMaybeError());
+        //     if (!r.Success) return r;
+
+        //     // 转发消息
+        //     r = EnsureSuccess(_ForwardMessageCore(to));
+        //     if (!r.Success) return r;
+
+        //     r = EnsureSuccess(_ProcessMaybeError());
+        //     if (!r.Success) return r;
+
+        //     // 如果需要截图，则进行截图
+        //     if (isCapture)
+        //     {
+        //         r = EnsureSuccess(_CaptureMultipleMessage(_WillProcessItems, to));
+        //         if (!r.Success) return r;
+        //     }
+
+        //     return Result.Ok();
+        // })
+        // .GetAwaiter().GetResult();
+        // if (result.Success && isCapture)
+        // {
+        //     var from = this._ChatBody.ChatContent.ChatHeader.Title.Title; //得到发送者
+        //     this._ChatBody.ChatContent.MainWxWindow.PasteContentToWho(to).GetAwaiter().GetResult();
+        //     //转回from
+        //     this._ChatBody.ChatContent.MainWxWindow.FocusWho(from);
+        // }
+        // else
+        // {
+        //     _logger.Error($"转发失败: {result.Error}");
+        // }
+        // /// <summary>
+        // /// 检查结果，如果失败则返回失败，否则返回成功的结果以便继续链式调用
+        // /// </summary>
+        // private Result EnsureSuccess(Result result)
+        // {
+        //     return result.Success ? Result.Ok() : Result.Fail(result.Error);
+        // }
+        #endregion
 
         /// <summary>
         /// 转发单条消息
@@ -1175,8 +1334,12 @@ namespace WeChatAuto.Components
                             RandomWait.Wait(300, 900);
                             SupperMouseKey.LeftClick();
                         }
-                        OnlyForwardSingleMessageCore(automation, to);
-                        return true;
+                        var result = OnlyForwardSingleMessageCore(automation, to, ForwardMessageTyhpeEnums.ForwardOneByOne);
+                        if (!result)
+                        {
+                            CloseMultiMenu();  //关闭多选窗口
+                        }
+                        return result;
                     }
                 }
 
@@ -1188,10 +1351,13 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        internal void OnlyForwardSingleMessageCore(UIA3Automation automation, OneOf<string, string[]> to)
+        internal bool OnlyForwardSingleMessageCore(UIA3Automation automation, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType)
         {
             var toWhos = to.IsT0 ? new List<string> { to.AsT0 } : to.AsT1.ToList();
-            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='逐条转发'][@ClassName='mmui::MultiSelectToolIButtonTexttem']";
+            var path = fType == ForwardMessageTyhpeEnums.ForwardOneByOne ?
+            "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='逐条转发'][@ClassName='mmui::MultiSelectToolIButtonTexttem']"
+            :
+            "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='合并转发'][@ClassName='mmui::MultiSelectToolIButtonTexttem']";
             var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
             if (buttonRetry.Success)
             {
@@ -1260,6 +1426,7 @@ namespace WeChatAuto.Components
                             RandomWait.Wait(300, 900);
                             SupperMouseKey.LeftClick();
                             RandomWait.Wait(600, 1500);
+                            return true;
                         }
                     }
                     else
@@ -1269,6 +1436,7 @@ namespace WeChatAuto.Components
                     }
                 }
             }
+            return false;
         }
 
 

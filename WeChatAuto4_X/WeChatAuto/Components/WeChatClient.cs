@@ -575,9 +575,19 @@ namespace WeChatAuto.Components
         /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
         /// </summary>
         /// <param name="to">要转发给谁</param>
-        /// <param name="isCapture">是否要转发的内容进行截图，默认是true</param>
-        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有十条，则转发所有消息</param>
-        public async Task<bool> ForwardMultipleMessage(string to, bool isCapture = true, int rowCount = 5) => await this.ChatContent.MessageBubbleList.ForwardMultipleMessage(to, isCapture, rowCount);
+        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTyhpeEnums"/></param>
+        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息</param>
+        public async Task<bool> ForwardMultipleMessage(OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType = ForwardMessageTyhpeEnums.ForwardMerge, int rowCount = 5) => await this.ChatContent.MessageBubbleList.ForwardMultipleMessage(to, fType, rowCount);
+
+        /// <summary>
+        /// 转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
+        /// </summary>
+        /// <param name="who">被转发消息的好友/群聊,可以为空，则转发本窗口的消息</param>
+        /// <param name="to">要转发给谁</param>
+        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTyhpeEnums"/></param>
+        /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息</param>
+        public async Task<bool> ForwardMultipleMessage(string who, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType = ForwardMessageTyhpeEnums.ForwardMerge, int rowCount = 5) => await this.ChatContent.MessageBubbleList.ForwardMultipleMessage(who, to, fType, rowCount);
+
 
         /// <summary>
         /// 转发单条消息
