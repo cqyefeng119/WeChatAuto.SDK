@@ -34,13 +34,10 @@ namespace WeAutoCommon.Models
 
         public static Result<T> Ok(T value) => new Result<T>(true, null, value);
         public new static Result<T> Fail(string error) => new Result<T>(false, error, default);
-
         public Result<U> Map<U>(Func<T, U> mapper)
             => Success ? Result<U>.Ok(mapper(Value)) : Result<U>.Fail(Error);
-
         public Result<U> Bind<U>(Func<T, Result<U>> binder)
             => Success ? binder(Value) : Result<U>.Fail(Error);
-
         public U Match<U>(Func<T, U> ok, Func<string, U> fail)
             => Success ? ok(Value) : fail(Error);
     }

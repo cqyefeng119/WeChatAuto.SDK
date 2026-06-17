@@ -147,4 +147,37 @@ public class GroupTests
         Assert.True(result.Success);
     }
 
+    [Theory(DisplayName = "获取群聊的成员列表")]
+    [InlineData("DroidMirror官方技术支持")]
+    [InlineData("歪脖子的模版交流群")]
+    [InlineData("实时AI快讯 5群")]
+    [InlineData("人工智能自动化技术讨论群")]
+    public async Task Test_GetChatGroupMemberList(string groupName)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.GetChatGroupMemberList(groupName);
+        Assert.True(result.Count > 0);
+        foreach (var item in result)
+        {
+            _output.WriteLine(item);
+        }
+        _output.WriteLine($"群{groupName}有成员: {result.Count} 个");
+    }
+
+    [Fact(DisplayName = "获取群聊的成员列表_本窗口")]
+    public async Task Test_GetChatGroupMemberList_thisWindow()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.GetChatGroupMemberList();
+        Assert.True(result.Count > 0);
+        foreach (var item in result)
+        {
+            _output.WriteLine(item);
+        }
+        _output.WriteLine($"本群有成员: {result.Count} 个"); ;
+    }
+
+
 }

@@ -921,7 +921,19 @@ namespace WeChatAuto.Components
         /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
         public async Task<Result> UpdateGroupNotice(string groupNotice) => await this.OwnerGroup.UpdateGroupNotice(groupNotice);
 
-        
+        /// <summary>
+        /// 获取群聊成员列表,在进行群聊加好友时，需要先获取成员列表
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <returns>群聊成员列表</returns>
+        public async Task<List<string>> GetChatGroupMemberList(string groupName) => await this.OwnerGroup.GetChatGroupMemberList(groupName);
+
+        /// <summary>
+        /// 获取焦点窗口群聊成员列表
+        /// </summary>
+        /// <returns>群聊成员列表</returns>
+        public async Task<List<string>> GetChatGroupMemberList() => await this.OwnerGroup.GetChatGroupMemberList();
+
 
         #endregion
 

@@ -166,16 +166,7 @@ namespace WeChatAuto.Components
             return paneRoot.FindFirstDescendant(cf => cf.ByName("搜索").And(cf.ByClassName("mmui::XValidatorTextEdit")));
         }
 
-        //微信风控，提供不全ui tree,暂时不提供此api,日后想办法
-        // /// <summary>
-        // /// 获取群聊成员列表
-        // /// </summary>
-        // /// <param name="groupName">群聊名称</param>
-        // /// <returns>群聊成员列表</returns>
-        // public async Task<List<string>> GetChatGroupMemberList(string groupName)
-        // {
-        //     return await WeChatInvoker.Call(GetChatGroupMemberListCore, groupName);
-        // }
+
 
         internal bool CheckGroup(UIA3Automation automation, string groupName)
         {
@@ -193,17 +184,6 @@ namespace WeChatAuto.Components
                 return false;
             return true;
         }
-
-        // 微信风控，提供不全ui tree,日后想办法.
-        // internal List<string> GetChatGroupMemberListCore(UIA3Automation automation, string groupName)
-        // {
-        //     if (!CheckGroup(automation, groupName))
-        //         return new List<string>();
-        //     var rootButton = RootBotton;
-        //     rootButton.ClickEnhance(this._Client.MainWindow);
-
-
-        // }
 
 
         /// <summary>
@@ -259,6 +239,128 @@ namespace WeChatAuto.Components
         /// <param name="isSaveToAddress">是否保存到通讯录,默认是True:保存,False:取消保存</param>
         /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
         public ChatResponse SetSaveToAddress(string groupName, bool isSaveToAddress = true) => null;
+
+        /// <summary>
+        /// 获取群聊成员列表
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <returns>群聊成员列表</returns>
+        public async Task<List<string>> GetChatGroupMemberList(string groupName)
+        {
+            var find = await _Client.Conversations.Search(groupName);
+            if (!find)
+                return new List<string>();
+            return await WeChatInvoker.Call(GetChatGroupMemberListCore);
+        }
+
+        /// <summary>
+        /// 获取焦点窗口群聊成员列表
+        /// </summary>
+        /// <returns>群聊成员列表</returns>
+        public async Task<List<string>> GetChatGroupMemberList()
+        {
+            var headInfo = await this._Client.GetTitle();
+            if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
+                return new List<string>();
+            return await WeChatInvoker.Call(GetChatGroupMemberListCore);
+        }
+        internal List<string> GetChatGroupMemberListCore(UIA3Automation automation)
+        {
+            var resultList = new List<string>();
+            var invokeButton = this._Client.ChatContent.MessageBubbleList.HistoryButton;
+            if (invokeButton == null)
+                return resultList;
+            HeaderInfo title = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+            if (!title.CanTalk())
+                return resultList;
+            invokeButton.Click();
+            RandomWait.Wait(600,1200);
+            var result = __ClickChatHistoryButton(automation, invokeButton, title.Title);  //打开消息历史窗口
+            if (!result.Success) return resultList;
+            result = __ClickGroupMemberButton(automation, result.Value);
+            if (!result.Success) return resultList;
+            _FetchMember(automation, result.Value, resultList);
+
+            return resultList;
+        }
+
+        private void _FetchMember(UIA3Automation automation, Window subWin, List<string> resultList)
+        {
+            var desktop = automation.GetDesktop();
+            var path = $"/Window[@Name='Weixin'][@ClassName='mmui::XPopover'][@ProcessId={this._Client.MainWindow.Properties.ProcessId}]/Group/Group/List[@AutomationId='chatroom_member_list'][@ClassName='mmui::StickyHeaderRecyclerListView']";
+            var listBoxRetry = Retry.WhileNull(() => desktop.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (listBoxRetry.Success)
+            {
+                var listBox = listBoxRetry.Result.AsListBox();
+                var index = 0;
+                var oldSnapshot = new List<string>();
+                var point = listBox.BoundingRectangle.Center();
+                while (index < 4)
+                {
+                    var listItems = listBox.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+                    var newSnapshot = listItems.Select(u => u.Name + "|" + u.Properties.RuntimeId.ToUniqueString()).ToList();
+                    var exceptList = newSnapshot.Except(oldSnapshot).ToList();
+                    if (exceptList.Count() > 0)
+                    {
+                        index = 0;
+                        oldSnapshot = newSnapshot;
+                        var oriList = listItems.Where(u => exceptList.Contains(u.Name + "|" + u.Properties.RuntimeId.ToUniqueString())).ToList();
+                        var addList = oriList.Where(u => !u.Name.Equals("")).ToList();
+                        resultList.AddRange(addList.Select(u => u.Name));
+                    }
+                    MouseScrollHelper.DownStep(point.Confusion(10, 10), 3);
+                    index++;
+                }
+            }
+            subWin?.Close();
+        }
+
+        private Result<Window> __ClickGroupMemberButton(UIA3Automation automation, Window subWin)
+        {
+            var path = "/Group/Group/Group/Group/Group/Group/Tab/TabItem[@AutomationId='qt_scrollarea_viewport.button_container.record_type_member'][@Name='群成员']";
+            var tabItemRetry = Retry.WhileNull(() => subWin.FindFirstByXPath(path), timeout: TimeSpan.FromSeconds(1), interval: TimeSpan.FromMilliseconds(200));
+            if (tabItemRetry.Success)
+            {
+                var tabItem = tabItemRetry.Result;
+                RandomWait.Wait(600, 1500);
+                tabItem.Click();
+                RandomWait.Wait(600, 1500);
+                return Result<Window>.Ok(subWin);
+            }
+            return Result<Window>.Fail("错误：点击 群成员 失败！");
+        }
+
+        private Result<Window> __ClickChatHistoryButton(UIA3Automation automation, Button invokeButton, string title)
+        {
+            var desktop = automation.GetDesktop();
+            var winResult = Retry.WhileNull(() => desktop.FindAllChildren(cf => cf.ByClassName("mmui::SearchMsgUniqueChatWindow").And(cf.ByControlType(ControlType.Window).And(cf.ByProcessId(_Client.MainWindow.Properties.ProcessId)))), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
+            if (winResult.Success)
+            {
+                var subWins = winResult.Result;
+                var subWin = subWins.FirstOrDefault(u =>
+                {
+                    var name = u.Name.Replace("“", "").Replace("”", "");
+                    if (name.Contains($"{title}"))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }).AsWindow();
+                if (subWin == null)
+                    return Result<Window>.Fail("错误：未能打开聊天记录窗口");
+                subWin.Focus();
+                int targetX = _Client.MainWindow.BoundingRectangle.X + (int)((_Client.MainWindow.BoundingRectangle.Width - subWin.BoundingRectangle.Width) / 2);
+                int targetY = _Client.MainWindow.BoundingRectangle.Y + (int)((_Client.MainWindow.BoundingRectangle.Height - subWin.BoundingRectangle.Height) / 2);
+                subWin.Move(targetX, targetY);  //移动子窗口至主窗口中间
+                RandomWait.Wait(100, 600);
+                subWin.DrawHighlightExt();
+                return Result<Window>.Ok(subWin);
+            }
+            return Result<Window>.Fail("错误：未能打开聊天记录窗口");
+        }
 
         /// <summary>
         /// 修改自己在群中的昵称
