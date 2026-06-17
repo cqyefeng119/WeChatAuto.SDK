@@ -906,6 +906,23 @@ namespace WeChatAuto.Components
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupMemo(string newMemo) => await this.OwnerGroup.ChangeChatGroupMemo(newMemo);
 
+        /// <summary>
+        /// 更新群聊公告,仅适用于自有群
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupNotice">群聊公告</param>
+        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
+        public async Task<Result> UpdateGroupNotice(string groupName, string groupNotice) => await this.OwnerGroup.UpdateGroupNotice(groupName, groupNotice);
+
+        /// <summary>
+        /// 更新焦点窗口的群聊公告,仅适用于自有群
+        /// </summary>
+        /// <param name="groupNotice">群聊公告</param>
+        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
+        public async Task<Result> UpdateGroupNotice(string groupNotice) => await this.OwnerGroup.UpdateGroupNotice(groupNotice);
+
+        
+
         #endregion
 
         #region 通讯录管理

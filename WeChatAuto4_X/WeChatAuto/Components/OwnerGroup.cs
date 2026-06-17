@@ -118,13 +118,120 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 更新群聊公告
+        /// 更新群聊公告,仅适用于自有群
         /// </summary>
         /// <param name="groupName">群聊名称</param>
         /// <param name="groupNotice">群聊公告</param>
-        /// <returns>微信响应结果</returns>
-        public async Task<ChatResponse> UpdateGroupNotice(string groupName, string groupNotice) => throw new Exception("待完成");
-        //   => await WxMainWindow.UpdateGroupNotice(groupName, groupNotice);
+        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
+        public async Task<Result> UpdateGroupNotice(string groupName, string groupNotice)
+        {
+            var find = await _Client.Conversations.Search(groupName);
+            if (!find)
+                return Result.Fail($"错误：没有发现groupName={groupName}的群");
+            return await WeChatInvoker.Call(UpdateGroupNoticeCore, groupNotice);
+        }
+
+        /// <summary>
+        /// 更新焦点窗口的群聊公告,仅适用于自有群
+        /// </summary>
+        /// <param name="groupNotice">群聊公告</param>
+        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
+        public async Task<Result> UpdateGroupNotice(string groupNotice)
+        {
+            var headInfo = await this._Client.GetTitle();
+            if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
+                return Result.Fail("错误：本窗口不是群聊窗口，修改群聊公告 动作终止!");
+            return await WeChatInvoker.Call(UpdateGroupNoticeCore, groupNotice);
+        }
+
+        private Result UpdateGroupNoticeCore(UIA3Automation automation, string groupNotice)
+        {
+            if (string.IsNullOrWhiteSpace(groupNotice))
+                return Result.Fail("groupNotice参数不能为空！");
+            var rootPane = this._GetChatRootPane();
+            var pane = rootPane.FindFirstByXPath("/Group[2]");
+            if (pane == null)
+                return Result.Fail("没有找到聊天信息的根Pane");
+            using var bitmap = pane.Capture();
+            using var mat = this._Client.OcrEngee.GetMatFromBitmap(bitmap);
+            //扩大两倍好识别
+            using var mat2 = new Mat();
+            CvInvoke.Resize(mat, mat2, Size.Empty, 2, 2, Emgu.CV.CvEnum.Inter.Cubic);
+            using var srcImg = mat2.ToBitmap();
+            var ocrResult = this._Client.OcrEngee.Detect(srcImg, 0, mat2.Width > mat2.Height ? mat2.Width : mat2.Height, 0.5f, 0.3f, 1.5f, false, false, false);
+            var item = ocrResult.TextBlocks.Where(x => x.Text.Trim().Equals("群公告")).FirstOrDefault();
+            if (item == null)
+                return Result.Fail("OCR识别 群公告 失败");
+            var srcPoint = new Point((int)(item.BoxPoints[0].X / 2 + (item.BoxPoints[2].X - item.BoxPoints[0].X) / 4), item.BoxPoints[0].Y / 2 + (int)((item.BoxPoints[2].Y - item.BoxPoints[0].Y) / 4));
+            var point = new Point(pane.BoundingRectangle.X + srcPoint.X, pane.BoundingRectangle.Y + srcPoint.Y);
+            var baseStep = 25;
+            var ratio = DpiHelper.GetScaleForWindow(this._Client.MainWindow.Properties.NativeWindowHandle);
+            var destPoint = new Point(point.X + 90, point.Y + (int)(baseStep * ratio));
+            Mouse.Position = destPoint;
+            RandomWait.Wait(100, 300);
+            SupperMouseKey.MoveTo(destPoint.Confusion(10, 0));
+            RandomWait.Wait(300, 900);
+            SupperMouseKey.LeftClick();
+            RandomWait.Wait(300, 1200);
+            //弹出修改群公告窗口
+            var chatInfo = this._Client.ChatContent.ChatHeader.GetTitleCore(automation);
+            var title = $"“{chatInfo.Title}”的群公告";
+            var desktop = automation.GetDesktop();
+            var winRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName(title).And(cf.ByControlType(ControlType.Pane))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            if (winRetry.Success)
+            {
+                var win = winRetry.Result;
+                var document = win.FindFirstByXPath("/Document[@ClassName='Chrome_RenderWidgetHostHWND']");
+                var baseWidth = 71;
+                var baseY = 30;
+                point = new Point(document.BoundingRectangle.X + document.BoundingRectangle.Width - (int)(baseWidth * ratio), document.BoundingRectangle.Y + (int)(baseY * ratio));
+                Mouse.Position = point;
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(point.Confusion(10, 2));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 1200);
+                point = document.BoundingRectangle.Center();
+                Mouse.Position = point.Confusion(10, 5);
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(point.Confusion(10, 5));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 1200);
+                SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
+                RandomWait.Wait(300, 900);
+                ClipboardHelper.SetText(groupNotice);
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
+                //点击完成
+                RandomWait.Wait(600, 1500);
+                baseWidth = 44;
+                baseY = 26;
+                point = new Point(document.BoundingRectangle.X + document.BoundingRectangle.Width - (int)(baseWidth * ratio), document.BoundingRectangle.Y + (int)(baseY * ratio));
+                Mouse.Position = point;
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(point.Confusion(5, 0));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 1200);
+                //confirm
+                var path = "/Document/Custom/Button[@Name='发布']";
+                var confirmRetry = Retry.WhileNull(() => win.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (confirmRetry.Success)
+                {
+                    var confirm = confirmRetry.Result;
+                    confirm.Click();
+                    RandomWait.Wait(300, 1200);
+                    this.CloseChatInfoPane();
+                    return Result.Ok();
+                }
+            }
+
+            this.CloseChatInfoPane();
+            return Result.Fail("错误：修改群公告失败");
+        }
 
         /// <summary>
         /// 创建群聊

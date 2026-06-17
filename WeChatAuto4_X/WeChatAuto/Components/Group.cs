@@ -63,9 +63,9 @@ namespace WeChatAuto.Components
                 if (button != null)
                 {
                     var point = button.GetClickablePoint();
-                    Mouse.Position = point.Confusion(5, 3);
+                    Mouse.Position = point.Confusion(5, 0);
                     RandomWait.Wait(100, 300);
-                    SupperMouseKey.MoveTo(point.Confusion(5, 3));
+                    SupperMouseKey.MoveTo(point.Confusion(5, 0));
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.LeftClick();
                     RandomWait.Wait(1000, 1500);

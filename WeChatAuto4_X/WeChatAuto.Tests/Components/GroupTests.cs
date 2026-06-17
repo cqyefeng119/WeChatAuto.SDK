@@ -128,4 +128,23 @@ public class GroupTests
         Assert.True(result.Success);
     }
 
+    [Fact(DisplayName = "测试修改群公告")]
+
+    public async Task Test_ChangeOwnerChatGroupNotice()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.UpdateGroupNotice("DroidMirror官方技术支持", "测试02");
+        Assert.True(result.Success);
+    }
+
+    [Fact(DisplayName = "测试修改群公告_本窗口")]
+    public async Task Test_ChangeOwnerChatGroupNotice_thisWindow()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.UpdateGroupNotice("测试03");
+        Assert.True(result.Success);
+    }
+
 }
