@@ -858,6 +858,54 @@ namespace WeChatAuto.Components
         /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
         public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(groupName, memberName);
 
+        /// <summary>
+        /// 创建群聊
+        /// 如果存在，则打开群聊，否则创建一个新群聊
+        /// </summary>
+        /// <param name="groupName">群聊名称,不能与之前的群聊名称重复</param>
+        /// <param name="firstWho">首个成员名称，必须是好友，不能是群聊名称，用来创建群聊定位,可以为空，如果为空，则以当前聊天的好友为基准创建群聊</param>
+        /// <param name="memberName">成员名称,成员数量要大于0</param>
+        /// <returns>是否创建成功,如果创建失败，则显示原因,具体请参考<see cref="Result"/></returns>
+        public async Task<Result> CreateOwnerChatGroup(string groupName, string firstWho, string[] memberName) => await this.OwnerGroup.CreateOwnerChatGroup(groupName, firstWho, memberName);
+
+        /// <summary>
+        /// 修改群名，适用于自有群群名修改
+        /// </summary>
+        /// <param name="oldGroupName">旧群名称</param>
+        /// <param name="newGroupName">新群名称</param>
+        /// <returns>微信响应结果</returns>
+        public async Task<Result> ChangeOwnerChatGroupName(string oldGroupName, string newGroupName) => await this.OwnerGroup.ChangeOwnerChatGroupName(oldGroupName, newGroupName);
+
+        /// <summary>
+        /// 修改自己在群中的昵称
+        /// </summary>
+        /// <param name="groupName">群名</param>
+        /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> ChangeChatGroupNickName(string groupName, string nickName) => await this.OwnerGroup.ChangeChatGroupNickName(groupName, nickName);
+
+        /// <summary>
+        /// 修改自己在群中的昵称,本方法适用于当前窗口是群聊的昵称修改
+        /// </summary>
+        /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> ChangeChatGroupNickName(string nickName) => await this.OwnerGroup.ChangeChatGroupNickName(nickName);
+
+        /// <summary>
+        /// 改变群备注,群聊备注仅自己可见.
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <param name="newMemo">新备注，如果为空，则为删除备注</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> ChangeChatGroupMemo(string groupName, string newMemo) => await this.OwnerGroup.ChangeChatGroupMemo(groupName, newMemo);
+
+        /// <summary>
+        /// 改变本聊天窗口的群备注,群聊备注仅自己可见.
+        /// </summary>
+        /// <param name="newMemo">新备注,如果为空，则为删除备注</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> ChangeChatGroupMemo(string newMemo) => await this.OwnerGroup.ChangeChatGroupMemo(newMemo);
+
         #endregion
 
         #region 通讯录管理

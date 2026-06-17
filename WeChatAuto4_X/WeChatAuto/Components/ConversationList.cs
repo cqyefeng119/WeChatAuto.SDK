@@ -394,12 +394,6 @@ namespace WeChatAuto.Components
             //System.Windows.Clipboard.SetText(who);
             edit.AsTextBox().Text = who;
             RandomWait.Wait(300, 1200);
-            // edit.Click();
-            // Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, FlaUI.Core.WindowsAPI.VirtualKeyShort.KEY_A);
-            // RandomWait.Wait(300, 800);
-            // Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
-            // Keyboard.TypeSimultaneously(VirtualKeyShort.LCONTROL, VirtualKeyShort.KEY_V);
-            // RandomWait.Wait(300, 800);
             //等候浮动菜单出来
             var popWinResult = Retry.WhileNull(() =>
             {
@@ -442,7 +436,7 @@ namespace WeChatAuto.Components
                         }
                         index++;
                         System.Diagnostics.Debug.WriteLine($"name={item.Name}");
-                        if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
+                        if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏") || item.Name.Equals("搜索网络结果"))
                             break;
                     }
                 }
@@ -478,7 +472,7 @@ namespace WeChatAuto.Components
                             return true;
                         }
                         index++;
-                        if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏"))
+                        if (item.Name.Equals("查看全部") || item.Name.Equals("聊天记录") || item.Name.Equals("收藏") || item.Name.Equals("搜索网络结果"))
                             break;
                     }
                 }

@@ -58,8 +58,74 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.AddOwnerChatGroupMember(name, new string[] {"秋歌"});
+        await client.AddOwnerChatGroupMember(name, new string[] { "秋歌" });
         Assert.True(true);
+    }
+
+    [Fact(DisplayName = "测试新建群")]
+    public async Task Test_CreateOwnerChatGroup()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.CreateOwnerChatGroup("我的测试01", "AI.Net", new string[] { "智影工坊_test", "秋歌", "khcgb" });
+        Assert.True(result.Success);
+    }
+
+    [Fact(DisplayName = "测试修改自有群名")]
+    public async Task Test_ChangeOwnerChatGroupName()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.ChangeOwnerChatGroupName("DroidMirror官方技术支持222", "DroidMirror官方技术支持333");
+        Assert.True(result.Success);
+    }
+
+    [Theory(DisplayName = "测试修改群备注")]
+    [InlineData("DroidMirror官方技术支持", "aaa")]
+    [InlineData("aaa", "DroidMirror官方技术支持")]
+    public async Task Test_ChangeOwnerChatGroupMemo(string groupName, string memo)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.ChangeChatGroupMemo(groupName, memo);
+        Assert.True(result.Success);
+    }
+
+    [Theory(DisplayName = "测试修改群备注_本窗口")]
+    [InlineData("aaa")]
+    [InlineData("bbb")]
+    [InlineData("")]
+    public async Task Test_ChangeOwnerChatGroupMemo_thisWindow(string memo)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.ChangeChatGroupMemo(memo);
+        Assert.True(result.Success);
+    }
+
+
+    [Theory(DisplayName = "测试修改在群的昵称")]
+    [InlineData("DroidMirror官方技术支持", "aaa")]
+    [InlineData("DroidMirror官方技术支持", "bbb")]
+    [InlineData("DroidMirror官方技术支持", "")]
+    public async Task Test_ChangeOwnerChatGroupNickName(string groupName, string nickName)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.ChangeChatGroupNickName(groupName, nickName);
+        Assert.True(result.Success);
+    }
+
+    [Theory(DisplayName = "测试修改在群中的昵称_本窗口")]
+    [InlineData("aaa")]
+    [InlineData("bbb")]
+    [InlineData("")]
+    public async Task Test_ChangeOwnerChatGroupNickName_thisWindow(string nickName)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.ChangeChatGroupNickName(nickName);
+        Assert.True(result.Success);
     }
 
 }

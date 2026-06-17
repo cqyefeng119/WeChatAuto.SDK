@@ -1095,7 +1095,7 @@ namespace WeChatAuto.Components
             index = 0;
             var count = 0;
             var oldSnap = new List<string>();
-            while (index < 15)
+            while (index < 30)
             {
                 var itemChecks = root.FindAllChildren(x => x.ByControlType(ControlType.CheckBox)).Where(x => x.BoundingRectangle.Y >= root.BoundingRectangle.Y && x.BoundingRectangle.Y + 40 <= root.BoundingRectangle.Y + root.BoundingRectangle.Height);
                 var newSnap = itemChecks.Select(x => x.Name + "_" + x.Properties.RuntimeId.ToUniqueString()).ToList();

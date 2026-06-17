@@ -53,6 +53,16 @@ namespace WeChatAuto.Services
 			Mat mat = clone.ToMat();
 			return mat;
 		}
+		public Mat GetMatFromBitmap(Bitmap bmp)
+		{
+			using Bitmap clone = new Bitmap(bmp.Width, bmp.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+			using (Graphics g = Graphics.FromImage(clone))
+			{
+				g.DrawImage(bmp, 0, 0);
+			}
+			Mat mat = clone.ToMat();
+			return mat;
+		}
 		/// <summary>
 		/// OCR识别，找出特定文字的中心坐标,此坐标针对屏幕
 		/// 仅支持竖向方向的截取
@@ -335,7 +345,7 @@ namespace WeChatAuto.Services
 				{
 					var centerPoint = new Point(dateItem.BoxPoints[0].X + (int)((dateItem.BoxPoints[2].X - dateItem.BoxPoints[0].X) / 2),
 					dateItem.BoxPoints[0].Y + (int)((dateItem.BoxPoints[2].Y - dateItem.BoxPoints[0].Y) / 2));
-					point = new Point(((centerPoint.X - padding) / 2)+offsetX, (centerPoint.Y - padding) / 2);
+					point = new Point(((centerPoint.X - padding) / 2) + offsetX, (centerPoint.Y - padding) / 2);
 					break;
 				}
 				boxScoreThresh -= 0.1f;
