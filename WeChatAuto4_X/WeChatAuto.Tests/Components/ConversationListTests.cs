@@ -110,7 +110,7 @@ public class ConversationList
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.SetTopMost("秋歌", true);
+        var result = await client.SetTopMost("DroidMirror官方技术支持", true);
         Assert.True(result);
     }
 

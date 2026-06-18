@@ -88,7 +88,7 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.CreateOwnerChatGroup("我的测试02", "AI.Net", new string[] { "智影工坊_test" });
+        var result = await client.CreateOwnerChatGroup("DroidMirror官方技术支持", "AI.Net", new string[] { "智影工坊_test" });
         Assert.True(result.Success);
     }
 
