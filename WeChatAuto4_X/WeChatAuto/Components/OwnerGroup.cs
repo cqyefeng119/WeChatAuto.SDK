@@ -438,6 +438,20 @@ namespace WeChatAuto.Components
             await WeChatInvoker.Call(AddOwnerChatGroupMemberCore, groupName, memberName);
         }
 
+
+        /// <summary>
+        /// 为焦点群聊窗口添加群聊成员，适用于自有群
+        /// </summary>
+        /// <param name="memberName">成员名称</param>
+        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
+        public async Task AddOwnerChatGroupMember(OneOf<string, string[]> memberName)
+        {
+            var headInfo = await this._Client.GetTitle();
+            if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
+                return;
+            await WeChatInvoker.Call(AddOwnerChatGroupMemberCore, headInfo.Title, memberName);
+        }
+
         private void AddOwnerChatGroupMemberCore(UIA3Automation automation, string groupName, OneOf<string, string[]> memberName)
         {
             if (!CheckGroup(automation, groupName))

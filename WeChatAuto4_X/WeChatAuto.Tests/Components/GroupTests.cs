@@ -50,6 +50,7 @@ public class GroupTests
         var groupOwner = await client.GetGroupOwner(name);
         Assert.True((groupOwner == client.NickName) == result);
     }
+
     [Theory(DisplayName = "测试拉好友加群")]
     [InlineData("DroidMirror官方技术支持")]
     [InlineData("WeChatAuto.SDK官方技术支持")]
@@ -58,10 +59,9 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.AddOwnerChatGroupMember(name, new string[] { "智影工坊_test", "AI.Net", "秋歌", "khcgb" });
+        await client.AddOwnerChatGroupMember(name, new string[] { "智影工坊_test" });
         Assert.True(true);
     }
-
 
     [Theory(DisplayName = "测试群内删人")]
     [InlineData("DroidMirror官方技术支持")]
@@ -88,8 +88,26 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.CreateOwnerChatGroup("我的测试01", "AI.Net", new string[] { "智影工坊_test", "秋歌", "khcgb" });
+        var result = await client.CreateOwnerChatGroup("我的测试02", "AI.Net", new string[] { "智影工坊_test" });
         Assert.True(result.Success);
+    }
+
+    [Fact(DisplayName = "测试退出群_本窗口")]
+    public async Task Test_QuitGroup_this()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.QuitChatGroup();
+        Assert.True(true);
+    }
+
+    [Fact(DisplayName = "测试退出群")]
+    public async Task Test_QuitGroup()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.QuitChatGroup("DroidMirror官方技术支持");
+        Assert.True(true);
     }
 
     [Fact(DisplayName = "测试修改自有群名")]

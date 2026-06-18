@@ -859,6 +859,13 @@ namespace WeChatAuto.Components
         public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(groupName, memberName);
 
         /// <summary>
+        /// 焦点窗口的群聊添加成员，适用于自有群
+        /// </summary>
+        /// <param name="memberName">成员名称</param>
+        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
+        public async Task AddOwnerChatGroupMember(OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(memberName);
+
+        /// <summary>
         /// 创建群聊
         /// 如果存在，则打开群聊，否则创建一个新群聊
         /// </summary>
@@ -949,6 +956,20 @@ namespace WeChatAuto.Components
         /// <param name="memberName">成员名称</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> RemoveOwnerChatGroupMember(OneOf<string, string[]> memberName) => await this.OwnerGroup.RemoveOwnerChatGroupMember(memberName);
+
+        /// <summary>
+        /// 退出群聊
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <param name="clearHistory">是否清除历史消</param>
+        public async Task QuitChatGroup(string groupName, bool clearHistory = true) => await this.OwnerGroup.QuitChatGroup(groupName, clearHistory);
+
+        /// <summary>
+        /// 退出焦点窗口的聊天群
+        /// </summary>
+        /// <param name="clearHistory">是否清除历史消</param>
+        /// <returns></returns>
+        public async Task QuitChatGroup(bool clearHistory = true) => await this.OwnerGroup.QuitChatGroup(clearHistory);
 
         #endregion
 

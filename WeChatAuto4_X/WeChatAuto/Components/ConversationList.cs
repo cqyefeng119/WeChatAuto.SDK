@@ -508,7 +508,7 @@ namespace WeChatAuto.Components
             var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
             return items;
         }
-        private SimpleConversation GetConversationItemFromName(string name)
+        internal SimpleConversation GetConversationItemFromName(string name)
         {
             var conversation = new SimpleConversation();
             string[] aryName = name.Split('\n');

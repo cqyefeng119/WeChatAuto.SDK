@@ -28,6 +28,7 @@ using FlaUI.UIA3;
 using WeAutoCommon.Models;
 using System.Reflection.Metadata.Ecma335;
 using Emgu.CV;
+using System.Windows.Media.Imaging;
 
 namespace WeChatAuto.Components
 {
@@ -220,17 +221,116 @@ namespace WeChatAuto.Components
             return "";
         }
 
-        /// <summary>
-        /// 清空群聊历史聊天记录
-        /// </summary>
-        /// <param name="groupName">群聊名称</param>
-        public async Task ClearChatGroupHistory(string groupName) => await Task.CompletedTask;
 
         /// <summary>
         /// 退出群聊
         /// </summary>
         /// <param name="groupName">群聊名称</param>
-        public async Task QuitChatGroup(string groupName) => await Task.CompletedTask;
+        /// <param name="clearHistory">是否清除历史消</param>
+        public async Task QuitChatGroup(string groupName, bool clearHistory = true)
+        {
+            var find = await _Client.Conversations.Search(groupName);
+            if (!find)
+                return;
+            await WeChatInvoker.Call(QuitChatGroupCore, clearHistory,groupName);
+        }
+
+        /// <summary>
+        /// 退出焦点窗口的聊天群
+        /// </summary>
+        /// <param name="clearHistory">是否清除历史消</param>
+        /// <returns></returns>
+        public async Task QuitChatGroup(bool clearHistory = true)
+        {
+            var headInfo = await this._Client.GetTitle();
+            if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
+                return;
+            await WeChatInvoker.Call(QuitChatGroupCore, clearHistory,headInfo.Title);
+        }
+
+        private void QuitChatGroupCore(UIA3Automation automation, bool clearHistory,string groupName)
+        {
+            var root = this._GetChatRootPane();
+            RandomWait.Wait(300, 900);
+            //先到底部
+            var point = root.BoundingRectangle.Center().Confusion(10, 20);
+            Mouse.Position = point;
+            RandomWait.Wait(100, 300);
+            SupperMouseKey.MoveTo(root.BoundingRectangle.Center().Confusion(10, 20));
+            RandomWait.Wait(300, 900);
+            var index = 0;
+            while (index < 3)
+            {
+                MouseScrollHelper.DownStep(point, 5);
+                SupperMouseKey.MoveTo(root.BoundingRectangle.Center().Confusion(10, 20));
+                RandomWait.Wait(300, 900);
+                index++;
+            }
+            //点击 退出群聊 按钮
+            using var bitmap = root.Capture();
+            using var mat = this._Client.OcrEngee.GetMatFromBitmap(bitmap);
+            var roi = new Rectangle(0, (int)(mat.Height * 0.7), mat.Width, mat.Height - (int)(mat.Height * 0.7));
+            using var mat2 = new Mat(mat, roi);
+            using var destBitmap = mat2.ToBitmap();
+            var ocrResult = this._Client.OcrEngee.Detect(destBitmap, 0, mat2.Height, 0.5f, 0.3f, 1.6f, false, false, false);
+            var region = ocrResult.TextBlocks.Where(u => u.Text.Trim().Equals("退出群聊")).FirstOrDefault();
+            if (region != null)
+            {
+                point = new Point(region.BoxPoints[0].X + (int)((region.BoxPoints[2].X - region.BoxPoints[0].X) / 2),
+                                  region.BoxPoints[0].Y + (int)((region.BoxPoints[2].Y - region.BoxPoints[0].Y) / 2));
+                point.X = root.BoundingRectangle.X + point.X;
+                point.Y = root.BoundingRectangle.Y + (int)(root.BoundingRectangle.Height * 0.7) + point.Y;
+                Mouse.Position = point;
+                RandomWait.Wait(100, 300);
+                SupperMouseKey.MoveTo(point.Confusion(10, 3));
+                RandomWait.Wait(300, 900);
+                SupperMouseKey.LeftClick();
+                RandomWait.Wait(300, 900);
+
+                //点击退出按钮
+                var path = "/Window[@Name='Weixin'][@ClassName='mmui::XDialog']/Group/Group/Group/Button[@Name='确定']";
+                var confirmRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (confirmRetry.Success)
+                {
+                    if (clearHistory)
+                    {
+                        var parent = confirmRetry.Result.GetParent().GetParent().GetParent();
+                        var clkCheck = parent.FindFirstChild(cf => cf.ByControlType(ControlType.CheckBox));
+                        clkCheck.Click();
+                        RandomWait.Wait(300, 900);
+                    }
+                    var confirmButton = confirmRetry.Result;
+                    point = confirmButton.BoundingRectangle.Center();
+                    Mouse.Position = point;
+                    RandomWait.Wait(100, 300);
+                    SupperMouseKey.MoveTo(point.Confusion(10, 2));
+                    RandomWait.Wait(300, 900);
+                    SupperMouseKey.LeftClick();
+                    RandomWait.Wait(1500, 3000);
+                    //会话窗口乱点一下.
+                    var cList = this._Client.Conversations.GetVisibleConversationElements(automation);
+                    var cObjList = this._Client.Conversations.GetVisibleConversationsCore(automation);
+                    if (cObjList.FirstOrDefault(x=>x.ConversationTitle.Equals(groupName)) != null)
+                    {
+                        return;
+                    }
+                    var cRoot = this._Client.Conversations.ConversationRoot;
+                    foreach (var c in cList)
+                    {
+                        if (c.BoundingRectangle.IsClickSafe(cRoot.BoundingRectangle))
+                        {
+                            var info = this._Client.Conversations.GetConversationItemFromName(c.Name);
+                            if (info.NotReadNumbr == 0 || info.IsDoNotDisturb)
+                            {
+                                c.Click();
+                                RandomWait.Wait(300, 900);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// 设置保存到通讯录
@@ -238,7 +338,10 @@ namespace WeChatAuto.Components
         /// <param name="groupName">群聊名称</param>
         /// <param name="isSaveToAddress">是否保存到通讯录,默认是True:保存,False:取消保存</param>
         /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
-        public ChatResponse SetSaveToAddress(string groupName, bool isSaveToAddress = true) => null;
+        public async Task<Result> SetSaveToAddress(string groupName, bool isSaveToAddress = true)
+        {
+            return Result.Ok();
+        }
 
         /// <summary>
         /// 获取群聊成员列表
@@ -274,7 +377,7 @@ namespace WeChatAuto.Components
             if (!title.CanTalk())
                 return resultList;
             invokeButton.Click();
-            RandomWait.Wait(600,1200);
+            RandomWait.Wait(600, 1200);
             var result = __ClickChatHistoryButton(automation, invokeButton, title.Title);  //打开消息历史窗口
             if (!result.Success) return resultList;
             result = __ClickGroupMemberButton(automation, result.Value);
