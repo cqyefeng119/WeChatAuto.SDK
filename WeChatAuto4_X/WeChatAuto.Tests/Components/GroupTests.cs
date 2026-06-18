@@ -115,7 +115,7 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.ChangeOwnerChatGroupName("DroidMirror官方技术支持222", "DroidMirror官方技术支持333");
+        var result = await client.ChangeOwnerChatGroupName("DroidMirror官方技术支持", "DroidMirror官方技术支持333");
         Assert.True(result.Success);
     }
 
@@ -173,7 +173,11 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.UpdateGroupNotice("DroidMirror官方技术支持", "测试02");
+        var result = await client.UpdateGroupNotice("DroidMirror官方技术支持", """
+使用 DroidMirror 过程中如果遇到问题，欢迎随时反馈，我们会尽快处理和优化🚀🚀。
+如果有好的功能建议或改进想法，也欢迎一起讨论。
+👉 遇到不会用的地方也不用担心，我们会尽量帮大家解答。
+""");
         Assert.True(result.Success);
     }
 
