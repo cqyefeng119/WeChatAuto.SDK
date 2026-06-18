@@ -462,184 +462,84 @@ namespace WeChatAuto.Components
             var memberList = memberName.IsT0 ? new List<string> { memberName.AsT0.Trim() } : memberName.AsT1.ToList().Select(x => x.Trim()).ToList();
             if (memberList.Count() == 0)
                 return;
-            var winRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstChild(cf => cf.ByName("微信添加群成员").And(cf.ByClassName("mmui::SessionPickerWindow")).And(cf.ByControlType(ControlType.Window))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
-            if (!winRetry.Success)
-                return;
-            var win = winRetry.Result.AsWindow();
-            try
+            var editPath = "/Window[@Name='微信添加群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
+            var searchEditRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(editPath), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            var path = "";
+            if (searchEditRetry.Success)
             {
-                var groupRoot = win.FindFirstDescendant(cf => cf.ByClassName("mmui::SPMasterView").And(cf.ByControlType(ControlType.Group)));  //会变化.
-                var RootFunc = () =>
+                var editParent = searchEditRetry.Result.GetParent();
+                foreach (var m in memberList)
                 {
-                    var item = groupRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByName("请勾选需要添加的联系人"))).AsListBox();
-                    return item;
-                };
-                var root = RootFunc();
-                int index = 0;
-                var oldSnap = new List<string>();
-                var scrollPoint = root.BoundingRectangle.SafeRandomPoint();
-                var rootBoundingRectangle = root.BoundingRectangle;
-                while (index < 2)
-                {
-                    var allItem = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox)).ToList().Select(x => x.Name.Trim()).ToList();
-                    var items = root.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox)).ToList().Where(u => !string.IsNullOrWhiteSpace(u.Name));
-                    //第一个滚动
-                    foreach (var item in items)
+                    //清空
+                    var clearButton = editParent.FindFirstChild(cf => cf.ByName("清空")).AsButton();
+                    if (clearButton != null)
                     {
-                        if (memberList.Contains(item.Name.Trim()))
-                        {
-                            if (item.BoundingRectangle.Y >= rootBoundingRectangle.Y && item.BoundingRectangle.Y + item.BoundingRectangle.Height <= rootBoundingRectangle.Y + rootBoundingRectangle.Height)
-                            {
-                                if (item.IsPatternSupported(item.Automation.PatternLibrary.TogglePattern))
-                                {
-                                    var point = item.BoundingRectangle.SafeRandomPoint();
-                                    // Mouse.MoveTo(point);
-                                    SupperMouseKey.MoveTo(point);
-                                    RandomWait.Wait(200, 900);
-                                    // Mouse.Click();
-                                    SupperMouseKey.LeftClick();
-                                    RandomWait.Wait(300, 900);
-                                    memberList.Remove(item.Name.Trim());
-                                    index = 2;
-                                    break;
-                                }
-                                else
-                                {
-                                    memberList.Remove(item.Name.Trim());
-                                }
-                            }
-                        }
-                    }
-                    if (memberList.Count == 0)
-                    {
-                        break;
-                    }
-                    if (index >= 2)
-                    {
-                        break;
-                    }
-                    var exceptList = allItem.Except(oldSnap);
-                    if (exceptList.Count() > 0)
-                    {
-                        index = 0;
-                        oldSnap = allItem;
-                    }
-                    else
-                    {
-                        index++;
-                    }
-                    // MouseScrollHelper.DownStep(scrollPoint, 2);
-                    SupperMouseKey.MoveTo(scrollPoint.Confusion(5, 5));
-                    RandomWait.Wait(300, 600);
-                    SupperMouseKey.Scroll(-3);
-                    RandomWait.Wait(300, 600);
-                }
-                //第二个，从筛选框选中
-                if (memberList.Count > 0)
-                {
-                    var search = win.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("搜索")).And(cf.ByClassName("mmui::XValidatorTextEdit")));
-                    Rectangle rectangle = Rectangle.Empty;
-                    var searchPoint = search.BoundingRectangle.SafeRandomPoint();
-                    foreach (var item in memberList.ToList())
-                    {
-                        SupperMouseKey.MoveTo(searchPoint);
-                        RandomWait.Wait(500, 1500);
-                        SupperMouseKey.LeftClick();
-                        RandomWait.Wait(100, 500);
-                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
-                        RandomWait.Wait(100, 500);
-                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
-                        RandomWait.Wait(100, 500);
-                        // System.Windows.Clipboard.SetText(item);
-                        // RandomWait.Wait(100, 500);
-                        // // Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
-                        // SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
-                        SupperMouseKey.Type(item);
-                        RandomWait.Wait(1200, 2500);
-                        //有风控，换成OCR方案
-                        if (rectangle == Rectangle.Empty)
-                        {
-                            var searchListRetry = Retry.WhileNull(() => win.FindFirstDescendant(cf => cf.ByAutomationId("sp_search_result_list").And(cf.ByName("请勾选需要添加的联系人"))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
-                            if (!searchListRetry.Success)
-                            {
-                                RandomWait.Wait(600, 1200);
-                                continue;
-                            }
-                            if (rectangle == Rectangle.Empty)
-                            {
-                                rectangle = searchListRetry.Result.BoundingRectangle;
-                            }
-                        }
-
-                        var point = this._Client.OcrEngee.OCRVerticalLeftCuttingDetect(rectangle, 0.5f, 100, item, false);
-                        if (!point.IsEmpty)
-                        {
-                            // Mouse.Click(point.Confusion(5, 5));
-                            SupperMouseKey.LeftClick(point.Confusion(5, 5));
-                        }
-
-                        #region UI Tree方案
-                        // var searchListRetry = Retry.WhileNull(()=>win.FindFirstDescendant(cf=>cf.ByAutomationId("sp_search_result_list").And(cf.ByName("请勾选需要添加的联系人"))),TimeSpan.FromSeconds(2),TimeSpan.FromMilliseconds(200));
-                        // if (!searchListRetry.Success)
-                        // {
-                        //     RandomWait.Wait(600, 1200);
-                        //     continue;
-                        // }
-                        // var subItem = searchListRetry.Result.FindFirstChild(cf => cf.ByControlType(ControlType.CheckBox).And(cf.ByName(item)));
-                        // if (subItem != null)
-                        // {
-                        //     if (subItem.IsPatternSupported(subItem.Automation.PatternLibrary.TogglePattern))
-                        //     {
-                        //         point = subItem.BoundingRectangle.SafeRandomPoint();
-                        //         Mouse.MoveTo(point);
-                        //         RandomWait.Wait(100, 300);
-                        //         subItem.ClickEnhance(win);
-                        //         memberList.Remove(item);
-                        //         if (memberList.Count() == 0)
-                        //             break;
-                        //     }
-                        // }
-                        #endregion
-                        RandomWait.Wait(600, 1200);
-                    }
-                }
-                RandomWait.Wait(600, 1200);
-                //选择框中可能选中，也可能没有，选中点击确定，没有选中选项直接关闭窗口
-                var selectRoot = win.FindFirstDescendant(cf => cf.ByAutomationId("sp_choice_contact_list.qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group)));
-                var selectItem = selectRoot.FindAllDescendants(cf => cf.ByControlType(ControlType.Button));
-                if (selectItem.Length == 0)
-                {
-                    RandomWait.Wait(1000, 3000);
-                    win.Close();
-                }
-                else
-                {
-                    var button = win.FindFirstDescendant(cf => cf.ByAutomationId("confirm_btn").And(cf.ByControlType(ControlType.Button)));
-                    if (button != null)
-                    {
+                        clearButton.Click();
                         RandomWait.Wait(600, 1500);
-                        button.ClickEnhance(win);
-                        RandomWait.Wait(1000, 2000);
-                        //人数多时，可能会出现弹窗提示
-                        var path = "/Window/Group/Group/Group/Button[@Name='邀请'][@ClassName='mmui::XOutlineButton']";
+                    }
+                    var searchEdit = this._Client.MainWindow.FindFirstByXPath(editPath).AsTextBox();
+                    searchEdit.Text = m;
+                    RandomWait.Wait(800, 2500);
+                    path = "/Window[@Name='微信添加群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_search_result_list']";
+                    var itemRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+                    if (itemRetry.Success)
+                    {
+                        var items = itemRetry.Result.FindAllChildren(cf => cf.ByControlType(ControlType.CheckBox)).Select(u => u.AsCheckBox()).ToList();
+                        foreach (var item in items)
+                        {
+                            if (item.Name.Equals(m))
+                            {
+                                //勾选
+                                var point = item.BoundingRectangle.Center();
+                                Mouse.Position = point.Confusion(10, 4);
+                                RandomWait.Wait(100, 300);
+                                SupperMouseKey.MoveTo(point.Confusion(10, 4));
+                                RandomWait.Wait(300, 900);
+                                SupperMouseKey.LeftClick();
+                                break;
+                            }
+                        }
+
+                    }
+                    //停顿，准备下一个勾选
+                    RandomWait.Wait(1200, 3000);
+                }
+                //确认是点击确定还是取消
+                path = "/Window[@Name='微信添加群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Button[@Name='添加'][@AutomationId='confirm_btn']";
+                var addRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (addRetry.Success)
+                {
+                    var addButton = addRetry.Result.AsButton();
+                    if (addButton.IsEnabled)
+                    {
+                        var point = addButton.BoundingRectangle.Center();
+                        Mouse.Position = point.Confusion(10, 4);
+                        RandomWait.Wait(100, 300);
+                        SupperMouseKey.MoveTo(point.Confusion(10, 4));
+                        RandomWait.Wait(300, 900);
+                        SupperMouseKey.LeftClick();
+                        RandomWait.Wait(600, 2000);
+                        //如果群人数比较多，会存在confirm的情况
+                        path = "/Window/Group/Group/Group/Button[@Name='邀请'][@ClassName='mmui::XOutlineButton']";
                         var buttonRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(200));
                         if (buttonRetry.Success)
                         {
                             var qryButton = buttonRetry.Result;
-                            var point = qryButton.BoundingRectangle.SafeRandomPoint();
-                            // Mouse.Click(point);
+                            point = qryButton.BoundingRectangle.SafeRandomPoint();
                             SupperMouseKey.LeftClick(point);
-                            RandomWait.Wait(1000, 3000);
                         }
                     }
-
-                    this._Client.ChatContent.Sender.FcouseSenderCore(automation);
+                    else
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                    }
                 }
-
-            }
-            catch (Exception ex)
-            {
-                _Logger.Error(ex.ToString());
+                else
+                {
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                }
+                RandomWait.Wait(1000, 3000);
+                this.CloseChatInfoPane();
             }
         }
 
@@ -656,8 +556,117 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="groupName">群聊名称</param>
         /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
-        public async Task<ChatResponse> RemoveOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => throw new Exception("待完成");
-        //=> await WxMainWindow.RemoveOwnerChatGroupMember(groupName, memberName);
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> RemoveOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName)
+        {
+            var find = await _Client.Conversations.Search(groupName);
+            if (!find)
+                return Result.Fail($"从未找到群： {groupName} ,移除好友动作失败！");
+            return await WeChatInvoker.Call(RemoveOwnerChatGroupMemberCore, memberName, groupName);
+        }
+
+        /// <summary>
+        /// 移除焦点窗口的群聊成员,适用于自有群
+        /// </summary>
+        /// <param name="memberName">成员名称</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> RemoveOwnerChatGroupMember(OneOf<string, string[]> memberName)
+        {
+            var headInfo = await this._Client.GetTitle();
+            if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
+                return Result.Fail($"或许焦点窗口 {headInfo.Title} 不是群聊窗口");
+            return await WeChatInvoker.Call(RemoveOwnerChatGroupMemberCore, memberName, headInfo.Title);
+        }
+
+        private Result RemoveOwnerChatGroupMemberCore(UIA3Automation automation, OneOf<string, string[]> memberName, string groupName)
+        {
+            var paneRoot = PaneRoot;
+            var point = this._Client.OcrEngee.OCRVerticalDetect(paneRoot, 0.5f, "移出");
+            if (point.IsEmpty)
+                return Result.Fail("");
+            this._Client.MainWindow.Focus();
+            Mouse.Position = paneRoot.BoundingRectangle.Center();
+            RandomWait.Wait(600, 1200);
+            var point2 = (new Point(point.X, point.Y - 30)).Confusion(10, 5);
+            SupperMouseKey.MoveTo(point2);
+            RandomWait.Wait(300, 1200);
+            SupperMouseKey.LeftClick();
+            //处理删人事宜
+            ProcessRemoveMembers(memberName, automation);
+
+            return Result.Fail($"从群 {groupName} 移除好友失败！");
+        }
+
+        internal void ProcessRemoveMembers(OneOf<string, string[]> memberName, UIA3Automation automation)
+        {
+            var memberList = memberName.IsT0 ? new List<string> { memberName.AsT0.Trim() } : memberName.AsT1.ToList().Select(x => x.Trim()).ToList();
+            if (memberList.Count() == 0)
+                return;
+            var editPath = "/Window[@Name='微信移出群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
+            var searchEditRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(editPath), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+            var path = "";
+            if (searchEditRetry.Success)
+            {
+                var editParent = searchEditRetry.Result.GetParent();
+                foreach (var m in memberList)
+                {
+                    //清空
+                    var clearButton = editParent.FindFirstChild(cf => cf.ByName("清空")).AsButton();
+                    if (clearButton != null)
+                    {
+                        clearButton.Click();
+                        RandomWait.Wait(600, 1500);
+                    }
+                    var searchEdit = this._Client.MainWindow.FindFirstByXPath(editPath).AsTextBox();
+                    searchEdit.Text = m;
+                    RandomWait.Wait(800, 2500);
+                    path = "/Window[@Name='微信移出群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/List[@AutomationId='sp_search_list']";
+                    var itemRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+                    if (itemRetry.Success)
+                    {
+                        var items = itemRetry.Result.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).ToList();
+                        if (items.Count > 0)
+                        {
+                            var item = items[0];
+                            var point = item.BoundingRectangle.Center();
+                            Mouse.Position = point.Confusion(10, 4);
+                            RandomWait.Wait(100, 300);
+                            SupperMouseKey.MoveTo(point.Confusion(10, 4));
+                            RandomWait.Wait(300, 900);
+                            SupperMouseKey.LeftClick();
+                        }
+                    }
+                    //停顿，准备下一个勾选
+                    RandomWait.Wait(1200, 3000);
+                }
+                //确认是点击确定还是取消
+                path = "/Window[@Name='微信移出群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Button[@Name='移出'][@AutomationId='confirm_btn']";
+                var addRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (addRetry.Success)
+                {
+                    var addButton = addRetry.Result.AsButton();
+                    if (addButton.IsEnabled)
+                    {
+                        var point = addButton.BoundingRectangle.Center();
+                        Mouse.Position = point.Confusion(10, 4);
+                        RandomWait.Wait(100, 300);
+                        SupperMouseKey.MoveTo(point.Confusion(10, 4));
+                        RandomWait.Wait(300, 900);
+                        SupperMouseKey.LeftClick();
+                        RandomWait.Wait(600, 2000);
+                    }
+                    else
+                    {
+                        SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                    }
+                }
+                else
+                {
+                    SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                }
+                RandomWait.Wait(1000, 3000);
+                this.CloseChatInfoPane();
+            }
+        }
     }
 }

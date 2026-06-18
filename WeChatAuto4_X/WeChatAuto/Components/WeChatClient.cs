@@ -934,6 +934,21 @@ namespace WeChatAuto.Components
         /// <returns>群聊成员列表</returns>
         public async Task<List<string>> GetChatGroupMemberList() => await this.OwnerGroup.GetChatGroupMemberList();
 
+        //=> await WxMainWindow.DeleteOwnerChatGroup(groupName);
+        /// <summary>
+        /// 移除群聊成员,适用于自有群
+        /// </summary>
+        /// <param name="groupName">群聊名称</param>
+        /// <param name="memberName">成员名称</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> RemoveOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await this.OwnerGroup.RemoveOwnerChatGroupMember(groupName, memberName);
+
+        /// <summary>
+        /// 移除焦点窗口的群聊成员,适用于自有群
+        /// </summary>
+        /// <param name="memberName">成员名称</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> RemoveOwnerChatGroupMember(OneOf<string, string[]> memberName) => await this.OwnerGroup.RemoveOwnerChatGroupMember(memberName);
 
         #endregion
 

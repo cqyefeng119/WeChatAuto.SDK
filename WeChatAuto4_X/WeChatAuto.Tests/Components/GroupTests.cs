@@ -58,7 +58,28 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.AddOwnerChatGroupMember(name, new string[] { "秋歌" });
+        await client.AddOwnerChatGroupMember(name, new string[] { "智影工坊_test", "AI.Net", "秋歌", "khcgb" });
+        Assert.True(true);
+    }
+
+
+    [Theory(DisplayName = "测试群内删人")]
+    [InlineData("DroidMirror官方技术支持")]
+    [InlineData("人工智能自动化技术讨论群")]
+    public async Task Test_RemoveOwnerChatGroupMember(string name)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.RemoveOwnerChatGroupMember(name, new string[] { "智影工坊_test", "AI.Net", "秋歌", "khcgb" });
+        Assert.True(true);
+    }
+
+    [Fact(DisplayName = "测试群内删人_本窗口")]
+    public async Task Test_RemoveOwnerChatGroupMember_Fosuse()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        await client.RemoveOwnerChatGroupMember(new string[] { "智影工坊_test" });
         Assert.True(true);
     }
 
@@ -178,6 +199,5 @@ public class GroupTests
         }
         _output.WriteLine($"本群有成员: {result.Count} 个"); ;
     }
-
 
 }
