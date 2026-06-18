@@ -971,6 +971,15 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task QuitChatGroup(bool clearHistory = true) => await this.OwnerGroup.QuitChatGroup(clearHistory);
 
+        /// <summary>
+        /// 邀请群聊成员,适用于外部群
+        /// </summary>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友</param>
+        /// <param name="members">被邀请的成员名称列表,要求在自己的通讯录中</param>
+        /// <param name="inviteReasonIfNeed">邀请原因，只在群管理员开启了 进群需要群主或者管理员确认 功能时有效，可以为空</param>
+        /// <returns>微信响应结果<see cref="Result"/></returns>
+        public async Task<Result> InviteChatGroupMember(string groupName, List<string> members, string inviteReasonIfNeed = "") => await this.OuterGroup.InviteChatGroupMember(groupName, members, inviteReasonIfNeed);
+
         #endregion
 
         #region 通讯录管理

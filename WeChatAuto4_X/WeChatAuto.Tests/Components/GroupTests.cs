@@ -5,6 +5,7 @@ using OneOf;
 using Xunit.Abstractions;
 using NAudio.CoreAudioApi;
 using WeAutoCommon.Utils;
+using System.Text.RegularExpressions;
 
 
 namespace WeChatAuto.Tests.Components;
@@ -222,4 +223,15 @@ public class GroupTests
         _output.WriteLine($"本群有成员: {result.Count} 个"); ;
     }
 
+    [Theory(DisplayName = "邀请群聊成员,适用于外部群")]
+    [InlineData("")]
+    [InlineData("人工智能自动化技术讨论群")]
+    [InlineData("人工智能自动化技术讨论群22")]
+    public async Task Test_InviteChatGroupMember(string groupName)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.InviteChatGroupMember(groupName, new List<string> { "khcgb", "秋歌" },"仅是一个测试");
+        Assert.True(result.Success);
+    }
 }
