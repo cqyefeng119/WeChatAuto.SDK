@@ -853,17 +853,10 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 添加群聊成员，适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，则在焦点聊天群聊中添加群聊成员</param>
         /// <param name="memberName">成员名称</param>
         /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
         public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(groupName, memberName);
-
-        /// <summary>
-        /// 焦点窗口的群聊添加成员，适用于自有群
-        /// </summary>
-        /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
-        public async Task AddOwnerChatGroupMember(OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(memberName);
 
         /// <summary>
         /// 创建群聊
@@ -886,76 +879,43 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 修改自己在群中的昵称
         /// </summary>
-        /// <param name="groupName">群名</param>
+        /// <param name="groupName">群名,可以为空，如果为空，则修改焦点群聊的自己在群中的昵称</param>
         /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupNickName(string groupName, string nickName) => await this.OwnerGroup.ChangeChatGroupNickName(groupName, nickName);
 
-        /// <summary>
-        /// 修改自己在群中的昵称,本方法适用于当前窗口是群聊的昵称修改
-        /// </summary>
-        /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
-        public async Task<Result> ChangeChatGroupNickName(string nickName) => await this.OwnerGroup.ChangeChatGroupNickName(nickName);
 
         /// <summary>
-        /// 改变群备注,群聊备注仅自己可见.
+        /// 改变群备注,群备注仅自己可见.
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
-        /// <param name="newMemo">新备注，如果为空，则为删除备注</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则改变焦点聊天群的备注</param>
+        /// <param name="newMemo">新备注，可以为空，如果为空，则删除本群备注</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupMemo(string groupName, string newMemo) => await this.OwnerGroup.ChangeChatGroupMemo(groupName, newMemo);
 
         /// <summary>
-        /// 改变本聊天窗口的群备注,群聊备注仅自己可见.
-        /// </summary>
-        /// <param name="newMemo">新备注,如果为空，则为删除备注</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
-        public async Task<Result> ChangeChatGroupMemo(string newMemo) => await this.OwnerGroup.ChangeChatGroupMemo(newMemo);
-
-        /// <summary>
         /// 更新群聊公告,仅适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称，可以为空字符串，如果为空，则更新焦点聊天群聊窗口的公告</param>
         /// <param name="groupNotice">群聊公告</param>
         /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
         public async Task<Result> UpdateGroupNotice(string groupName, string groupNotice) => await this.OwnerGroup.UpdateGroupNotice(groupName, groupNotice);
 
-        /// <summary>
-        /// 更新焦点窗口的群聊公告,仅适用于自有群
-        /// </summary>
-        /// <param name="groupNotice">群聊公告</param>
-        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
-        public async Task<Result> UpdateGroupNotice(string groupNotice) => await this.OwnerGroup.UpdateGroupNotice(groupNotice);
 
         /// <summary>
-        /// 获取群聊成员列表,在进行群聊加好友时，需要先获取成员列表
+        /// 获取群聊成员列表
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则获取的是焦点聊天群聊的成员列表</param>
         /// <returns>群聊成员列表</returns>
         public async Task<List<string>> GetChatGroupMemberList(string groupName) => await this.OwnerGroup.GetChatGroupMemberList(groupName);
 
         /// <summary>
-        /// 获取焦点窗口群聊成员列表
-        /// </summary>
-        /// <returns>群聊成员列表</returns>
-        public async Task<List<string>> GetChatGroupMemberList() => await this.OwnerGroup.GetChatGroupMemberList();
-
-        //=> await WxMainWindow.DeleteOwnerChatGroup(groupName);
-        /// <summary>
         /// 移除群聊成员,适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则从焦点聊天群聊中移除好友</param>
         /// <param name="memberName">成员名称</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> RemoveOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await this.OwnerGroup.RemoveOwnerChatGroupMember(groupName, memberName);
-
-        /// <summary>
-        /// 移除焦点窗口的群聊成员,适用于自有群
-        /// </summary>
-        /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
-        public async Task<Result> RemoveOwnerChatGroupMember(OneOf<string, string[]> memberName) => await this.OwnerGroup.RemoveOwnerChatGroupMember(memberName);
 
         /// <summary>
         /// 退出群聊
@@ -965,13 +925,6 @@ namespace WeChatAuto.Components
         public async Task QuitChatGroup(string groupName, bool clearHistory = true) => await this.OwnerGroup.QuitChatGroup(groupName, clearHistory);
 
         /// <summary>
-        /// 退出焦点窗口的聊天群
-        /// </summary>
-        /// <param name="clearHistory">是否清除历史消</param>
-        /// <returns></returns>
-        public async Task QuitChatGroup(bool clearHistory = true) => await this.OwnerGroup.QuitChatGroup(clearHistory);
-
-        /// <summary>
         /// 邀请群聊成员,适用于外部群
         /// </summary>
         /// <param name="groupName">群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友</param>
@@ -979,6 +932,16 @@ namespace WeChatAuto.Components
         /// <param name="inviteReasonIfNeed">邀请原因，只在群管理员开启了 进群需要群主或者管理员确认 功能时有效，可以为空</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> InviteChatGroupMember(string groupName, List<string> members, string inviteReasonIfNeed = "") => await this.OuterGroup.InviteChatGroupMember(groupName, members, inviteReasonIfNeed);
+
+        /// <summary>
+        /// 添加群聊里面的好友为自己的好友,适用于从外部群中添加好友为自己的好友
+        /// 此操作为微信严风控操作，因为微信对于一天加好友应该有数量限定，建议分批次加，一次不要超过20-30个，时间延长为4小时或者一天后
+        /// </summary>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友</param>
+        /// <param name="memberName">成员名称列表,考虑风控,建议先运行<see cref="Group.GetChatGroupMemberList(string)"/>获取群聊的成员列表，然后分批增加</param>
+        /// <param name="options">好友选项，可以增加好友时设置备注后缀、打招呼内容及标签等，方便分类管理</param>
+        /// <returns></returns>
+        public async Task<IDictionary<string, FriendAddResult>> AddChatGroupMemberToFriends(string groupName, List<string> memberName, AddFriendsOptions options = null) => await this.OuterGroup.AddChatGroupMemberToFriends(groupName, memberName, options);
 
         #endregion
 

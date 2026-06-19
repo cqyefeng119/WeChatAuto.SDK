@@ -120,27 +120,21 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 更新群聊公告,仅适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称，可以为空字符串，如果为空，则更新焦点聊天群聊窗口的公告</param>
         /// <param name="groupNotice">群聊公告</param>
         /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
         public async Task<Result> UpdateGroupNotice(string groupName, string groupNotice)
         {
-            var find = await _Client.Conversations.Search(groupName);
-            if (!find)
-                return Result.Fail($"错误：没有发现groupName={groupName}的群");
-            return await WeChatInvoker.Call(UpdateGroupNoticeCore, groupNotice);
-        }
-
-        /// <summary>
-        /// 更新焦点窗口的群聊公告,仅适用于自有群
-        /// </summary>
-        /// <param name="groupNotice">群聊公告</param>
-        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
-        public async Task<Result> UpdateGroupNotice(string groupNotice)
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return Result.Fail($"错误：没有发现groupName={groupName}的群");
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
-                return Result.Fail("错误：本窗口不是群聊窗口，修改群聊公告 动作终止!");
+                return Result.Fail("错误：此窗口为非聊天窗口");
+
             return await WeChatInvoker.Call(UpdateGroupNoticeCore, groupNotice);
         }
 
@@ -430,27 +424,23 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 添加群聊成员，适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，则在焦点聊天群聊中添加群聊成员</param>
         /// <param name="memberName">成员名称</param>
         /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
         public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName)
         {
-            await WeChatInvoker.Call(AddOwnerChatGroupMemberCore, groupName, memberName);
-        }
-
-
-        /// <summary>
-        /// 为焦点群聊窗口添加群聊成员，适用于自有群
-        /// </summary>
-        /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
-        public async Task AddOwnerChatGroupMember(OneOf<string, string[]> memberName)
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return;
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
                 return;
             await WeChatInvoker.Call(AddOwnerChatGroupMemberCore, headInfo.Title, memberName);
         }
+
 
         private void AddOwnerChatGroupMemberCore(UIA3Automation automation, string groupName, OneOf<string, string[]> memberName)
         {
@@ -568,27 +558,20 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 移除群聊成员,适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则从焦点聊天群聊中移除好友</param>
         /// <param name="memberName">成员名称</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> RemoveOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName)
         {
-            var find = await _Client.Conversations.Search(groupName);
-            if (!find)
-                return Result.Fail($"从未找到群： {groupName} ,移除好友动作失败！");
-            return await WeChatInvoker.Call(RemoveOwnerChatGroupMemberCore, memberName, groupName);
-        }
-
-        /// <summary>
-        /// 移除焦点窗口的群聊成员,适用于自有群
-        /// </summary>
-        /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
-        public async Task<Result> RemoveOwnerChatGroupMember(OneOf<string, string[]> memberName)
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return Result.Fail($"错误：未找到群： {groupName} ,移除好友动作失败！"); ;
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
-                return Result.Fail($"或许焦点窗口 {headInfo.Title} 不是群聊窗口");
+                return Result.Fail("错误：此窗口为非聊天窗口");
             return await WeChatInvoker.Call(RemoveOwnerChatGroupMemberCore, memberName, headInfo.Title);
         }
 

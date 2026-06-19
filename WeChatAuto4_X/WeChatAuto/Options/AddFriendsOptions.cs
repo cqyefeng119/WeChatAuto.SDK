@@ -16,7 +16,7 @@ namespace WeChatAuto.Options
         /// <summary>
         /// 间隔时间,以秒为单位，默认为三秒，如果担心风控，可以把此时间设置长一点
         /// </summary>
-        public int IntervalTime { get; set; } = 3;
+        public int IntervalTime { get; set; } = 5;
         /// <summary>
         /// 是否关闭增加朋友窗口,默认关闭，可以设置为false不关闭
         /// </summary>

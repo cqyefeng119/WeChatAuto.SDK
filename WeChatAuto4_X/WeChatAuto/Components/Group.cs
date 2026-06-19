@@ -225,30 +225,24 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 退出群聊
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空,如果为空，则退出焦点聊天群</param>
         /// <param name="clearHistory">是否清除历史消</param>
         public async Task QuitChatGroup(string groupName, bool clearHistory = true)
         {
-            var find = await _Client.Conversations.Search(groupName);
-            if (!find)
-                return;
-            await WeChatInvoker.Call(QuitChatGroupCore, clearHistory,groupName);
-        }
-
-        /// <summary>
-        /// 退出焦点窗口的聊天群
-        /// </summary>
-        /// <param name="clearHistory">是否清除历史消</param>
-        /// <returns></returns>
-        public async Task QuitChatGroup(bool clearHistory = true)
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return;
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
                 return;
-            await WeChatInvoker.Call(QuitChatGroupCore, clearHistory,headInfo.Title);
+
+            await WeChatInvoker.Call(QuitChatGroupCore, clearHistory, headInfo.Title);
         }
 
-        private void QuitChatGroupCore(UIA3Automation automation, bool clearHistory,string groupName)
+        private void QuitChatGroupCore(UIA3Automation automation, bool clearHistory, string groupName)
         {
             var root = this._GetChatRootPane();
             RandomWait.Wait(300, 900);
@@ -310,7 +304,7 @@ namespace WeChatAuto.Components
                     //会话窗口乱点一下.
                     var cList = this._Client.Conversations.GetVisibleConversationElements(automation);
                     var cObjList = this._Client.Conversations.GetVisibleConversationsCore(automation);
-                    if (cObjList.FirstOrDefault(x=>x.ConversationTitle.Equals(groupName)) != null)
+                    if (cObjList.FirstOrDefault(x => x.ConversationTitle.Equals(groupName)) != null)
                     {
                         return;
                     }
@@ -333,40 +327,24 @@ namespace WeChatAuto.Components
         }
 
         /// <summary>
-        /// 设置保存到通讯录
-        /// </summary>
-        /// <param name="groupName">群聊名称</param>
-        /// <param name="isSaveToAddress">是否保存到通讯录,默认是True:保存,False:取消保存</param>
-        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
-        public async Task<Result> SetSaveToAddress(string groupName, bool isSaveToAddress = true)
-        {
-            return Result.Ok();
-        }
-
-        /// <summary>
         /// 获取群聊成员列表
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则获取的是焦点聊天群聊的成员列表</param>
         /// <returns>群聊成员列表</returns>
         public async Task<List<string>> GetChatGroupMemberList(string groupName)
         {
-            var find = await _Client.Conversations.Search(groupName);
-            if (!find)
-                return new List<string>();
-            return await WeChatInvoker.Call(GetChatGroupMemberListCore);
-        }
-
-        /// <summary>
-        /// 获取焦点窗口群聊成员列表
-        /// </summary>
-        /// <returns>群聊成员列表</returns>
-        public async Task<List<string>> GetChatGroupMemberList()
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return new List<string>(); ;
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
                 return new List<string>();
             return await WeChatInvoker.Call(GetChatGroupMemberListCore);
         }
+
         internal List<string> GetChatGroupMemberListCore(UIA3Automation automation)
         {
             var resultList = new List<string>();
@@ -468,26 +446,20 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 修改自己在群中的昵称
         /// </summary>
-        /// <param name="groupName">群名</param>
+        /// <param name="groupName">群名,可以为空，如果为空，则修改焦点群聊的自己在群中的昵称</param>
         /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupNickName(string groupName, string nickName)
         {
-            var find = await _Client.Conversations.Search(groupName);
-            if (!find)
-                return Result.Fail($"错误：没有发现groupName={groupName}的群");
-            return await WeChatInvoker.Call(ChangeChatGroupNickNameCore, nickName);
-        }
-        /// <summary>
-        /// 修改自己在群中的昵称,本方法适用于当前窗口是群聊的昵称修改
-        /// </summary>
-        /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
-        public async Task<Result> ChangeChatGroupNickName(string nickName)
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return Result.Fail($"错误：没有发现groupName={groupName}的群");
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
-                return Result.Fail("错误：本窗口不是群聊窗口，修改群聊昵称动作终止!");
+                return Result.Fail("错误：此窗口为非聊天窗口");
             return await WeChatInvoker.Call(ChangeChatGroupNickNameCore, nickName);
         }
 
@@ -549,27 +521,20 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 改变群备注,群备注仅自己可见.
         /// </summary>
-        /// <param name="groupName">群聊名称</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则改变焦点聊天群的备注</param>
         /// <param name="newMemo">新备注</param>
         /// <returns>微信响应结果<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupMemo(string groupName, string newMemo)
         {
-            var find = await _Client.Conversations.Search(groupName);
-            if (!find)
-                return Result.Fail($"错误：没有发现groupName={groupName}的群");
-            return await WeChatInvoker.Call(ChangeOwnerChatGroupMemoCore, newMemo);
-        }
-
-        /// <summary>
-        /// 改变本聊天窗口的群备注,群聊备注仅自己可见.
-        /// </summary>
-        /// <param name="newMemo">新备注</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
-        public async Task<Result> ChangeChatGroupMemo(string newMemo)
-        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                var find = await _Client.Conversations.Search(groupName);
+                if (!find)
+                    return Result.Fail($"错误：没有发现groupName={groupName}的群");
+            }
             var headInfo = await this._Client.GetTitle();
             if (!headInfo.CanTalk() || headInfo.HeaderType != ChatType.群聊)
-                return Result.Fail("错误：本窗口不是群聊窗口，修改群聊备注动作终止!");
+                return Result.Fail("错误：此窗口为非聊天窗口");
             return await WeChatInvoker.Call(ChangeOwnerChatGroupMemoCore, newMemo);
         }
 

@@ -75,15 +75,6 @@ public class GroupTests
         Assert.True(true);
     }
 
-    [Fact(DisplayName = "测试群内删人_本窗口")]
-    public async Task Test_RemoveOwnerChatGroupMember_Fosuse()
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        await client.RemoveOwnerChatGroupMember(new string[] { "智影工坊_test" });
-        Assert.True(true);
-    }
-
     [Fact(DisplayName = "测试新建群")]
     public async Task Test_CreateOwnerChatGroup()
     {
@@ -91,15 +82,6 @@ public class GroupTests
         var client = framework.GetWeChatClient(_wxClientName);
         var result = await client.CreateOwnerChatGroup("DroidMirror官方技术支持", "AI.Net", new string[] { "智影工坊_test" });
         Assert.True(result.Success);
-    }
-
-    [Fact(DisplayName = "测试退出群_本窗口")]
-    public async Task Test_QuitGroup_this()
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        await client.QuitChatGroup();
-        Assert.True(true);
     }
 
     [Fact(DisplayName = "测试退出群")]
@@ -131,17 +113,6 @@ public class GroupTests
         Assert.True(result.Success);
     }
 
-    [Theory(DisplayName = "测试修改群备注_本窗口")]
-    [InlineData("aaa")]
-    [InlineData("bbb")]
-    [InlineData("")]
-    public async Task Test_ChangeOwnerChatGroupMemo_thisWindow(string memo)
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.ChangeChatGroupMemo(memo);
-        Assert.True(result.Success);
-    }
 
 
     [Theory(DisplayName = "测试修改在群的昵称")]
@@ -156,18 +127,6 @@ public class GroupTests
         Assert.True(result.Success);
     }
 
-    [Theory(DisplayName = "测试修改在群中的昵称_本窗口")]
-    [InlineData("aaa")]
-    [InlineData("bbb")]
-    [InlineData("")]
-    public async Task Test_ChangeOwnerChatGroupNickName_thisWindow(string nickName)
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.ChangeChatGroupNickName(nickName);
-        Assert.True(result.Success);
-    }
-
     [Fact(DisplayName = "测试修改群公告")]
 
     public async Task Test_ChangeOwnerChatGroupNotice()
@@ -179,15 +138,6 @@ public class GroupTests
 如果有好的功能建议或改进想法，也欢迎一起讨论。
 👉 遇到不会用的地方也不用担心，我们会尽量帮大家解答。
 """);
-        Assert.True(result.Success);
-    }
-
-    [Fact(DisplayName = "测试修改群公告_本窗口")]
-    public async Task Test_ChangeOwnerChatGroupNotice_thisWindow()
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.UpdateGroupNotice("测试03");
         Assert.True(result.Success);
     }
 
@@ -209,19 +159,6 @@ public class GroupTests
         _output.WriteLine($"群{groupName}有成员: {result.Count} 个");
     }
 
-    [Fact(DisplayName = "获取群聊的成员列表_本窗口")]
-    public async Task Test_GetChatGroupMemberList_thisWindow()
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.GetChatGroupMemberList();
-        Assert.True(result.Count > 0);
-        foreach (var item in result)
-        {
-            _output.WriteLine(item);
-        }
-        _output.WriteLine($"本群有成员: {result.Count} 个"); ;
-    }
 
     [Theory(DisplayName = "邀请群聊成员,适用于外部群")]
     [InlineData("")]
@@ -231,7 +168,38 @@ public class GroupTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.InviteChatGroupMember(groupName, new List<string> { "khcgb", "秋歌" },"仅是一个测试");
+        var result = await client.InviteChatGroupMember(groupName, new List<string> { "khcgb", "秋歌" }, "仅是一个测试");
         Assert.True(result.Success);
+    }
+
+    [Theory(DisplayName = "他有群里加好友")]
+    [InlineData("人工智能自动化技术讨论群")]
+    [InlineData("测试sss")]
+    [InlineData("")]
+    public async Task Test_OuterGroup_AddFriend(string groupName)
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var list = new List<string>();
+        if (string.IsNullOrWhiteSpace(groupName))
+        {
+            list = await client.GetChatGroupMemberList("");
+        }
+        else
+        {
+            list = await client.GetChatGroupMemberList(groupName);
+        }
+        list = list.Skip(21).ToList();
+        var result = await client.AddChatGroupMemberToFriends(groupName, list, new Options.AddFriendsOptions
+        {
+            SayHi = "测试自动化群里加好友，不用理会，如有打扰，海涵😻",
+            Suffix = "test",
+            Label = "wechatauto22"
+        });
+        foreach (var item in result)
+        {
+            _output.WriteLine($"{item.Key}  {item.Value.ToString()}");
+        }
+        Assert.True(result.Keys.Count > 0);
     }
 }

@@ -20,5 +20,7 @@ namespace WeAutoCommon.Enums
         Adding = 2,
         [Description("一增加就通过，可能以前增加后自己又删除，或者对方设置权限允许通过")]
         Added = 3,
+        [Description("由于对方在群里的隐私设置，不允许添加")]
+        PrivacyRestricted = 4,
     }
 }

@@ -298,7 +298,7 @@ namespace WeChatAuto.Components
         private void __ConfigAddInfomation(Window win, Dictionary<string, FriendAddResult> result, string friend, AddFriendsOptions options, CancellationToken token)
         {
             var desktop = win.Automation.GetDesktop();
-            var addWinRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("申请添加朋友").And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByControlType(ControlType.Window)))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
+            var addWinRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByName("申请添加朋友").And(cf.ByClassName("mmui::VerifyFriendWindow").And(cf.ByControlType(ControlType.Window)).And(cf.ByProcessId(this._Client.MainWindow.Properties.ProcessId)))), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
             if (addWinRetry.Success)
             {
                 var addWin = addWinRetry.Result.AsWindow();
@@ -314,7 +314,7 @@ namespace WeChatAuto.Components
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.LeftClick();
                     RandomWait.Wait(300, 900);
-                    System.Windows.Clipboard.SetText(options.SayHi);
+                    ClipboardHelper.SetText(options.SayHi);
                     SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
