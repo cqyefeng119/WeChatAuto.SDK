@@ -10,17 +10,23 @@ namespace WeAutoCommon.Models
     public class HeaderInfo
     {
         /// <summary>
-        /// 标题
+        /// 标题,也就是好友/群聊名称
         /// </summary>
         public string Title { get; set; }
         /// <summary>
         /// 标题类型,<seealso cref="ChatType"/>
         /// </summary>
-        public ChatType HeaderType { get; set; }
+        public ChatType HeaderType { get; set; } = ChatType.其他;
         /// <summary>
         /// 如果HeaderType是ChatType.群聊,则显示群聊人数数量，如果不是群聊，这里的数量恒为1
         /// </summary>
         public int ChatNumber { get; set; } = 1;
+
+        /// <summary>
+        /// 是否可以聊天类型
+        /// </summary>
+        /// <returns></returns>
+        public bool CanTalk() => this.HeaderType == ChatType.好友 || this.HeaderType == ChatType.企业微信 || this.HeaderType == ChatType.群聊;
 
         public override string ToString()
         {

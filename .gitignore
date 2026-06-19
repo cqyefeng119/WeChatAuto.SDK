@@ -51,14 +51,14 @@ node_modules/
 .svn
 .idea
 .DS_Store
+.tmp
 
 /Admin.NET.App/unpackage
 /App/unpackage
 .history
 /package-lock.json
 Videos
-!Examples/autodemo/Videos/
-!Examples/autodemo2/Videos/
+!Examples/demo01/Videos
 ffmpeg
 pack.cmd
 WeChatAuto4_X/

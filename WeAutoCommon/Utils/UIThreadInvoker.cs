@@ -14,15 +14,18 @@ namespace WeAutoCommon.Utils
     public class UIThreadInvoker : IDisposable
     {
         private readonly Thread _uiThread;
-        private readonly BlockingCollection<Func<UIA3Automation, Task>> _queue = new BlockingCollection<Func<UIA3Automation, Task>>();
+        private readonly BlockingCollection<Action<UIA3Automation>> _queue = new BlockingCollection<Action<UIA3Automation>>();
         private readonly TaskCompletionSource<bool> _started = new TaskCompletionSource<bool>();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private volatile bool _IsRunning = false;
         private UIA3Automation _automation;
         private readonly string _ThreadName;
         public string ThreadName => _ThreadName;
         private volatile bool _disposed = false;
-
         public UIA3Automation Automation => _automation;
+
+        public readonly int ActionThreadId;
+
 
         public UIThreadInvoker(string threadName)
         {
@@ -34,6 +37,7 @@ namespace WeAutoCommon.Utils
             _uiThread.IsBackground = false;
             _uiThread.Start();
             _started.Task.GetAwaiter().GetResult();
+            ActionThreadId = _uiThread.ManagedThreadId;
         }
 
         public override string ToString()
@@ -54,7 +58,8 @@ namespace WeAutoCommon.Utils
                         if (_disposed) break;
                         try
                         {
-                            action(_automation).GetAwaiter().GetResult();
+                            _IsRunning = true;
+                            action(_automation);
                         }
                         catch (OperationCanceledException)
                         {
@@ -65,6 +70,10 @@ namespace WeAutoCommon.Utils
                         {
                             // 记录异常，但不中断整个线程
                             Trace.WriteLine($"UIThreadInvoker thread [{_ThreadName}] Action execution failed: {ex}");
+                        }
+                        finally
+                        {
+                            _IsRunning = false;
                         }
                     }
                 }
@@ -103,7 +112,6 @@ namespace WeAutoCommon.Utils
                 {
                     tcs.SetException(ex);
                 }
-                return Task.CompletedTask;
             });
             return tcs.Task;
         }
@@ -122,6 +130,12 @@ namespace WeAutoCommon.Utils
                 return null;
             });
         }
+
+        /// <summary>
+        /// 检查是否在运行中.
+        /// </summary>
+        /// <returns></returns>
+        public bool IsSessionRunning() => _queue.Count != 0 || _IsRunning;
 
         public virtual void Dispose(bool disposing)
         {

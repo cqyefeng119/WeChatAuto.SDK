@@ -42,7 +42,7 @@ namespace WeAutoCommon.Models
         /// 是否免打扰
         /// </summary>
         public bool IsDoNotDisturb { get; set; } = false;  //是否免打扰
-        
+
         /// <summary>
         /// 是否置顶
         /// </summary>
@@ -66,4 +66,36 @@ namespace WeAutoCommon.Models
             return JsonConvert.SerializeObject(serializableObject, Formatting.Indented);
         }
     }
+    /// <summary>
+    /// 简单的会话对象，因为我们无须关注那些临时信息
+    /// </summary>
+    public class SimpleConversation
+    {
+        /// <summary>
+        /// 会话标题
+        /// </summary>
+        public string ConversationTitle { get; set; }
+
+        /// <summary>
+        /// 是否免打扰
+        /// </summary>
+        public bool IsDoNotDisturb { get; set; } = false;  //是否免打扰
+
+        /// <summary>
+        /// 是否置顶
+        /// </summary>
+        public bool IsTop { get; set; } = false;
+        /// <summary>
+        /// 未读消息数
+        /// </summary>
+        public int NotReadNumbr { get; set; } = 0;
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+
+    }
+
+
 }
