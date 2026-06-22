@@ -236,6 +236,9 @@ namespace WeChatAuto.Components
         /// </summary>
         public Moments Moments;
 
+        /// <summary>
+        /// cache管理器
+        /// </summary>
         public CacheManager CacheManager;
 
 
