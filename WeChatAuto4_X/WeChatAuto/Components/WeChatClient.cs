@@ -322,6 +322,16 @@ namespace WeChatAuto.Components
         /// <param name="who"></param>
         /// <returns></returns>
         public async Task<Window> OpenSubWin(string who) => await this.Conversations.OpenSubWin(who);
+        /// <summary>
+        /// 得到本微信窗口句柄
+        /// </summary>
+        /// <returns></returns>
+        public nint GetHandler() => this.MainWindow.Properties.NativeWindowHandle.Value;
+        /// <summary>
+        /// 得到本微信窗口的进程id
+        /// </summary>
+        /// <returns></returns>
+        public nint GetProcessId() => this.MainWindow.Properties.ProcessId.Value;
 
         #endregion
 
