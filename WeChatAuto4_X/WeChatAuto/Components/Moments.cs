@@ -587,7 +587,7 @@ namespace WeChatAuto.Components
 			var index = 0;
 			var result = false;
 			//滚动并且删除.
-			while (index < WeAutomation.Config.MonentsScrollMaxSetp)
+			while (index < WeAutomation.Config.MonentsScrollMaxStep)
 			{
 				var childItems = container.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
 				var filterItems = childItems.Where(x => !x.ClassName.Equals("mmui::TimelineCell") && !x.ClassName.Equals("mmui::TimelineCommentCell") && !string.IsNullOrWhiteSpace(x.Name)).ToList();

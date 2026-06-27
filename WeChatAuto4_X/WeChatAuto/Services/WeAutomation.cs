@@ -54,7 +54,6 @@ namespace WeChatAuto.Services
         /// <returns>IServiceProvider，用于获取服务实例</returns>
         public static IServiceProvider Initialize(Action<WeChatConfig> options = default) => GetServiceProvider(options);
 
-
         private static IServiceCollection AddWxAutomationCore(IServiceCollection services, Action<WeChatConfig> options)
         {
             options?.Invoke(_config);

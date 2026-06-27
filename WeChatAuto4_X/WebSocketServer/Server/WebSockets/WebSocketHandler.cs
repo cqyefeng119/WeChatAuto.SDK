@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using WeChatAuto.Components;
 
 public class WebSocketHandler
 {
@@ -13,11 +14,13 @@ public class WebSocketHandler
     private readonly int heatBeatDelay = 5000;  //心跳设置为5秒
     private readonly SocketSessionChannel? channel;
     private WebSocket? ws;
+    private readonly WeChatClientFactory _factory;
 
-    public WebSocketHandler(ConnectionManager manager, SocketSessionChannel channel)
+    public WebSocketHandler(ConnectionManager manager, SocketSessionChannel channel, WeChatClientFactory factory)
     {
         _manager = manager;
         this.channel = channel;
+        this._factory = factory;
     }
 
     public async Task HandleAsync(WebSocket ws, CancellationToken userToken)
@@ -65,6 +68,18 @@ public class WebSocketHandler
                         continue;
                     }
 
+                    if (msg?.Type == "global")
+                    {
+                        var wechatList = _factory.GetWeChatClientNames();
+                        RequestData data = new RequestData()
+                        {
+                            Type = "global",
+                            Data = JsonSerializer.Serialize(wechatList),
+                            RequestId = msg.RequestId
+                        };
+                        continue;
+                    }
+
                     Console.WriteLine($"[{connId}] {msg?.Data}");
                     if (msg?.Type == "command")
                     {
@@ -72,7 +87,7 @@ public class WebSocketHandler
                         if (string.IsNullOrWhiteSpace(data))
                             continue;
                         var package = JsonSerializer.Deserialize<MessagePackage>(data);
-                        var wrapper = MessagePackageWrapper.Create(package!,this);
+                        var wrapper = MessagePackageWrapper.Create(package!, this);
                         await this.channel!.AddWxMessage(wrapper);
                     }
                 }

@@ -998,7 +998,7 @@ namespace WeChatAuto.Components
                 MouseScrollHelper.DownStep(scrollPoint.Confusion(5, 10), 2);
                 RandomWait.Wait(100, 400);
                 maxFetchNumber++;
-                if (maxFetchNumber > WeAutomation.Config.MaxHistoryFallbackthresholdNumber)
+                if (maxFetchNumber > WeAutomation.Config.MaxHistoryFallbackThresholdNumber)
                 {
                     break;
                 }

@@ -23,9 +23,9 @@ WeAutomation.Initialize(builder.Services, options =>
     //options.KMDevicePID = 0x2612;
     //options.KMVerifyUserData = "4F6A21981BE675822DEE7B9BC39F3791";
 });
-builder.Services.AddLogging(conf =>
+builder.Services.AddLogging(config =>
 {
-    conf.AddConsole();
+    config.AddConsole();
 });
 builder.Services.AddSingleton<ConnectionManager>();
 builder.Services.AddScoped<WebSocketHandler>();

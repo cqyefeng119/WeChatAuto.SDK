@@ -13,8 +13,8 @@ public class MessagePackage
     public string? FuncName { get; set; }
     [JsonPropertyName("options")]
     public string? Options { get; set; }
-    [JsonPropertyName("from")]
-    public required string From {get;set;}
+    [JsonPropertyName("from_wechat")]
+    public required string FromWechat {get;set;}
 }
 /// <summary>
 /// 微信消息 - 包装类
@@ -31,7 +31,7 @@ public class MessagePackageWrapper : MessagePackage
             RequestId = package.RequestId,
             FuncName = package.FuncName,
             Options = package.Options,
-            From = package.From,
+            FromWechat = package.FromWechat,
         };
     }
 }

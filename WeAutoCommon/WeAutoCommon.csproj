@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>
-      net48;
-      net481;
       net6.0-windows7.0;
       net7.0-windows;
       net8.0-windows;
@@ -34,7 +32,7 @@
     <PackageReference Include="FlaUI.Core" Version="5.0.0" />
     <PackageReference Include="FlaUI.UIA2" Version="5.0.0" />
     <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
-    <PackageReference Include="MessagePack" Version="3.1.4" />
+    <PackageReference Include="MessagePack" Version="3.1.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="System.Threading.Channels" Version="9.0.10" />

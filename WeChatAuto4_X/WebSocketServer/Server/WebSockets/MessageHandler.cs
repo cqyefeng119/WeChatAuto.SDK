@@ -18,7 +18,7 @@ public class MessageHandler
     }
     public async Task<RequestData> HandleAsync(MessagePackageWrapper wrapper)
     {
-        var client = factory.GetWeChatClient(wrapper.From);
+        var client = factory.GetWeChatClient(wrapper.FromWechat);
         RequestData response = new RequestData
         {
             Type = "echo",
