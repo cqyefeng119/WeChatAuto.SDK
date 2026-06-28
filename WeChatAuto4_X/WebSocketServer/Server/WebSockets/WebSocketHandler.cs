@@ -39,6 +39,8 @@ public class WebSocketHandler
         try
         {
             var buffer = new byte[8192];
+            await channel!.ConsumptionMessage();
+            Console.WriteLine("**********"+" 收到新的客户端连接，即将建立长连接 "+"**********");
             //保持长连接
             while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
             {
@@ -64,7 +66,7 @@ public class WebSocketHandler
                     if (msg?.Type == "pong")
                     {
                         stopwatch.Restart();  //重新计时,
-                        Console.WriteLine($"[{connId}] - 收到心跳回复");
+                        Console.WriteLine($"[{connId}] - 收到心跳回复,客户端在线...");
                         continue;
                     }
 
@@ -77,6 +79,7 @@ public class WebSocketHandler
                             Data = JsonSerializer.Serialize(wechatList),
                             RequestId = msg.RequestId
                         };
+                        await SendAsync(data);
                         continue;
                     }
 
@@ -143,11 +146,12 @@ public class WebSocketHandler
         {
             if (stopwatch.IsRunning && stopwatch.ElapsedMilliseconds > 3 * heatBeatDelay)
             {
+                Console.WriteLine("由于客户端心跳超时，退出此连接....");
                 linkedTokenSource.Cancel();
                 ws.Abort();
                 break;
             }
-            var ping = new RequestData { Type = "ping" };
+            var ping = new RequestData { Type = "ping", Data="ping",RequestId=""};
             await SendAsync(ping);
             await Task.Delay(heatBeatDelay);
         }

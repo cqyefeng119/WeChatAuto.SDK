@@ -32,8 +32,7 @@ class WechatFactory:
         """获取远程websocket服务器的所有打开微信"""
         request_data = RequestData(type="global", data="", request_id=uuid.uuid4().hex)
         result = await self.socket_client.request(request_data)
-        response = RequestData.model_validate_json(result)
-        wechat_list = json.loads(response.data)
+        wechat_list: list[str] = json.loads(result)
         for who in wechat_list:
             self.client_list[who] = WeChatClient(who, self.socket_client)
 
@@ -44,10 +43,13 @@ class WechatFactory:
         self.ws = await websockets.connect(self.uri)
         # 初始化websocket client.
         self.socket_client = WebSocketClient(self.ws, self.cts)
+        # 启动监听循环
+        await self.socket_client.start()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
         await self.close()
+        print("*" * 10, " 客户端退出 ", "*" * 10)
         return False
 
     async def close(self):
