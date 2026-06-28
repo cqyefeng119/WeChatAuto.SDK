@@ -14,13 +14,15 @@ public class WebSocketHandler
     private readonly int heatBeatDelay = 5000;  //心跳设置为5秒
     private readonly SocketSessionChannel? channel;
     private WebSocket? ws;
+    private readonly ILogger<WebSocketHandler> logger;
     private readonly WeChatClientFactory _factory;
 
-    public WebSocketHandler(ConnectionManager manager, SocketSessionChannel channel, WeChatClientFactory factory)
+    public WebSocketHandler(ConnectionManager manager, SocketSessionChannel channel, WeChatClientFactory factory,ILogger<WebSocketHandler> logger)
     {
         _manager = manager;
         this.channel = channel;
         this._factory = factory;
+        this.logger = logger;
     }
 
     public async Task HandleAsync(WebSocket ws, CancellationToken userToken)
@@ -40,7 +42,7 @@ public class WebSocketHandler
         {
             var buffer = new byte[8192];
             await channel!.ConsumptionMessage();
-            Console.WriteLine("**********"+" 收到新的客户端连接，即将建立长连接 "+"**********");
+            logger.LogInformation("**********"+" 收到新的客户端连接，即将建立长连接 "+"**********");
             //保持长连接
             while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
             {
@@ -60,13 +62,13 @@ public class WebSocketHandler
                     }
 
                     var raw = sb.ToString();
-
+                    logger.LogDebug($"收到客户端原始数据:{raw}");
                     var msg = JsonSerializer.Deserialize<RequestData>(raw);
 
                     if (msg?.Type == "pong")
                     {
                         stopwatch.Restart();  //重新计时,
-                        Console.WriteLine($"[{connId}] - 收到心跳回复,客户端在线...");
+                        logger.LogDebug($"[{connId}] - 收到心跳回复,客户端在线...");
                         continue;
                     }
 
@@ -83,7 +85,7 @@ public class WebSocketHandler
                         continue;
                     }
 
-                    Console.WriteLine($"[{connId}] {msg?.Data}");
+                    logger.LogDebug($"[{connId}] {msg?.Data}");
                     if (msg?.Type == "command")
                     {
                         var data = msg.Data;
@@ -101,7 +103,7 @@ public class WebSocketHandler
                 catch (Exception ex)
                 {
                     //只记录，不做处理
-                    Console.WriteLine($"处理用户消息时出错，错误原因:{ex.ToString()}");
+                    logger.LogError($"处理用户消息时出错，错误原因:{ex.ToString()}");
                     break;
                 }
             }
@@ -115,7 +117,7 @@ public class WebSocketHandler
             {
                 await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None);
             }
-            Console.WriteLine($"客户端 {connId} 退出连接....");
+            logger.LogInformation($"客户端 {connId} 退出连接....");
         }
     }
     public async Task SendAsync(RequestData msg)
@@ -146,7 +148,7 @@ public class WebSocketHandler
         {
             if (stopwatch.IsRunning && stopwatch.ElapsedMilliseconds > 3 * heatBeatDelay)
             {
-                Console.WriteLine("由于客户端心跳超时，退出此连接....");
+                logger.LogError("由于客户端心跳超时，退出此连接....");
                 linkedTokenSource.Cancel();
                 ws.Abort();
                 break;

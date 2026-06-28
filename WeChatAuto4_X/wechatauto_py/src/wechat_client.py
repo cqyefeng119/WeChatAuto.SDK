@@ -1,8 +1,11 @@
 import uuid
+import json
 
 from websocket_client import WebSocketClient
 from models.owner_info import OwerInfo
 from models.message_package import MessagePackage
+from enums.navigation_type import NavigationType
+from models.simple_conversation import SimpleConversation
 
 
 class WeChatClient:
@@ -10,7 +13,7 @@ class WeChatClient:
         self.from_wechat = from_wechat
         self.socket = socket
 
-    async def get_ower_info(self):
+    async def get_ower_info(self) -> OwerInfo:
         """
         获取本微信的个人信息，包括头像文件位置，wxid,昵称
         """
@@ -22,4 +25,212 @@ class WeChatClient:
         )
         result = await self.socket.send_obj(request_package)
         return OwerInfo.model_validate_json(result)
-        
+
+    async def max_window(self) -> None:
+        """
+        最大化微信窗口
+        """
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name="Max",
+            options="",
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_obj(request_package)
+
+    async def restore_window(self) -> None:
+        """
+        还原微信窗口
+        """
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name="Restore",
+            options="",
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_obj(request_package)
+
+    async def pinned_window(self) -> None:
+        """
+        置顶微信窗口
+        """
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name="Pinned",
+            options="",
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_obj(request_package)
+
+    async def unpined_widnow(self) -> None:
+        """
+        取消置顶微信窗口
+        """
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name="UnPinned",
+            options="",
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_obj(request_package)
+
+    async def _do_remote_action(self, action_name: str, options: str):
+        """执行远程websocket服务端的方法"""
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name=action_name,
+            options=options,
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_obj(request_package)
+
+    async def _do_remote_function(self, func_name: str, options: str) -> str:
+        """执行远程websocket服务端的函数并返回值"""
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name=func_name,
+            from_wechat=self.from_wechat,
+            options=options,
+        )
+        return await self.socket.send_obj(request_package)
+
+    async def focus_window(self) -> None:
+        """
+        使主窗口获取焦点
+        """
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name="Focus",
+            options="",
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_obj(request_package)
+
+    async def close_search_window(self, who: str) -> None:
+        """关闭查询窗口,如果查询窗口打开则关闭，如果查询窗口没有打开，则不作动作"""
+        await self._do_remote_action("CloseSearchWindow", who)
+
+    async def open_subWin(self, who: str) -> None:
+        """打开who指定的子窗口"""
+        await self._do_remote_action("OpenSubWin", who)
+
+    async def get_owner_window_handler(self) -> int:
+        """得到本微信窗口句柄"""
+        handler = await self._do_remote_function("GetHandler", "")
+        return int(handler)
+
+    async def get_owner_window_process_id(self) -> int:
+        """得到本微信窗口的进程id"""
+        process_id = await self._do_remote_function("GetProcessId", "")
+        return int(process_id)
+
+    async def switch_navigation(self, navigationType: NavigationType) -> None:
+        """切换导航栏"""
+        await self._do_remote_action("SwitchNavigation", str(navigationType))
+
+    async def close_navWin(self, navigationType: NavigationType) -> None:
+        """
+        关闭通过导航栏打开的窗口.
+        仅支持聊天文件、朋友圈、视频号、看一看、搜一搜、小程序面板等窗口
+        """
+        await self._do_remote_action("CloseNavWin", str(navigationType))
+
+    async def click_motify_icon(self, index: int) -> None:
+        """点击任务栏微信图标
+
+        Args:
+            index (int): 图标索引，从1开始,索引范围不能越界
+        """
+        await self._do_remote_action("ClickNotifyIcon", str(index))
+
+    async def click_motify_icon_name(self, wechat_name: str) -> None:
+        """点击指定微信名称的任务栏图标
+
+        Args:
+            wechat_name (str): 微信名称
+        """
+        await self._do_remote_action("ClickNotifyIcon", wechat_name)
+
+    async def get_all_conversations(self) -> list[str]:
+        """获取会话列表所有会话的标题
+        考虑到效率，只返回名称列表
+
+        Returns:
+            list[str]: 返回会话标题名称列表
+        """
+        result_str = await self._do_remote_function("GetAllConversations", "")
+        return json.loads(result_str)
+
+    async def get_visible_conversation_titles(self) -> list[str]:
+        """获取会话列表可见会话标题
+
+        Returns:
+            list[str]: 可见的会话列表的标题列表
+        """
+        result_str = await self._do_remote_function("GetVisibleConversationTitles", "")
+        return json.loads(result_str)
+
+    async def get_visible_conversations(self) -> list[SimpleConversation]:
+        """获取可见会话列表
+        会话信息包含：会话名称、会话未读消息数、会话头像等具体信息
+
+        Returns:
+            list[SimpleConversation]: 返回<see cref="Conversation"/>列表
+        """
+        result_str = await self._do_remote_function("GetVisibleConversations", "")
+        return json.loads(result_str)
+
+    async def search_friend(self, who: str) -> bool:
+        """搜索好友/群聊
+
+        Args:
+            who (str): 待搜索的好友/群聊昵称,who - 微信会话列表肉眼可见的名称,如果群有备注，则这个who即为备注名
+
+        Returns:
+            bool: 如果找到，返回true,如果没有找到，则返回false.
+        """
+        result_str = await self._do_remote_function("SearchFriend", who)
+        return bool(result_str)
+
+    async def locate_conversation(self, who: str) -> bool:
+        """定位会话
+        定位会话的用途：可以将会话列表滚动到指定会话的位置，使指定会话可见
+
+        Args:
+            who (str): 会话标题
+
+        Returns:
+            bool: 如果找到会话，则返回true，否则返回false
+        """
+        result_str = await self._do_remote_function("LocateConversation", who)
+        return bool(result_str)
+
+    async def set_do_not_disturb(self, who: str, setting: bool) -> bool:
+        """设置会话消息免打扰
+
+        Args:
+            who (str): 要设置的 好友/群聊 名称,可以为空,如果为空，则为当前窗口设置免打扰
+            setting (bool): 如果为:true,则设置会话消息免打扰，如果为:false,则：允许消息通知
+
+        Returns:
+            bool: 执行消息免打扰结果
+        """
+        result_str = await self._do_remote_function(
+            "SetDoNotDisturb", json.dumps({"who": who, "setting": setting})
+        )
+        return bool(result_str)
+
+    async def set_top_most(self, who: str, setting: bool) -> bool:
+        """设置会话置顶
+
+        Args:
+            who (str): true:聊天置顶;false:取消聊天置顶
+            setting (bool): 要设置的 好友/群聊 名称,可以为空,如果为空，则为当前窗口设置置顶
+
+        Returns:
+            bool: 执行会话置顶结果
+        """
+        result_str = await self._do_remote_function(
+            "SetTopMost", json.dumps({"who": who, "setting": setting})
+        )
+        return bool(result_str)

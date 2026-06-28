@@ -19,9 +19,9 @@ async def wechat_automation():
             f"本服务器({DEFAULT_URI})共有微信客户端{len(wechat_list)}个:{list(wechat_list.keys())}"
         )
         client: WeChatClient = wechat_list["Alex"] # 得到某个微信客户端，支持多微信
-        owner_info = await client.get_ower_info()
-        print(owner_info)
-
+        result = await client.set_do_not_disturb("零声教育【依依老师】",False)
+        result = await client.set_top_most("零声教育【依依老师】",False)
+        print(result)
         # await factory.keep_running()
 
 

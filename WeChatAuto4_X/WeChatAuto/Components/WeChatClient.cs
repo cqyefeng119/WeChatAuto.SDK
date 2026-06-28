@@ -287,10 +287,19 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         public async Task Pinned() => await ToolBar.Top(true);
         /// <summary>
-        /// 如此置顶微信窗口
+        /// 取消置顶微信窗口
         /// </summary>
         /// <returns></returns>
         public async Task UnPinned() => await ToolBar.Top(false);
+        /// <summary>
+        /// 使主窗口获取焦点
+        /// </summary>
+        /// <returns></returns>
+        public async Task Focus()
+        {
+            this.MainWindow.Focus();
+            await Task.CompletedTask;
+        }
 
         /// <summary>
         /// 关闭查询窗口,如果查询窗口打开则关闭，如果查询窗口没有打开，则不作动作
@@ -349,7 +358,7 @@ namespace WeChatAuto.Components
         /// <param name="navigationType">导航栏类型,请参见枚举类型<seealso cref="NavigationType"/></param>
         public async Task CloseNavWin(NavigationType navigationType) => await this.Navigation.CloseNavWin(navigationType);
         /// <summary>
-        /// 点击任务栏图标
+        /// 点击任务栏微信图标
         /// </summary>
         /// <param name="index">图标索引，从1开始,索引范围不能越界</param>
         /// <returns></returns>
@@ -372,20 +381,20 @@ namespace WeChatAuto.Components
         /// 获取会话列表所有会话的标题
         /// 考虑到效率，只返回名称列表
         /// </summary>
-        /// <returns></returns>
+        /// <returns>所有会话列表的标题</returns>
         public async Task<List<string>> GetAllConversations() => await this.Conversations.GetAllConversations();
 
         /// <summary>
         /// 获取会话列表可见会话标题
         /// </summary>
-        /// <returns></returns>
+        /// <returns>可见的会话列表的标题列表</returns>
         public async Task<List<string>> GetVisibleConversationTitles() => await this.Conversations.GetVisibleConversationTitles();
 
         /// <summary>
         /// 获取可见会话列表
         /// 会话信息包含：会话名称、会话未读消息数、会话头像等具体信息，请参考<see cref="SimpleConversation"/>
         /// </summary>
-        /// <returns>返回<see cref="Conversation"/>列表</returns>
+        /// <returns>返回<see cref="SimpleConversation"/>列表</returns>
         public async Task<List<SimpleConversation>> GetVisibleConversations() => await this.Conversations.GetVisibleConversations();
 
         /// <summary>
