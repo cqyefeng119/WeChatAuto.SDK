@@ -16,7 +16,7 @@ async def wechat_automation():
         await factory.initialize()
         wechat_list = factory.client_list
         print(
-            f"本服务器({DEFAULT_URI})共有微信客户端{len(wechat_list)}个:{list(wechat_list.keys())}"
+            f"连接服务器({DEFAULT_URI})共有微信客户端{len(wechat_list)}个:{list(wechat_list.keys())}"
         )
         client: WeChatClient = wechat_list["Alex"] # 得到某个微信客户端，支持多微信
         await client.send_message("DroidMirror官方技术支持","hello world!",at_user=["AI.Net_test","智影工坊"])

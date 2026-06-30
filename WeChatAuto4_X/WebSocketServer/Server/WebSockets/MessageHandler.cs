@@ -130,13 +130,14 @@ public class MessageHandler
             case "SendEmoji":
                 var emojiOptions = wrapper.Options;
                 var emojiDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(emojiOptions!);
+                var atUser = emojiDict!["atUser"].ToString().Equals("null") ? null : JsonConvert.DeserializeObject<List<string>>(emojiDict!["atUser"]);
                 if (int.TryParse(emojiDict!["emoji"], out var emojiValue))
                 {
-                    await client.SendEmoji(emojiDict!["who"], emojiValue, JsonConvert.DeserializeObject<List<string>>(emojiDict!["atUser"]));
+                    await client.SendEmoji(emojiDict!["who"], emojiValue, atUser);
                 }
                 else
                 {
-                    await client.SendEmoji(emojiDict!["who"], emojiDict!["emoji"].ToString(), JsonConvert.DeserializeObject<List<string>>(emojiDict!["atUser"]));
+                    await client.SendEmoji(emojiDict!["who"], emojiDict!["emoji"].ToString(), atUser);
                 }
 
                 break;
@@ -161,7 +162,7 @@ public class MessageHandler
                 dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload!); ;
                 who = dicPayload!["who"].ToString();
                 //处理声音文件
-                
+
                 //这里处理语音数据.
                 if (string.IsNullOrEmpty(who))
                 {

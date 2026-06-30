@@ -195,7 +195,7 @@ class WeChatClient:
             bool: 如果找到，返回true,如果没有找到，则返回false.
         """
         result_str = await self._do_remote_function("SearchFriend", who)
-        return bool(result_str)
+        return result_str.lower() == 'true'
 
     async def locate_conversation(self, who: str) -> bool:
         """定位会话
@@ -208,7 +208,7 @@ class WeChatClient:
             bool: 如果找到会话，则返回true，否则返回false
         """
         result_str = await self._do_remote_function("LocateConversation", who)
-        return bool(result_str)
+        return result_str.lower() == 'true'
 
     async def set_do_not_disturb(self, who: str, setting: bool) -> bool:
         """设置会话消息免打扰
@@ -223,7 +223,7 @@ class WeChatClient:
         result_str = await self._do_remote_function(
             "SetDoNotDisturb", json.dumps({"who": who, "setting": setting})
         )
-        return bool(result_str)
+        return result_str.lower() == "true"
 
     async def set_top_most(self, who: str, setting: bool) -> bool:
         """设置会话置顶
@@ -238,7 +238,7 @@ class WeChatClient:
         result_str = await self._do_remote_function(
             "SetTopMost", json.dumps({"who": who, "setting": setting})
         )
-        return bool(result_str)
+        return result_str.lower() == 'true'
 
     async def get_title(self) -> HeaderInfo:
         """获取当前聊天窗口的标题对象
@@ -319,10 +319,10 @@ class WeChatClient:
             for file in files
         }
         await self._do_remote_action(
-            "SendFile", json.dumps({"who": who, "files": files, "upload": upload})
+            "SendFile", json.dumps({"who": who, "files": json.dumps(files), "upload": json.dumps(upload)})
         )
 
-    async def send_emoji(self, who: str, emoji: int | str, at_user: list[str]) -> None:
+    async def send_emoji(self, who: str, emoji: int | str, at_user: list[str] | None = None) -> None:
         """发送表情
 
         Args:
@@ -331,7 +331,7 @@ class WeChatClient:
             at_user (list[str]): 被@的好友列表
         """
         await self._do_remote_action(
-            "SendEmoji", json.dumps({"who": who, "emoji": emoji, "atUser": at_user})
+            "SendEmoji", json.dumps({"who": who, "emoji": emoji, "atUser": json.dumps(at_user)})
         )
 
     async def send_voice_chat(self, who: str) -> None:
