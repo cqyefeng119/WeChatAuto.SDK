@@ -1,6 +1,7 @@
 import pytest
 import logging
 import asyncio
+from datetime import datetime, date
 
 from wechat_auto_sdk.enums.navigation_type import NavigationType
 from wechat_auto_sdk.wechat_client import WeChatClient
@@ -310,6 +311,7 @@ async def test_send_file(client: WeChatClient):
         ],
     )
 
+
 @pytest.mark.asyncio
 async def test_send_emoji(client: WeChatClient):
     """
@@ -317,4 +319,60 @@ async def test_send_emoji(client: WeChatClient):
     """
     await client.send_emoji("AI.Net_test", 1)
     await asyncio.sleep(2)
-    await client.send_emoji("","微笑")
+    await client.send_emoji("", "微笑")
+
+
+@pytest.mark.asyncio
+async def test_send_voice_chat(client: WeChatClient):
+    """
+    发起单人语音聊天
+    """
+    await client.send_voice_chat("AI.Net_test")
+
+
+@pytest.mark.asyncio
+async def test_send_vedio_chat(client: WeChatClient):
+    """
+    发起单人视频聊天
+    """
+    await client.send_vedio_chat("AI.Net_test")
+
+
+@pytest.mark.asyncio
+async def test_send_voice_chats(client: WeChatClient):
+    """
+    发起多人语音聊天，适用于群聊发起语音聊天
+    """
+    await client.send_voice_chats(
+        "DroidMirror官方技术支持", ["AI.Net_test", "智影工坊"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_send_voice_message(client: WeChatClient):
+    """发送语音消息,此功能依赖虚拟声卡：Cable input/Cable output
+    请在声音-->设置-->将输入设备改成: Cable output
+    如果没有安装虚拟声卡，请在:https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip下载
+
+    Args:
+        who (str): 好友昵称或群聊名称,可以为空，如果为空，则给焦点聊天窗口发送语音消息
+        file_path (str): 语音文件路径
+    """
+    await client.send_voice_message(
+        "AI.Net_test",
+        "D:\\repo\\WeChatAuto.SDK\\WeChatAuto.SDK\\src\\WeChatAuto4_X\\WeChatAuto.Tests\\Assets\\littlecat.wav",
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_chatHistory(client: WeChatClient):
+    """
+    根据日期获取聊天历史
+    """
+    list = await client.get_chatHistory(fetch_date=date.today())
+    await asyncio.sleep(2)
+    print(list)
+    assert len(list) > 0
+    list = await client.get_chatHistory("Admin.net官方", fetch_date=date.today())
+    print(list)
+    assert len(list) > 0

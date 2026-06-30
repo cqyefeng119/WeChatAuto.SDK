@@ -6,3 +6,4 @@ class OwerInfo(BaseModel):
     nick_name: str
     wx_id: str
     avator_path: str
+    upload: str

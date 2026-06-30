@@ -1,10 +1,13 @@
+from datetime import datetime, date, time
 import uuid
 import base64
 import json
 
 from pathlib import Path
+from typing import overload
 
 from wechat_auto_sdk.models.chat_refer import ChatRefer
+from wechat_auto_sdk.models.chat_simple_message import ChatSimpleMessage
 from wechat_auto_sdk.websocket_client import WebSocketClient
 from wechat_auto_sdk.models.owner_info import OwerInfo
 from wechat_auto_sdk.models.message_package import MessagePackage
@@ -29,7 +32,15 @@ class WeChatClient:
             options="",
         )
         result = await self.socket.send_obj(request_package)
-        return OwerInfo.model_validate_json(result)
+        # 处理本地图片
+        owner_info = OwerInfo.model_validate_json(result)
+        local_file = Path.cwd() / "Avator" / Path(owner_info.avator_path).name
+        bytes = base64.b64decode(owner_info.upload)
+        if not local_file.exists():
+            local_file.parent.mkdir(parents=True, exist_ok=True)
+        local_file.write_bytes(bytes)
+        owner_info.avator_path = str(local_file.resolve())
+        return owner_info
 
     async def max_window(self) -> None:
         """
@@ -195,7 +206,7 @@ class WeChatClient:
             bool: 如果找到，返回true,如果没有找到，则返回false.
         """
         result_str = await self._do_remote_function("SearchFriend", who)
-        return result_str.lower() == 'true'
+        return result_str.lower() == "true"
 
     async def locate_conversation(self, who: str) -> bool:
         """定位会话
@@ -208,7 +219,7 @@ class WeChatClient:
             bool: 如果找到会话，则返回true，否则返回false
         """
         result_str = await self._do_remote_function("LocateConversation", who)
-        return result_str.lower() == 'true'
+        return result_str.lower() == "true"
 
     async def set_do_not_disturb(self, who: str, setting: bool) -> bool:
         """设置会话消息免打扰
@@ -238,7 +249,7 @@ class WeChatClient:
         result_str = await self._do_remote_function(
             "SetTopMost", json.dumps({"who": who, "setting": setting})
         )
-        return result_str.lower() == 'true'
+        return result_str.lower() == "true"
 
     async def get_title(self) -> HeaderInfo:
         """获取当前聊天窗口的标题对象
@@ -319,10 +330,15 @@ class WeChatClient:
             for file in files
         }
         await self._do_remote_action(
-            "SendFile", json.dumps({"who": who, "files": json.dumps(files), "upload": json.dumps(upload)})
+            "SendFile",
+            json.dumps(
+                {"who": who, "files": json.dumps(files), "upload": json.dumps(upload)}
+            ),
         )
 
-    async def send_emoji(self, who: str, emoji: int | str, at_user: list[str] | None = None) -> None:
+    async def send_emoji(
+        self, who: str, emoji: int | str, at_user: list[str] | None = None
+    ) -> None:
         """发送表情
 
         Args:
@@ -331,7 +347,8 @@ class WeChatClient:
             at_user (list[str]): 被@的好友列表
         """
         await self._do_remote_action(
-            "SendEmoji", json.dumps({"who": who, "emoji": emoji, "atUser": json.dumps(at_user)})
+            "SendEmoji",
+            json.dumps({"who": who, "emoji": emoji, "atUser": json.dumps(at_user)}),
         )
 
     async def send_voice_chat(self, who: str) -> None:
@@ -358,7 +375,7 @@ class WeChatClient:
             partner (list[str]): 参与者，好友昵称列表,必须是群聊成员
         """
         await self._do_remote_action(
-            "SendVoiceChats", json.dumps({"who": who, "partner": partner})
+            "SendVoiceChats", json.dumps({"who": who, "partner": json.dumps(partner)})
         )
 
     async def send_voice_message(self, who: str, file_path: str) -> None:
@@ -380,3 +397,55 @@ class WeChatClient:
             "SendVoiceMessage",
             json.dumps({"who": who, "filePath": file_path, "upload": file_base64}),
         )
+
+    async def _get_chat_history_current_window(
+        self,
+        fetch_date: date | None,
+    ) -> list[ChatSimpleMessage]:
+        """根据日期获取当前聊天窗口的聊天历史
+
+        Args:
+            date (datetime): 查询日期,如果为空，则为当天日期
+
+        Returns:
+            list[ChatSimpleMessage]: 返回<see cref="ChatSimpleMessage"/>列表
+        """
+        if fetch_date is None:
+            fetch_date = date.today()
+        result = await self._do_remote_function(
+            "GetChatHistory_Current_Window", fetch_date.strftime("%Y-%m-%d")
+        )
+        return json.loads(result)
+
+    async def _get_chatHistory_who(
+        self, who: str, fetch_date: date | None
+    ) -> list[ChatSimpleMessage]:
+        """根据日期获取聊天历史
+
+        Args:
+            client (WeChatClient): 微信名称，可以是好友/群聊的微信名称,可以为空，如果为空，则获取当前聊天窗口的历史记录
+
+        Returns:
+            list[ChatSimpleMessage]: 查询日期,如果不传，则是当天日期
+        """
+        if fetch_date is None:
+            fetch_date = date.today()
+        result = await self._do_remote_function(
+            "GetChatHistory_Who",
+            json.dumps({"who": who, "fetch_date": fetch_date.strftime("%Y-%m-%d")}),
+        )
+        return json.loads(result)
+
+    async def get_chatHistory(
+        self, who: str | None = None, fetch_date: date | None = None
+    ) -> list[ChatSimpleMessage]:
+        """根据日期获取聊天历史
+
+        Args:
+            fetch_date (date | None): 查询日期,如果不传，则是当天日期
+            who (str | None, optional): 微信名称，可以是好友/群聊的微信名称,可以为空，如果为空，则获取当前聊天窗口的历史记录
+        """
+        if who is None:
+            return await self._get_chat_history_current_window(fetch_date=fetch_date)
+        else:
+            return await self._get_chatHistory_who(who, fetch_date)

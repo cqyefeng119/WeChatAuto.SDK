@@ -162,16 +162,39 @@ public class MessageHandler
                 dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload!); ;
                 who = dicPayload!["who"].ToString();
                 //处理声音文件
-
+                var localFileName = dicPayload["filePath"].ToString();
+                var fileName = Path.GetFileName(localFileName);
+                var pathRoot = Path.Combine(AppContext.BaseDirectory, "temp");
+                if (!Directory.Exists(pathRoot))
+                    Directory.CreateDirectory(pathRoot);
+                pathRoot = Path.Combine(pathRoot, fileName);
+                var bytes = Convert.FromBase64String(dicPayload!["upload"].ToString());
+                await File.WriteAllBytesAsync(pathRoot, bytes);
+                await Task.Delay(1000);
                 //这里处理语音数据.
                 if (string.IsNullOrEmpty(who))
                 {
-                    await client.SendVoiceMessage(dicPayload["filePath"]);
+                    await client.SendVoiceMessage(pathRoot);
                 }
                 else
                 {
-                    await client.SendVoiceMessage(who, dicPayload["filePath"]);
+                    await client.SendVoiceMessage(who, pathRoot);
                 }
+                break;
+            case "GetChatHistory_Current_Window":
+                payload = wrapper.Options!;
+                var date = DateOnly.Parse(payload!);
+                var fetchDate = date.ToDateTime(TimeOnly.Parse("00:00:00"));
+                var list = await client.GetChatHistory(fetchDate);
+                response.Data = JsonConvert.SerializeObject(list);
+                break;
+            case "GetChatHistory_Who":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload);
+                who = dicPayload!["who"];
+                var fDate = DateTime.Parse(dicPayload!["fetch_date"]);
+                list = await client.GetChatHistory(who, fDate);
+                response.Data = JsonConvert.SerializeObject(list);
                 break;
             default:
                 throw new Exception("不支持的函数名!");
@@ -246,6 +269,24 @@ public class MessageHandler
     private async Task _ProcessOwnerInfo(WeChatClient client, RequestData response)
     {
         var info = client.GetOwerInfo();
-        response.Data = JsonConvert.SerializeObject(info);
+        var bytes = await File.ReadAllBytesAsync(info.AvatorPath);
+        var upload = Convert.ToBase64String(bytes);
+        OwerInfoExt infoExt = OwerInfoExt.CreateObject(info);
+        infoExt.upload = upload;
+        response.Data = JsonConvert.SerializeObject(infoExt);
+    }
+
+    private class OwerInfoExt : OwerInfo
+    {
+        public string? upload { get; set; }
+        public static OwerInfoExt CreateObject(OwerInfo info)
+        {
+            return new OwerInfoExt()
+            {
+                AvatorPath = info.AvatorPath,
+                NickName = info.NickName,
+                WxId = info.WxId,
+            };
+        }
     }
 }
