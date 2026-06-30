@@ -1,8 +1,8 @@
 import asyncio
 
-from wechat_client import WeChatClient
-from models.wechat_config import WeChatConfig
-from wechat_factory import WechatFactory
+from wechat_auto_sdk.wechat_client import WeChatClient
+from wechat_auto_sdk.models.wechat_config import WeChatConfig
+from wechat_auto_sdk.wechat_factory import WechatFactory
 
 DEFAULT_URI = "ws://localhost:5177/ws"
 
@@ -19,9 +19,7 @@ async def wechat_automation():
             f"本服务器({DEFAULT_URI})共有微信客户端{len(wechat_list)}个:{list(wechat_list.keys())}"
         )
         client: WeChatClient = wechat_list["Alex"] # 得到某个微信客户端，支持多微信
-        result = await client.set_do_not_disturb("零声教育【依依老师】",False)
-        result = await client.set_top_most("零声教育【依依老师】",False)
-        print(result)
+        await client.send_message("DroidMirror官方技术支持","hello world!",at_user=["AI.Net_test","智影工坊"])
         # await factory.keep_running()
 
 

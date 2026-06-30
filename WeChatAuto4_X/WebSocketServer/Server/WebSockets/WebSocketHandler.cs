@@ -36,7 +36,7 @@ public class WebSocketHandler
         // 心跳任务
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
-        _ = Task.Run(() => Heartbeat(ws, connId, linkedTokenSource, stopwatch), token);
+        //_ = Task.Run(() => Heartbeat(ws, connId, linkedTokenSource, stopwatch), token);
 
         try
         {

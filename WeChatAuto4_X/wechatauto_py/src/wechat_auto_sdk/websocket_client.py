@@ -2,9 +2,9 @@ import asyncio
 import websockets
 import uuid
 
-from cancellation_token_source import CancellationTokenSource
-from models.request_data import RequestData
-from models.message_package import MessagePackage
+from wechat_auto_sdk.cancellation_token_source import CancellationTokenSource
+from wechat_auto_sdk.models.request_data import RequestData
+from wechat_auto_sdk.models.message_package import MessagePackage
 
 
 class WebSocketClient:

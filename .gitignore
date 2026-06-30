@@ -61,3 +61,5 @@ Videos
 !Examples/demo01/Videos
 ffmpeg
 pack.cmd
+__pycache__/
+**/__pycache__/

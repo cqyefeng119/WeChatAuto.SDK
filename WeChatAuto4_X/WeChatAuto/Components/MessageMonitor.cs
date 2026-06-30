@@ -1438,14 +1438,14 @@ namespace WeChatAuto.Components
                 this._Client.AddOrUpdateFriendFromCache(friendInfo);
             }
             token.ThrowIfCancellationRequested();
-            this._Client.ChatContent.Sender.FcouseSenderCore(automation);  //获取完信息后把焦点切回消息输入框
+            this._Client.ChatContent.Sender.FocuseSenderCore(automation);  //获取完信息后把焦点切回消息输入框
             RandomWait.Wait(100, 300);
 
             //再次检查一下是否关闭侧边栏，如果没有关闭，则关闭一下，避免影响下一次获取信息
             var addButtonRetry = Retry.WhileNotNull(() => this._Client.MainWindow.FindFirstByXPath("/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/Group/Button[@Name='添加'][@AutomationId='single_chat_member_add'][@ClassName='mmui::ChatMemberActionView']"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
             if (!addButtonRetry.Result)
             {
-                this._Client.ChatContent.Sender.FcouseSenderCore(automation);  //获取完信息后把焦点切回消息输入框
+                this._Client.ChatContent.Sender.FocuseSenderCore(automation);  //获取完信息后把焦点切回消息输入框
                 RandomWait.Wait(100, 300);
             }
         }

@@ -215,7 +215,7 @@ namespace WeChatAuto.Components
             var list = _GetChatMemberList();
             if (list.Length > 0)
             {
-                this._Client.ChatContent.Sender.FcouseSenderCore(automation);
+                this._Client.ChatContent.Sender.FocuseSenderCore(automation);
                 return list[0].Name.Trim();
             }
             return "";

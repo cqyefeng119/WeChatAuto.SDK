@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using WeAutoCommon.Enums;
 using WeChatAuto.Components;
+using WeChatAuto.Models;
 
 public class MessageHandler
 {
@@ -110,10 +111,93 @@ public class MessageHandler
                 var setTopMostResult = await client.SetTopMost(topMostOptions!["who"].ToString(), bool.Parse(topMostOptions!["setting"].ToString()!));
                 response.Data = setTopMostResult.ToString();
                 break;
+            case "GetTitle":
+                var headInfo = await client.GetTitle();
+                response.Data = JsonConvert.SerializeObject(headInfo);
+                break;
+            case "FocuseSenderInput":
+                await client.FocuseSenderInput();
+                break;
+            case "GetOnlyTitle":
+                var title = await client.GetOnlyTitle();
+                response.Data = title;
+                break;
+            case "SendMessage":
+                var sendMessageOptions = wrapper.Options;
+                var optionsMessage = JsonConvert.DeserializeObject<Dictionary<string, string>>(sendMessageOptions!);
+                await client.SendMessage(optionsMessage!["who"], optionsMessage!["message"], JsonConvert.DeserializeObject<List<string>>(optionsMessage!["atUser"]), JsonConvert.DeserializeObject<ChatRefer>(optionsMessage!["refer"]));
+                break;
+            case "SendEmoji":
+                var emojiOptions = wrapper.Options;
+                var emojiDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(emojiOptions!);
+                if (int.TryParse(emojiDict!["emoji"], out var emojiValue))
+                {
+                    await client.SendEmoji(emojiDict!["who"], emojiValue, JsonConvert.DeserializeObject<List<string>>(emojiDict!["atUser"]));
+                }
+                else
+                {
+                    await client.SendEmoji(emojiDict!["who"], emojiDict!["emoji"].ToString(), JsonConvert.DeserializeObject<List<string>>(emojiDict!["atUser"]));
+                }
+
+                break;
+            case "SendFile":
+                await _SendFile(wrapper, client);
+                break;
+            case "SendVoiceChat":
+                var who = wrapper.Options!;
+                await client.SendVoiceChat(who);
+                break;
+            case "SendVedioChat":
+                who = wrapper.Options!;
+                await client.SendVedioChat(who);
+                break;
+            case "SendVoiceChats":
+                var payload = wrapper.Options!;
+                var dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload!);
+                await client.SendVoiceChats(dicPayload!["who"].ToString(), JsonConvert.DeserializeObject<string[]>(dicPayload!["partner"].ToString()));
+                break;
+            case "SendVoiceMessage":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload!); ;
+                who = dicPayload!["who"].ToString();
+                //处理声音文件
+                
+                //这里处理语音数据.
+                if (string.IsNullOrEmpty(who))
+                {
+                    await client.SendVoiceMessage(dicPayload["filePath"]);
+                }
+                else
+                {
+                    await client.SendVoiceMessage(who, dicPayload["filePath"]);
+                }
+                break;
             default:
                 throw new Exception("不支持的函数名!");
         }
         return response;
+    }
+
+    private static async Task _SendFile(MessagePackageWrapper wrapper, WeChatClient client)
+    {
+        var payload = wrapper.Options!;
+        var dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload!);
+        var localFileNames = JsonConvert.DeserializeObject<List<string>>(dicPayload!["files"]);
+        var localFiles = JsonConvert.DeserializeObject<Dictionary<string, string>>(dicPayload["upload"]);
+        var pathRoot = Path.Combine(AppContext.BaseDirectory, "temp");
+        if (!Directory.Exists(pathRoot))
+            Directory.CreateDirectory(pathRoot);
+        var sendFiles = new List<string>();
+        foreach (var file in localFileNames!)
+        {
+            var fileName = Path.GetFileName(file);
+            var path = Path.Combine(pathRoot, fileName);
+            var base64 = localFiles![file];
+            var bytes = Convert.FromBase64String(base64);
+            await File.WriteAllBytesAsync(path, bytes);
+            sendFiles.Add(path);
+        }
+        await client.SendFile(dicPayload!["who"], sendFiles.ToArray());
     }
 
     private async Task _CloseSearchWindow(WeChatClient client, RequestData response, string who)

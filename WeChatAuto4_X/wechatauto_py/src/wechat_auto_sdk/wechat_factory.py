@@ -4,11 +4,11 @@ import json
 
 import websockets
 
-from wechat_client import WeChatClient
-from models.wechat_config import WeChatConfig
-from cancellation_token_source import CancellationTokenSource
-from websocket_client import WebSocketClient
-from models.request_data import RequestData
+from wechat_auto_sdk.wechat_client import WeChatClient
+from wechat_auto_sdk.models.wechat_config import WeChatConfig
+from wechat_auto_sdk.cancellation_token_source import CancellationTokenSource
+from wechat_auto_sdk.websocket_client import WebSocketClient
+from wechat_auto_sdk.models.request_data import RequestData
 
 
 class WechatFactory:

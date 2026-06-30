@@ -1,11 +1,16 @@
 import uuid
+import base64
 import json
 
-from websocket_client import WebSocketClient
-from models.owner_info import OwerInfo
-from models.message_package import MessagePackage
-from enums.navigation_type import NavigationType
-from models.simple_conversation import SimpleConversation
+from pathlib import Path
+
+from wechat_auto_sdk.models.chat_refer import ChatRefer
+from wechat_auto_sdk.websocket_client import WebSocketClient
+from wechat_auto_sdk.models.owner_info import OwerInfo
+from wechat_auto_sdk.models.message_package import MessagePackage
+from wechat_auto_sdk.enums.navigation_type import NavigationType
+from wechat_auto_sdk.models.simple_conversation import SimpleConversation
+from wechat_auto_sdk.models.header_info import HeaderInfo
 
 
 class WeChatClient:
@@ -234,3 +239,144 @@ class WeChatClient:
             "SetTopMost", json.dumps({"who": who, "setting": setting})
         )
         return bool(result_str)
+
+    async def get_title(self) -> HeaderInfo:
+        """获取当前聊天窗口的标题对象
+
+        Returns:
+            HeaderInfo: 标题对象
+        """
+        result_str: str = await self._do_remote_function("GetTitle", "")
+        return HeaderInfo.model_validate_json(result_str)
+
+    async def focuse_sender_input(self) -> None:
+        """
+        当前窗口的Sender输入区域点击，以获得焦点，也可以取消系统的消息提醒或者关闭右侧Pane等作用
+        """
+        await self._do_remote_action("FocuseSenderInput", "")
+
+    async def get_only_title(self) -> str:
+        """获取当前标窗的标题
+
+        Returns:
+            str: 当前窗口的标题名称
+        """
+        result_str: str = await self._do_remote_function("GetOnlyTitle", "")
+        return result_str
+
+    async def send_message(
+        self,
+        who: str,
+        message: str,
+        *,
+        at_user: str | list[str] | None = None,
+        chat_refer: ChatRefer | None = None,
+    ) -> None:
+        """
+        发送文本消息,可以是群聊名称或者好友名称，名称可以为空，如果为空，则给当前聊天窗口发送消息
+
+        Args:
+            who (str): 好名/群聊的名称,也就是肉眼所见的标题
+            message (str): 消息内容，文本消息内容
+            at_user (str | list[str] | None, optional): 被@的好友,可以一个，也可以多个
+            chat_refer (ChatRefer | None, optional): 引用的对话内容,请参考<see cref="ChatRefer"/>
+        """
+        at_list = (
+            []
+            if at_user is None
+            else [at_user]
+            if isinstance(at_user, str)
+            else at_user
+        )
+        await self._do_remote_action(
+            "SendMessage",
+            json.dumps(
+                {
+                    "who": who,
+                    "message": message,
+                    "atUser": json.dumps(at_list),
+                    "refer": json.dumps(chat_refer),
+                }
+            ),
+        )
+
+    async def send_file(self, who: str, files: list[str]) -> None:
+        """发送文件
+
+        Args:
+            who (str): 好友/群聊，可以为空,如果为空，则发送到当前聊天窗口
+            files (list[str]): 文件路径列表
+        """
+        if len(files) == 0:
+            raise Exception(f"参数{files}错误： 包含的文件名不能为空!")
+        # 检查文件是否都存在
+        missing_file = next((file for file in files if not Path(file).is_file()), None)
+        if missing_file is not None:
+            raise FileNotFoundError(missing_file)
+        # 读取文件，并且转为base64字符上传
+        upload = {
+            file: base64.b64encode(Path(file).read_bytes()).decode("utf-8")
+            for file in files
+        }
+        await self._do_remote_action(
+            "SendFile", json.dumps({"who": who, "files": files, "upload": upload})
+        )
+
+    async def send_emoji(self, who: str, emoji: int | str, at_user: list[str]) -> None:
+        """发送表情
+
+        Args:
+            who (str): 被发送消息的好友名称/群聊名称
+            emoji (int | str): 表情名称或者描述或者索引
+            at_user (list[str]): 被@的好友列表
+        """
+        await self._do_remote_action(
+            "SendEmoji", json.dumps({"who": who, "emoji": emoji, "atUser": at_user})
+        )
+
+    async def send_voice_chat(self, who: str) -> None:
+        """发起单人语音聊天
+
+        Args:
+            who (str): 好友昵称,可以为空，如果为空，则发送到当前聊天窗口
+        """
+        await self._do_remote_action("SendVoiceChat", who)
+
+    async def send_vedio_chat(self, who: str) -> None:
+        """发起单人视频聊天
+
+        Args:
+            who (str): 好友昵称,可以为空，如果为空，则发送到当前聊天窗口
+        """
+        await self._do_remote_action("SendVedioChat", who)
+
+    async def send_voice_chats(self, who: str, partner: list[str]) -> None:
+        """发起多人语音聊天，适用于群聊发起语音聊天
+
+        Args:
+            who (str): 群聊名称,可以为空，如果为空，则发送到当前聊天窗口
+            partner (list[str]): 参与者，好友昵称列表,必须是群聊成员
+        """
+        await self._do_remote_action(
+            "SendVoiceChats", json.dumps({"who": who, "partner": partner})
+        )
+
+    async def send_voice_message(self, who: str, file_path: str) -> None:
+        """发送语音消息,此功能依赖虚拟声卡：Cable input/Cable output
+        请在声音-->设置-->将输入设备改成: Cable output
+        如果没有安装虚拟声卡，请在:https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip下载
+
+        Args:
+            who (str): 好友昵称或群聊名称,可以为空，如果为空，则给焦点聊天窗口发送语音消息
+            file_path (str): 语音文件路径
+        """
+        if not file_path:
+            raise Exception("错误：参数file_path不能为空！")
+        path = Path(file_path)
+        if not path.is_file():
+            raise FileNotFoundError()
+        file_base64 = base64.b64encode(Path(file_path).read_bytes()).decode("utf-8")
+        await self._do_remote_action(
+            "SendVoiceMessage",
+            json.dumps({"who": who, "filePath": file_path, "upload": file_base64}),
+        )

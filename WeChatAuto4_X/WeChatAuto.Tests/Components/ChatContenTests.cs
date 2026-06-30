@@ -175,7 +175,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.FcouseSenderInput();
+        await client.FocuseSenderInput();
         Assert.True(true);
     }
 

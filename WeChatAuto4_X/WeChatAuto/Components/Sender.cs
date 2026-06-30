@@ -1022,12 +1022,12 @@ namespace WeChatAuto.Components
 		/// 当前窗口的Sender区域点击，以获得焦点，可以取消系统的消息提醒或者关闭右侧Pane
 		/// </summary>
 		/// <returns></returns>
-		public async Task FcouseSenderInput()
+		public async Task FocuseSenderInput()
 		{
-			await WeChatInvoker.Call(FcouseSenderCore);
+			await WeChatInvoker.Call(FocuseSenderCore);
 		}
 
-		internal void FcouseSenderCore(UIA3Automation automation)
+		internal void FocuseSenderCore(UIA3Automation automation)
 		{
 			var root = this.content.Root;
 			if (root == null)
