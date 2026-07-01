@@ -3,6 +3,7 @@ import logging
 import asyncio
 from datetime import datetime, date
 
+from wechat_auto_sdk.enums.forward_message_type_enums import ForwardMessageTypeEnums
 from wechat_auto_sdk.enums.navigation_type import NavigationType
 from wechat_auto_sdk.wechat_client import WeChatClient
 
@@ -374,5 +375,59 @@ async def test_get_chatHistory(client: WeChatClient):
     print(list)
     assert len(list) > 0
     list = await client.get_chatHistory("Admin.net官方", fetch_date=date.today())
+    print(list)
+    assert len(list) > 0
+
+
+@pytest.mark.asyncio
+async def test_tap_who(client: WeChatClient):
+    """
+    点击who指定的会话
+    """
+    result = await client.tap_who("AI.Net_test", 60)
+    assert result
+    result = await client.tap_who("Alex")
+    assert not result
+
+
+@pytest.mark.asyncio
+async def test_forward_multiple_message(client: WeChatClient):
+    """
+    转发多条消息
+    """
+    result = await client.forward_multiple_message(
+        "人工智能自动化技术讨论群", ["Alex", "AI.Net_test"]
+    )
+    assert result
+
+
+@pytest.mark.asyncio
+async def test_forward_single_message(client: WeChatClient):
+    """
+    转发单条消息
+    """
+    result = await client.forward_single_message(
+        "矛", "@菜鸟 用刘亦菲的声音给我报一下现在的时间", ["Alex", "AI.Net_test"]
+    )
+    assert result
+
+
+@pytest.mark.asyncio
+async def test_open_add_friens_win(client: WeChatClient):
+    """
+    打开新增朋友窗口 与 关闭新增朋友窗口
+    """
+    await client.open_add_friens_win()
+    await asyncio.sleep(2)
+    await client.close_add_friend_win()
+
+
+async def test_add_friends(client: WeChatClient):
+    """
+    通过手机号码、微信号查找并添加好友
+    """
+    list = await client.add_friends(
+        ["18978694189", "13719238557", "13719238558", "18978194199"]
+    )
     print(list)
     assert len(list) > 0

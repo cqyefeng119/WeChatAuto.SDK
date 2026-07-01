@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 from typing import overload
 
+from wechat_auto_sdk.enums.forward_message_type_enums import ForwardMessageTypeEnums
+from wechat_auto_sdk.enums.friend_add_result import FriendAddResult
+from wechat_auto_sdk.models.add_friends_options import AddFriendsOptions
 from wechat_auto_sdk.models.chat_refer import ChatRefer
 from wechat_auto_sdk.models.chat_simple_message import ChatSimpleMessage
 from wechat_auto_sdk.websocket_client import WebSocketClient
@@ -36,7 +39,7 @@ class WeChatClient:
         owner_info = OwerInfo.model_validate_json(result)
         local_file = Path.cwd() / "Avator" / Path(owner_info.avator_path).name
         bytes = base64.b64decode(owner_info.upload)
-        if not local_file.exists():
+        if not local_file.parent.exists():
             local_file.parent.mkdir(parents=True, exist_ok=True)
         local_file.write_bytes(bytes)
         owner_info.avator_path = str(local_file.resolve())
@@ -449,3 +452,108 @@ class WeChatClient:
             return await self._get_chat_history_current_window(fetch_date=fetch_date)
         else:
             return await self._get_chatHistory_who(who, fetch_date)
+
+    async def tap_who(self, who: str, prev_scroll_number: int = 30) -> bool:
+        """拍一拍
+        注意：只能拍一拍当前聊天窗口的好友,一般结合消息监听使用.
+        只有两个地方可以拍一拍：一个是群聊中，一个是好友聊天窗口（非企业微信,企业微信聊天不能拍一拍),自己不能拍一拍自己
+
+        Args:
+            who (str): 要拍一拍的好友昵称
+            prev_scroll_number (int, optional): 如果当前页找不到，往前滚动的次数. Defaults to 30.
+        """
+        result = await self._do_remote_function(
+            "TapWho", json.dumps({"who": who, "prev_scroll_number": prev_scroll_number})
+        )
+        return result.lower() == "true"
+
+    async def forward_multiple_message(
+        self,
+        who: str,
+        to: list[str],
+        f_type: ForwardMessageTypeEnums = ForwardMessageTypeEnums.ForwardMerge,
+        row_count: int = 5,
+    ) -> bool:
+        """转发多条消息,默认转发最后5条消息，可以自行指定转发多少条消息
+
+        Args:
+            who (str): 被转发消息的好友/群聊,可以为空，则转发本窗口的消息
+            to (list[str]): 要转发给谁,可以设置多个好友/群聊
+            f_type (ForwardMessageTypeEnums, optional): 消息转发类型，详情请参见<see cref="ForwardMessageTypeEnums"/>
+            row_count (int, optional): 要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息
+        """
+        result = await self._do_remote_function(
+            "ForwardMultipleMessage",
+            json.dumps(
+                {
+                    "who": who,
+                    "to": json.dumps(to),
+                    "f_type": f_type.value,
+                    "row_count": row_count,
+                }
+            ),
+        )
+        return result.lower() == "true"
+
+    async def forward_single_message(
+        self, who: str, message: str, to: list[str], prev_scroll_number: int = 30
+    ) -> bool:
+        """转发单条消息
+
+        Args:
+            who (str): 要转发的好友昵称
+            message (str): 要转发的消息内容
+            to (list[str]): 要转发给谁,可以是多个好友
+            prev_scroll_number (int, optional): 如果当前页找不到，往前滚动的次数. Defaults to 30.
+
+        Returns:
+            bool: True - 发送成功 False - 发送失败
+        """
+        if not who:
+            raise ValueError("参数: who 不能为空")
+        if not to:
+            raise ValueError("参数: to 不能为空")
+
+        result: str = await self._do_remote_function(
+            "ForwardSingleMessage",
+            json.dumps(
+                {
+                    "who": who,
+                    "message": message,
+                    "to": json.dumps(to),
+                    "prev_scroll_number": prev_scroll_number,
+                }
+            ),
+        )
+        return result.lower() == "true"
+
+    async def open_add_friens_win(self):
+        """
+        打开新增朋友窗口
+        如果未打开新增朋友窗口，则打开新增朋友窗口，如果已打开“新增朋友”窗口，则不做动作.
+        """
+        await self._do_remote_action("OpenAddFriensWin", "")
+
+    async def close_add_friend_win(self):
+        """
+        关闭新增朋友窗口
+        """
+        await self._do_remote_action("CloseAddFriendWin", "")
+
+    async def add_friends(
+        self, friends: list[str], options: AddFriendsOptions | None = None
+    ) -> dict[str, FriendAddResult]:
+        """通过手机号码、微信号查找并添加好友
+
+        Args:
+            friends (list[str]): 手机号码或者微信号列表
+            options (AddFriendsOptions | None, optional): 增加朋友选项，具体请参考<see cref="AddFriendsOptions"/>. Defaults to None.
+
+        Returns:
+            dict[str,FriendAddResult]: 添加好友结果列表，详情请参见<see cref="FriendAddResult"/>
+        """
+        result = await self._do_remote_function("AddFriends",json.dumps({
+            "friends": friends,
+            "options": json.dumps(options)
+        }))
+        return json.loads(result)

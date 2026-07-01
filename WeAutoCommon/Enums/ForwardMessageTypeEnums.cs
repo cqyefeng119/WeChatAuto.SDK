@@ -1,6 +1,6 @@
 namespace WeAutoCommon.Enums
 {
-    public enum ForwardMessageTyhpeEnums
+    public enum ForwardMessageTypeEnums
     {
         /// <summary>
         /// 逐条转发

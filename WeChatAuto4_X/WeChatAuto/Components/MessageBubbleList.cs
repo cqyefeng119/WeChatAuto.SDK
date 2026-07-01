@@ -1011,9 +1011,9 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="who">被转发消息的好友/群聊,可以为空，则转发本窗口的消息</param>
         /// <param name="to">要转发给谁</param>
-        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTyhpeEnums"/></param>
+        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTypeEnums"/></param>
         /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息</param>
-        public async Task<bool> ForwardMultipleMessage(string who, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType = ForwardMessageTyhpeEnums.ForwardMerge, int rowCount = 5)
+        public async Task<bool> ForwardMultipleMessage(string who, OneOf<string, string[]> to, ForwardMessageTypeEnums fType = ForwardMessageTypeEnums.ForwardMerge, int rowCount = 5)
         {
             if (string.IsNullOrWhiteSpace(who))
             {
@@ -1036,14 +1036,14 @@ namespace WeChatAuto.Components
         /// 注意：只能转发本窗口的消息
         /// </summary>
         /// <param name="to">要转发给谁</param>
-        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTyhpeEnums"/></param>
+        /// <param name="fType">消息转发类型，详情请参见<see cref="ForwardMessageTypeEnums"/></param>
         /// <param name="rowCount">要转发多少条消息，默认是最后的5条消息,如果当前没有5条，则转发所有消息</param>
-        public async Task<bool> ForwardMultipleMessage(OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType = ForwardMessageTyhpeEnums.ForwardMerge, int rowCount = 5)
+        public async Task<bool> ForwardMultipleMessage(OneOf<string, string[]> to, ForwardMessageTypeEnums fType = ForwardMessageTypeEnums.ForwardMerge, int rowCount = 5)
         {
             return await WeChatInvoker.Call(ForwardMultipleMessageCore, to, fType, rowCount);
         }
 
-        private bool ForwardMultipleMessageCore(UIA3Automation automation, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType, int rowCount)
+        private bool ForwardMultipleMessageCore(UIA3Automation automation, OneOf<string, string[]> to, ForwardMessageTypeEnums fType, int rowCount)
         {
             var toWhos = to.IsT0 ? new List<string> { to.AsT0 } : to.AsT1.ToList();
             if (toWhos.Count == 0)
@@ -1334,7 +1334,7 @@ namespace WeChatAuto.Components
                             RandomWait.Wait(300, 900);
                             SupperMouseKey.LeftClick();
                         }
-                        var result = OnlyForwardSingleMessageCore(automation, to, ForwardMessageTyhpeEnums.ForwardOneByOne);
+                        var result = OnlyForwardSingleMessageCore(automation, to, ForwardMessageTypeEnums.ForwardOneByOne);
                         if (!result)
                         {
                             CloseMultiMenu();  //关闭多选窗口
@@ -1351,10 +1351,10 @@ namespace WeChatAuto.Components
             return false;
         }
 
-        internal bool OnlyForwardSingleMessageCore(UIA3Automation automation, OneOf<string, string[]> to, ForwardMessageTyhpeEnums fType)
+        internal bool OnlyForwardSingleMessageCore(UIA3Automation automation, OneOf<string, string[]> to, ForwardMessageTypeEnums fType)
         {
             var toWhos = to.IsT0 ? new List<string> { to.AsT0 } : to.AsT1.ToList();
-            var path = fType == ForwardMessageTyhpeEnums.ForwardOneByOne ?
+            var path = fType == ForwardMessageTypeEnums.ForwardOneByOne ?
             "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='逐条转发'][@ClassName='mmui::MultiSelectToolIButtonTexttem']"
             :
             "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Custom/Group/ToolBar/Group/Button[@Name='合并转发'][@ClassName='mmui::MultiSelectToolIButtonTexttem']";

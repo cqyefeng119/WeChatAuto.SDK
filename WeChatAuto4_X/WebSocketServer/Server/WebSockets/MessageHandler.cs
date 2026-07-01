@@ -196,6 +196,38 @@ public class MessageHandler
                 list = await client.GetChatHistory(who, fDate);
                 response.Data = JsonConvert.SerializeObject(list);
                 break;
+            case "TapWho":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload);
+                who = dicPayload!["who"];
+                var prevNextNumber = int.Parse(dicPayload!["prev_scroll_number"]);
+                var tapResult = await client.TapWho(who, prevNextNumber);
+                response.Data = tapResult.ToString();
+                break;
+            case "ForwardMultipleMessage":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload);
+                who = dicPayload!["who"];
+                var to = JsonConvert.DeserializeObject<List<string>>(dicPayload!["to"]);
+                var fType = (ForwardMessageTypeEnums)Enum.Parse(typeof(ForwardMessageTypeEnums), dicPayload!["f_type"]);
+                var rowCount = int.Parse(dicPayload["row_count"]);
+                response.Data = (await client.ForwardMultipleMessage(who, to!.ToArray(), fType, rowCount)).ToString();
+                break;
+            case "ForwardSingleMessage":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                who = dicPayload["who"];
+                var message = dicPayload["message"];
+                to = JsonConvert.DeserializeObject<List<string>>(dicPayload["to"])!;
+                var prev_scroll_number = int.Parse(dicPayload["prev_scroll_number"]);
+                response.Data = (await client.ForwardSingleMessage(who, message, to.ToArray(), prev_scroll_number)).ToString();
+                break;
+            case "OpenAddFriensWin":
+                await client.OpenAddFriensWin();
+                break;
+            case "CloseAddFriendWin":
+                await client.CloseAddFriendWin();
+                break;
             default:
                 throw new Exception("不支持的函数名!");
         }
