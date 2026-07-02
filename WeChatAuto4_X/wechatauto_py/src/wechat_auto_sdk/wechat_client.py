@@ -552,8 +552,196 @@ class WeChatClient:
         Returns:
             dict[str,FriendAddResult]: 添加好友结果列表，详情请参见<see cref="FriendAddResult"/>
         """
-        result = await self._do_remote_function("AddFriends",json.dumps({
-            "friends": friends,
-            "options": json.dumps(options)
-        }))
+        result = await self._do_remote_function(
+            "AddFriends",
+            json.dumps(
+                {"friends": json.dumps(friends), "options": json.dumps(options)}
+            ),
+        )
         return json.loads(result)
+
+    async def is_owner_chat_group(self, group_name: str) -> bool:
+        """是否是自有群
+
+        Args:
+            group_name (str): 群聊名称
+
+        Returns:
+            bool: 是否是自有群
+        """
+        if not group_name:
+            raise ValueError("错误：群名不能为空！")
+        result = await self._do_remote_function("IsOwnerChatGroup", group_name)
+        return result.lower() == "true"
+
+    async def get_group_owner(self, group_name: str) -> str:
+        """获取群主
+
+        Args:
+            group_name (str): 群聊名称
+
+        Returns:
+            str: 群主昵称
+        """
+        if not group_name:
+            raise ValueError("错误：群名不能为空！")
+        return await self._do_remote_function("GetGroupOwner", group_name)
+
+    async def add_owner_chat_group_member(
+        self, group_name: str, member_name: list[str]
+    ) -> None:
+        """添加群聊成员，适用于自有群
+
+        Args:
+            group_name (str): 群聊名称,可以为空，如果为空，则在焦点聊天群聊中添加群聊成员
+            member_name (list[str]): 成员名称
+        """
+        if not member_name:
+            raise ValueError("错误：参数 member_name 不能为空")
+        await self._do_remote_action(
+            "AddOwnerChatGroupMember",
+            json.dumps(
+                {"group_name": group_name, "member_name": json.dumps(member_name)}
+            ),
+        )
+
+    async def create_owner_chat_group(
+        self, group_name: str, first_who: str, member_name: list[str]
+    ) -> bool:
+        """创建群聊,如果存在，则打开群聊，否则创建一个新群聊
+
+        Args:
+            group_name (str): 群聊名称,不能与之前的群聊名称重复
+            first_who (str): 首个成员名称，必须是好友，不能是群聊名称，用来创建群聊定位,可以为空，如果为空，则以当前聊天的好友为基准创建群聊
+            member_name (list[str]): 成员名称,成员数量要大于0
+
+        Returns:
+            bool: 是否创建成功
+        """
+        result = await self._do_remote_function(
+            "CreateOwnerChatGroup",
+            json.dumps(
+                {
+                    "group_name": group_name,
+                    "first_who": first_who,
+                    "member_name": json.dumps(member_name),
+                }
+            ),
+        )
+        return result.lower() == "true"
+
+    async def change_owner_chat_group_name(
+        self, old_group_name: str, new_group_name: str
+    ) -> bool:
+        """修改群名，适用于自有群群名修改
+
+        Args:
+            old_group_name (str): 旧群名称
+            new_group_name (str): 新群名称
+
+        Returns:
+            bool: 是否修改成功
+        """
+        result = await self._do_remote_function(
+            "ChangeOwnerChatGroupName",
+            json.dumps(
+                {"old_group_name": old_group_name, "new_group_name": new_group_name}
+            ),
+        )
+        return result.lower() == "true"
+
+    async def change_chat_group_nick_name(
+        self, group_name: str, nick_name: str
+    ) -> bool:
+        """修改自己在群中的昵称
+
+        Args:
+            group_name (str): 群名,可以为空，如果为空，则修改焦点群聊的自己在群中的昵称
+            nick_name (str): 昵称，如果为空，则删除自己在本群中的昵称
+
+        Returns:
+            bool: 是否修改成功
+        """
+        result = await self._do_remote_function(
+            "ChangeChatGroupNickName",
+            json.dumps({"group_name": group_name, "nick_name": nick_name}),
+        )
+        return result.lower() == "true"
+
+    async def change_chat_group_memo(self, group_name: str, new_memo: str) -> bool:
+        """改变群备注,群备注仅自己可见.
+
+        Args:
+            group_name (str): 群聊名称,可以为空，如果为空，则改变焦点聊天群的备注
+            new_memo (str): 新备注，可以为空，如果为空，则删除本群备注
+
+        Returns:
+            bool: 是否修改成功
+        """
+        result = await self._do_remote_function(
+            "ChangeChatGroupMemo",
+            json.dumps({"group_name": group_name, "new_memo": new_memo}),
+        )
+        return result.lower() == "true"
+
+    async def update_group_notice(self, group_name: str, group_notice: str) -> bool:
+        """更新群聊公告,仅适用于自有群
+
+        Args:
+            group_name (str): 群聊名称，可以为空字符串，如果为空，则更新焦点聊天群聊窗口的公告
+            group_notice (str): 群聊公告
+
+        Returns:
+            bool: 是否修改成功
+        """
+        result = await self._do_remote_function(
+            "UpdateGroupNotice",
+            json.dumps({"group_name": group_name, "group_notice": group_notice}),
+        )
+        return result.lower() == "true"
+
+    async def get_chat_group_member_list(self, group_name: str) -> list[str]:
+        """获取群聊成员列表
+
+        Args:
+            group_name (str): 群聊名称,可以为空，如果为空，则获取的是焦点聊天群聊的成员列表
+
+        Returns:
+            list[str]: 群聊成员列表
+        """
+        result = await self._do_remote_function("GetChatGroupMemberList", group_name)
+        return json.loads(result)
+
+    async def remove_owner_chat_group_member(
+        self, group_name: str, member_name: list[str]
+    ) -> bool:
+        """移除群聊成员,适用于自有群
+
+        Args:
+            group_name (str): 群聊名称,可以为空，如果为空，则从焦点聊天群聊中移除好友
+            member_name (str): 成员名称
+
+        Returns:
+            bool: 操作结果
+        """
+        result = await self._do_remote_function(
+            "RemoveOwnerChatGroupMember",
+            json.dumps(
+                {"group_name": group_name, "member_name": json.dumps(member_name)}
+            ),
+        )
+        return result.lower() == "true"
+
+    async def quit_chat_group(
+        self, group_name: str, clear_history: bool = True
+    ) -> None:
+        """退出群聊
+
+        Args:
+            group_name (str): 群聊名称
+            clear_history (bool, optional): 是否清除历史消息. Defaults to True.
+        """
+        await self._do_remote_action(
+            "QuitChatGroup",
+            json.dumps({"group_name": group_name, "clear_history": clear_history}),
+        )

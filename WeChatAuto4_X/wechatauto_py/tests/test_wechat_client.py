@@ -412,7 +412,6 @@ async def test_forward_single_message(client: WeChatClient):
     assert result
 
 
-@pytest.mark.asyncio
 async def test_open_add_friens_win(client: WeChatClient):
     """
     打开新增朋友窗口 与 关闭新增朋友窗口
@@ -422,6 +421,7 @@ async def test_open_add_friens_win(client: WeChatClient):
     await client.close_add_friend_win()
 
 
+@pytest.mark.asyncio
 async def test_add_friends(client: WeChatClient):
     """
     通过手机号码、微信号查找并添加好友
@@ -431,3 +431,115 @@ async def test_add_friends(client: WeChatClient):
     )
     print(list)
     assert len(list) > 0
+
+
+@pytest.mark.asyncio
+async def test_is_owner_chat_group(client: WeChatClient):
+    """
+    是否是自有群
+    """
+    assert await client.is_owner_chat_group("DroidMirror官方技术支持")
+    assert not await client.is_owner_chat_group("前端攻城狮")
+
+
+@pytest.mark.asyncio
+async def test_get_group_owner(client: WeChatClient):
+    """
+    获取群主
+    """
+    assert await client.get_group_owner("人工智能自动化技术讨论群") == "AI.Net_test"
+    assert await client.get_group_owner("DroidMirror官方技术支持") == "Alex"
+
+
+@pytest.mark.asyncio
+async def test_add_owner_chat_group_member(client: WeChatClient):
+    """
+    添加群聊成员，适用于自有群
+    """
+    await client.add_owner_chat_group_member(
+        "DroidMirror官方技术支持", ["AI.Net_test", "智影工坊"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_owner_chat_group(client: WeChatClient):
+    """
+    创建群聊,如果存在，则打开群聊，否则创建一个新群聊
+    """
+    assert await client.create_owner_chat_group(
+        "测试dddd2", "AI.Net_test", ["智影工坊"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_change_owner_chat_group_name(client: WeChatClient):
+    """
+    修改群名，适用于自有群群名修改
+    """
+    assert await client.change_owner_chat_group_name("测试dddd2", "测试dddd3")
+
+
+@pytest.mark.asyncio
+async def test_change_chat_group_nick_name(client: WeChatClient):
+    """
+    修改自己在群中的昵称
+    """
+    assert await client.change_chat_group_nick_name(
+        "DroidMirror官方技术支持", "Alex_test"
+    )
+
+
+@pytest.mark.asyncio
+async def test_change_chat_group_memo(client: WeChatClient):
+    """
+    改变群备注,群备注仅自己可见.
+    """
+    assert await client.change_chat_group_memo(
+        "DroidMirror官方技术支持", "DroidMirror官方技术支持_test"
+    )
+    await asyncio.sleep(2)
+    # 删除群备注
+    assert await client.change_chat_group_memo("", "")
+    await asyncio.sleep(2)
+    # 微信bug,再删除一次
+    assert await client.change_chat_group_memo("", "")
+
+
+@pytest.mark.asyncio
+async def test_update_group_notice(client: WeChatClient):
+    """
+    更新群聊公告,仅适用于自有群
+    """
+    assert await client.update_group_notice("DroidMirror官方技术支持", "hello world!!")
+
+
+@pytest.mark.asyncio
+async def test_get_chat_group_member_list(client: WeChatClient):
+    """
+    获取群聊成员列表
+    """
+    list = await client.get_chat_group_member_list("人工智能自动化技术讨论群")
+    assert len(list) > 0
+
+
+@pytest.mark.asyncio
+async def test_remove_owner_chat_group_member(client: WeChatClient):
+    """
+    移除群聊成员,适用于自有群
+    """
+    result = await client.remove_owner_chat_group_member(
+        "DroidMirror官方技术支持", ["智影工坊"]
+    )
+    assert result
+
+
+@pytest.mark.asyncio
+async def test_quit_chat_group(client: WeChatClient):
+    """
+    退出群聊
+    """
+    # 建一个新群
+    await client.create_owner_chat_group("测试退出群", "AI.Net_test", ["智影工坊"])
+    # 退出群聊
+    await asyncio.sleep(2)
+    await client.quit_chat_group("测试退出群")

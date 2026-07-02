@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using WeAutoCommon.Enums;
 using WeChatAuto.Components;
 using WeChatAuto.Models;
+using WeChatAuto.Options;
 
 public class MessageHandler
 {
@@ -227,6 +228,83 @@ public class MessageHandler
                 break;
             case "CloseAddFriendWin":
                 await client.CloseAddFriendWin();
+                break;
+            case "AddFriends":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                var friends = JsonConvert.DeserializeObject<List<string>>(dicPayload["friends"]);
+                var myOptions = JsonConvert.DeserializeObject<AddFriendsOptions>(dicPayload["options"]);
+                var fetch_result = await client.AddFriends(friends!.ToArray(), myOptions);
+                response.Data = JsonConvert.SerializeObject(fetch_result);
+                break;
+            case "IsOwnerChatGroup":
+                var strResult = wrapper.Options!;
+                response.Data = (await client.IsOwnerChatGroup(strResult)).ToString();
+                break;
+            case "GetGroupOwner":
+                var groupName = wrapper.Options!;
+                response.Data = await client.GetGroupOwner(groupName);
+                break;
+            case "AddOwnerChatGroupMember":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"].ToString();
+                var member_name = JsonConvert.DeserializeObject<List<string>>(dicPayload["member_name"]);
+                await client.AddOwnerChatGroupMember(groupName, member_name!.ToArray());
+                break;
+            case "CreateOwnerChatGroup":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                var memberList = JsonConvert.DeserializeObject<List<string>>(dicPayload["member_name"]);
+                var r = await client.CreateOwnerChatGroup(dicPayload["group_name"], dicPayload["first_who"], memberList!.ToArray());
+                response.Data = r.Success.ToString();
+                break;
+            case "ChangeOwnerChatGroupName":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                r = await client.ChangeOwnerChatGroupName(dicPayload["old_group_name"], dicPayload["new_group_name"]);
+                response.Data = r.Success.ToString();
+                break;
+            case "ChangeChatGroupNickName":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"];
+                var nick_name = dicPayload["nick_name"];
+                response.Data = (await client.ChangeChatGroupNickName(groupName, nick_name)).Success.ToString();
+                break;
+            case "ChangeChatGroupMemo":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"];
+                var new_memo = dicPayload["new_memo"];
+                response.Data = (await client.ChangeChatGroupMemo(groupName, new_memo)).Success.ToString();
+                break;
+            case "UpdateGroupNotice":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"];
+                var group_notice = dicPayload["group_notice"];
+                response.Data = (await client.UpdateGroupNotice(groupName, group_notice)).Success.ToString();
+                break;
+            case "GetChatGroupMemberList":
+                payload = wrapper.Options!;
+                rList = await client.GetChatGroupMemberList(payload);
+                response.Data = JsonConvert.SerializeObject(rList);
+                break;
+            case "RemoveOwnerChatGroupMember":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"];
+                member_name = JsonConvert.DeserializeObject<List<string>>(dicPayload["member_name"].ToString());
+                var removeResult = await client.RemoveOwnerChatGroupMember(groupName, member_name!.ToArray());
+                response.Data = removeResult.Success.ToString();
+                break;
+            case "QuitChatGroup":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"]!;
+                var clear_history = bool.Parse(dicPayload["clear_history"].ToString());
+                await client.QuitChatGroup(groupName,clear_history);
                 break;
             default:
                 throw new Exception("不支持的函数名!");

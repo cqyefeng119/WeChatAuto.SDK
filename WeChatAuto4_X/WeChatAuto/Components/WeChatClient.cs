@@ -867,14 +867,12 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 添加群聊成员，适用于自有群
         /// </summary>
-        /// <param name="groupName">群聊名称,可以为空，则在焦点聊天群聊中添加群聊成员</param>
+        /// <param name="groupName">群聊名称,可以为空，如果为空，则在焦点聊天群聊中添加群聊成员</param>
         /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="ChatResponse"/></returns>
         public async Task AddOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await OwnerGroup.AddOwnerChatGroupMember(groupName, memberName);
 
         /// <summary>
-        /// 创建群聊
-        /// 如果存在，则打开群聊，否则创建一个新群聊
+        /// 创建群聊,如果存在，则打开群聊，否则创建一个新群聊
         /// </summary>
         /// <param name="groupName">群聊名称,不能与之前的群聊名称重复</param>
         /// <param name="firstWho">首个成员名称，必须是好友，不能是群聊名称，用来创建群聊定位,可以为空，如果为空，则以当前聊天的好友为基准创建群聊</param>
@@ -887,7 +885,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="oldGroupName">旧群名称</param>
         /// <param name="newGroupName">新群名称</param>
-        /// <returns>微信响应结果</returns>
+        /// <returns>是否修改成功</returns>
         public async Task<Result> ChangeOwnerChatGroupName(string oldGroupName, string newGroupName) => await this.OwnerGroup.ChangeOwnerChatGroupName(oldGroupName, newGroupName);
 
         /// <summary>
@@ -895,7 +893,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="groupName">群名,可以为空，如果为空，则修改焦点群聊的自己在群中的昵称</param>
         /// <param name="nickName">昵称，如果为空，则删除自己在本群中的昵称</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
+        /// <returns>是否修改成功<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupNickName(string groupName, string nickName) => await this.OwnerGroup.ChangeChatGroupNickName(groupName, nickName);
 
 
@@ -904,7 +902,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="groupName">群聊名称,可以为空，如果为空，则改变焦点聊天群的备注</param>
         /// <param name="newMemo">新备注，可以为空，如果为空，则删除本群备注</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
+        /// <returns>是否修改成功<see cref="Result"/></returns>
         public async Task<Result> ChangeChatGroupMemo(string groupName, string newMemo) => await this.OwnerGroup.ChangeChatGroupMemo(groupName, newMemo);
 
         /// <summary>
@@ -912,7 +910,7 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="groupName">群聊名称，可以为空字符串，如果为空，则更新焦点聊天群聊窗口的公告</param>
         /// <param name="groupNotice">群聊公告</param>
-        /// <returns>微信操作响应结果<see cref="ChatResponse"/></returns>
+        /// <returns>是否修改成功<see cref="ChatResponse"/></returns>
         public async Task<Result> UpdateGroupNotice(string groupName, string groupNotice) => await this.OwnerGroup.UpdateGroupNotice(groupName, groupNotice);
 
 
@@ -928,14 +926,14 @@ namespace WeChatAuto.Components
         /// </summary>
         /// <param name="groupName">群聊名称,可以为空，如果为空，则从焦点聊天群聊中移除好友</param>
         /// <param name="memberName">成员名称</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
+        /// <returns>操作结果<see cref="Result"/></returns>
         public async Task<Result> RemoveOwnerChatGroupMember(string groupName, OneOf<string, string[]> memberName) => await this.OwnerGroup.RemoveOwnerChatGroupMember(groupName, memberName);
 
         /// <summary>
         /// 退出群聊
         /// </summary>
         /// <param name="groupName">群聊名称</param>
-        /// <param name="clearHistory">是否清除历史消</param>
+        /// <param name="clearHistory">是否清除历史消息</param>
         public async Task QuitChatGroup(string groupName, bool clearHistory = true) => await this.OwnerGroup.QuitChatGroup(groupName, clearHistory);
 
         /// <summary>

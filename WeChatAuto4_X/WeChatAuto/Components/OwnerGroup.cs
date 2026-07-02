@@ -32,6 +32,7 @@ using System.IO;
 using MessagePack;
 using System.Reflection.PortableExecutable;
 using System.Windows.Controls;
+using System.Windows.Documents;
 
 namespace WeChatAuto.Components
 {
@@ -589,16 +590,14 @@ namespace WeChatAuto.Components
             RandomWait.Wait(300, 1200);
             SupperMouseKey.LeftClick();
             //处理删人事宜
-            ProcessRemoveMembers(memberName, automation);
-
-            return Result.Fail($"从群 {groupName} 移除好友失败！");
+            return ProcessRemoveMembers(memberName, automation);
         }
 
-        internal void ProcessRemoveMembers(OneOf<string, string[]> memberName, UIA3Automation automation)
+        internal Result ProcessRemoveMembers(OneOf<string, string[]> memberName, UIA3Automation automation)
         {
             var memberList = memberName.IsT0 ? new List<string> { memberName.AsT0.Trim() } : memberName.AsT1.ToList().Select(x => x.Trim()).ToList();
             if (memberList.Count() == 0)
-                return;
+                return Result.Fail("错误：memberList列表为空！");
             var editPath = "/Window[@Name='微信移出群成员'][@ClassName='mmui::SessionPickerWindow']/Group/Group/Group/Edit[@Name='搜索'][@ClassName='mmui::XValidatorTextEdit']";
             var searchEditRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(editPath), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
             var path = "";
@@ -655,15 +654,19 @@ namespace WeChatAuto.Components
                     else
                     {
                         SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                        return Result.Fail("删除群内好友失败！");
                     }
                 }
                 else
                 {
                     SupperMouseKey.TypeSimultaneously(VirtualKeyShort.ESC);
+                    return Result.Fail("删除群内好友失败！");
                 }
                 RandomWait.Wait(1000, 3000);
                 this.CloseChatInfoPane();
+                return Result.Ok();
             }
+            return Result.Fail("删除群里好友失败！");
         }
     }
 }
