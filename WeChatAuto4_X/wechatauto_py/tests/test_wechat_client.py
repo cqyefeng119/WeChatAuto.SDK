@@ -1,10 +1,13 @@
 import pytest
 import logging
 import asyncio
-from datetime import datetime, date
+from datetime import date
 
-from wechat_auto_sdk.enums.forward_message_type_enums import ForwardMessageTypeEnums
 from wechat_auto_sdk.enums.navigation_type import NavigationType
+from wechat_auto_sdk.models.friend_request_auto_accept_options import (
+    FriendRequestAutoAcceptOptions,
+)
+from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
 from wechat_auto_sdk.wechat_client import WeChatClient
 
 logger = logging.getLogger(__name__)
@@ -543,3 +546,61 @@ async def test_quit_chat_group(client: WeChatClient):
     # 退出群聊
     await asyncio.sleep(2)
     await client.quit_chat_group("测试退出群")
+
+
+@pytest.mark.asyncio
+async def test_invite_chat_group_member(client: WeChatClient):
+    """
+    邀请群聊成员,适用于外部群
+    """
+    result = await client.invite_chat_group_member(
+        "人工智能自动化技术讨论群", ["khcgb_test"]
+    )
+    assert result
+
+
+@pytest.mark.asyncio
+async def test_add_chat_group_member_to_friends(client: WeChatClient):
+    """
+    添加群聊里面的好友为自己的好友,适用于从外部群中添加好友为自己的好友
+    """
+    result = await client.add_chat_group_member_to_friends(
+        "实时AI快讯 5群", ["稲崎咲弥", "Amy", "杨善民"]
+    )
+    print(result)
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+async def test_get_all_friends(client: WeChatClient):
+    """
+    获取所有好友的信息列表
+    """
+    result = await client.get_all_friends()
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+async def test_get_all_friend_names(client: WeChatClient):
+    """
+    获取所有好友名称列表.（通过通讯录）
+    """
+    result = await client.get_all_friend_names()
+    print(result)
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+async def test_passed_all_new_friend(client: WeChatClient):
+    """通过加好友添加申请"""
+    options = FriendRequestAutoAcceptOptions(
+        passed_delete=True, keyword="test", label="测试标签", suffix="test"
+    )
+
+    async def on_passed(
+        passed_list: list[NewFriendBackItem], wechat_client: WeChatClient
+    ):
+        print(passed_list)
+        await wechat_client.send_message("DroidMirror官方技术支持", "你好！")
+    result = await client.passed_all_new_friend(options, on_passed)
+    assert len(result) > 0

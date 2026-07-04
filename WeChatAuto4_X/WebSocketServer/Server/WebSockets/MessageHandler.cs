@@ -304,7 +304,45 @@ public class MessageHandler
                 dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
                 groupName = dicPayload["group_name"]!;
                 var clear_history = bool.Parse(dicPayload["clear_history"].ToString());
-                await client.QuitChatGroup(groupName,clear_history);
+                await client.QuitChatGroup(groupName, clear_history);
+                break;
+            case "InviteChatGroupMember":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"];
+                member_name = JsonConvert.DeserializeObject<List<string>>(dicPayload["members"].ToString());
+                var invite_reason_if_need = dicPayload["invite_reason_if_need"];
+                var inviteResult = await client.InviteChatGroupMember(groupName, member_name, inviteReasonIfNeed: invite_reason_if_need);
+                response.Data = inviteResult.Success.ToString();
+                break;
+            case "AddChatGroupMemberToFriends":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                groupName = dicPayload["group_name"];
+                member_name = JsonConvert.DeserializeObject<List<string>>(dicPayload["member_name"].ToString());
+                var addOptions = JsonConvert.DeserializeObject<AddFriendsOptions>(dicPayload["options"].ToString());
+                var addResult = await client.AddChatGroupMemberToFriends(groupName, member_name, addOptions);
+                response.Data = JsonConvert.SerializeObject(addResult);
+                break;
+            case "GetAllFriends":
+                payload = wrapper.Options!;
+                var friendList = await client.GetAllFriends(bool.Parse(payload));
+                foreach (var item in friendList)
+                {
+                    bytes = await File.ReadAllBytesAsync(item.AvatarPath);
+                    item.AvatarImageBase64 = Convert.ToBase64String(bytes);
+                }
+                response.Data = JsonConvert.SerializeObject(friendList);
+                break;
+            case "GetAllFriendNames":
+                var allFriendName = await client.GetAllFriendNames();
+                response.Data = JsonConvert.SerializeObject(allFriendName);
+                break;
+            case "PassedAllNewFriend":
+                payload = wrapper.Options!;
+                var passedOptions = JsonConvert.DeserializeObject<FriendRequestAutoAcceptOptions>(payload);
+                var newFriends = await client.PassedAllNewFriend(passedOptions);
+                response.Data = JsonConvert.SerializeObject(newFriends);
                 break;
             default:
                 throw new Exception("不支持的函数名!");

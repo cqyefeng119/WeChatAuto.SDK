@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using OneOf;
 using WeChatAuto.Components;
 using WeChatAuto.Models;
@@ -20,22 +21,26 @@ namespace WeChatAuto.Options
         /// <summary>
         /// 通过后是否删除申请记录
         /// </summary>
+        [JsonProperty("passed_delete")]
         public bool PassedDelete { get; set; } = true;
 
         /// <summary>
         /// 打招呼关键词过滤,可以设置多个，回调的时候会携带此KeyWord的信息返回给调用者，调用者应该根据关键词做相应的处理.
         /// </summary>
+        [JsonProperty("keyword")]
         public OneOf<string, string[], List<string>> KeyWord { get; set; }
 
         /// <summary>
         /// 好友备注后缀
         /// 如果设置后缀，被通过的好友会自动加上此后缀,如:AI.Net_Test
         /// </summary>
+        [JsonProperty("suffix")]
         public string Suffix { get; set; }
 
         /// <summary>
         /// 微信标签
         /// </summary>
+        [JsonProperty("label")]
         public string Label { get; set; }
     }
 }

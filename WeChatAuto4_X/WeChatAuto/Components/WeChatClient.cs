@@ -942,7 +942,7 @@ namespace WeChatAuto.Components
         /// <param name="groupName">群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友</param>
         /// <param name="members">被邀请的成员名称列表,要求在自己的通讯录中</param>
         /// <param name="inviteReasonIfNeed">邀请原因，只在群管理员开启了 进群需要群主或者管理员确认 功能时有效，可以为空</param>
-        /// <returns>微信响应结果<see cref="Result"/></returns>
+        /// <returns>操作结果<see cref="Result"/></returns>
         public async Task<Result> InviteChatGroupMember(string groupName, List<string> members, string inviteReasonIfNeed = "") => await this.OuterGroup.InviteChatGroupMember(groupName, members, inviteReasonIfNeed);
 
         /// <summary>
@@ -952,7 +952,7 @@ namespace WeChatAuto.Components
         /// <param name="groupName">群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友</param>
         /// <param name="memberName">成员名称列表,考虑风控,建议先运行<see cref="Group.GetChatGroupMemberList(string)"/>获取群聊的成员列表，然后分批增加</param>
         /// <param name="options">好友选项，可以增加好友时设置备注后缀、打招呼内容及标签等，方便分类管理</param>
-        /// <returns></returns>
+        /// <returns>返回每个好友增加情况的字典</returns>
         public async Task<IDictionary<string, FriendAddResult>> AddChatGroupMemberToFriends(string groupName, List<string> memberName, AddFriendsOptions options = null) => await this.OuterGroup.AddChatGroupMemberToFriends(groupName, memberName, options);
 
         #endregion
@@ -976,7 +976,7 @@ namespace WeChatAuto.Components
         /// 如果好友有昵称与备注，优先选择备注名
         /// 注意：如果是企业微信，会剔除@xxxx后缀，以保持一致性.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>好友名称列表</returns>
         public async Task<List<string>> GetAllFriendNames() => await AddressBookList.GetAllFriendNames();
 
         /// <summary>

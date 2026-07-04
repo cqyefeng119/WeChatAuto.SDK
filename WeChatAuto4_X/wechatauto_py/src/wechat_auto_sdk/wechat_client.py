@@ -1,22 +1,29 @@
-from datetime import datetime, date, time
+from __future__ import annotations
+from datetime import date
 import uuid
 import base64
 import json
 
 from pathlib import Path
-from typing import overload
+from collections.abc import Awaitable, Callable
 
 from wechat_auto_sdk.enums.forward_message_type_enums import ForwardMessageTypeEnums
 from wechat_auto_sdk.enums.friend_add_result import FriendAddResult
 from wechat_auto_sdk.models.add_friends_options import AddFriendsOptions
 from wechat_auto_sdk.models.chat_refer import ChatRefer
 from wechat_auto_sdk.models.chat_simple_message import ChatSimpleMessage
+from wechat_auto_sdk.models.friend_info import FriendInfo
+from wechat_auto_sdk.models.friend_request_auto_accept_options import (
+    FriendRequestAutoAcceptOptions,
+)
+from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
 from wechat_auto_sdk.websocket_client import WebSocketClient
 from wechat_auto_sdk.models.owner_info import OwerInfo
 from wechat_auto_sdk.models.message_package import MessagePackage
 from wechat_auto_sdk.enums.navigation_type import NavigationType
 from wechat_auto_sdk.models.simple_conversation import SimpleConversation
 from wechat_auto_sdk.models.header_info import HeaderInfo
+
 
 
 class WeChatClient:
@@ -724,6 +731,8 @@ class WeChatClient:
         Returns:
             bool: 操作结果
         """
+        if not member_name:
+            raise ValueError("错误：member_name不能为空!")
         result = await self._do_remote_function(
             "RemoveOwnerChatGroupMember",
             json.dumps(
@@ -741,7 +750,123 @@ class WeChatClient:
             group_name (str): 群聊名称
             clear_history (bool, optional): 是否清除历史消息. Defaults to True.
         """
+        if not group_name:
+            raise ValueError("错误：group_name参数不能为空！")
         await self._do_remote_action(
             "QuitChatGroup",
             json.dumps({"group_name": group_name, "clear_history": clear_history}),
         )
+
+    async def invite_chat_group_member(
+        self, group_name: str, members: list[str], invite_reason_if_need: str = ""
+    ) -> bool:
+        """邀请群聊成员,适用于外部群
+
+        Args:
+            group_name (str): 群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友
+            members (list[str]): 被邀请的成员名称列表,要求在自己的通讯录中
+            invite_reason_if_need (str): 邀请原因，只在群管理员开启了 进群需要群主或者管理员确认 功能时有效，可以为空
+
+        Returns:
+            bool: 操作结果
+        """
+        if not members:
+            raise ValueError("错误：members 不能为空")
+        result = await self._do_remote_function(
+            "InviteChatGroupMember",
+            json.dumps(
+                {
+                    "group_name": group_name,
+                    "members": json.dumps(members),
+                    "invite_reason_if_need": invite_reason_if_need,
+                }
+            ),
+        )
+        return result.lower() == "true"
+
+    async def add_chat_group_member_to_friends(
+        self,
+        group_name: str,
+        member_name: list[str],
+        options: AddFriendsOptions | None = None,
+    ) -> dict[str, FriendAddResult]:
+        """添加群聊里面的好友为自己的好友,适用于从外部群中添加好友为自己的好友
+        此操作为微信严风控操作，因为微信对于一天加好友应该有数量限定，建议分批次加，一次不要超过20-30个，时间延长为4小时或者一天后
+
+        Args:
+            group_name (str): 群聊名称,可以为空，如果为空，则在本焦点群聊窗口邀请好友
+            member_name (list[str]): 成员名称列表,考虑风控,建议先运行<see cref="Group.GetChatGroupMemberList(string)"/>获取群聊的成员列表，然后分批增加
+            options (AddFriendsOptions): 好友选项，可以增加好友时设置备注后缀、打招呼内容及标签等，方便分类管理
+
+        Returns:
+            dict[str,FriendAddResult]: 返回每个好友增加情况的字典
+        """
+        if not member_name:
+            raise ValueError("错误：参数 member_name 不能为空！")
+        result = await self._do_remote_function(
+            "AddChatGroupMemberToFriends",
+            json.dumps(
+                {
+                    "group_name": group_name,
+                    "member_name": json.dumps(member_name),
+                    "options": json.dumps(options),
+                }
+            ),
+        )
+        return json.loads(result)
+
+    async def get_all_friends(self, from_cache: bool = True) -> list[FriendInfo]:
+        """获取所有好友的信息列表,具体请考<see cref="FriendInfo"/>类说明.</para>
+        注意：只会获取通讯录中的联系人、企业微信联系人和群聊的记录,公众号，服务号，我的企业等特殊账号不会获取.
+        1.如果是企业微信，会剔除@xxxx后缀，以保持一致性
+        2.如果好友/群聊/企业微信联系人等有备注，则备注会覆盖昵称显示.
+        3.注意：如果微信联系人有重名，此方法会仅获取/保存一个联系人，所以运行此方法前:建议好友/群聊/企业微信联系人有重名时，通过手工的方式添加备注，以保持区分.
+        4.普通联系人可以获取wxid,其他的如：群聊/企业微信联系人无法获取wxid.
+        5. 此方法运行结果会保存在cache中,默认为true,从cache中获取数据，如果设置为false,则重新刷新一遍通讯录,cache也会同步更新，建议实际开发过程中运行一遍从通讯录获取好友信息的操作,并且做好添加好友时的同步工作（在一些监听的场景，如果读取到此好友没有wxid,也会自动获取,并同步更新cache）
+        6. 不必太过于担心cache过期的问题，因为实际需要识别wxid的业务场景中，如果碰到新好友在cache中没有数据，会自动获取好友的信息并更新cahce，所以也不必太担心cache的过时问题
+
+        Args:
+            from_cache (bool, optional): 是否从cahce中获取数据. Defaults to True.
+
+        Returns:
+            list[FriendInfo]: 好友列表
+        """
+        result = await self._do_remote_function("GetAllFriends", str(from_cache))
+        return json.loads(result)
+
+    async def get_all_friend_names(self) -> list[str]:
+        """获取所有好友名称列表.（通过通讯录）
+        如果好友有昵称与备注，优先选择备注名
+        注意：如果是企业微信，会剔除@xxxx后缀，以保持一致性.
+        Returns:
+            list[str]: 好友名称列表
+        """
+        result = await self._do_remote_function("GetAllFriendNames", "")
+        return json.loads(result)
+
+    async def passed_all_new_friend(
+        self,
+        options: FriendRequestAutoAcceptOptions,
+        passed_callback: Callable[
+            [list[NewFriendBackItem], WeChatClient], Awaitable[None]
+        ]
+        | None = None,
+    ) -> list[NewFriendBackItem]:
+        """通过加好友添加申请
+
+        Args:
+            options (FriendRequestAutoAcceptOptions): 配置对象，具体参见<see cref="FriendRequestAutoAcceptOptions"/>
+            passed_callback (Callable[[list[NewFriendBackItem], WeChatClient], Awaitable[None]] | None, optional): 通过好友申请后的自定义回调. Defaults to None.
+
+        Returns:
+            list[NewFriendBackItem]: _description_
+        """
+        options_dumps = FriendRequestAutoAcceptOptions.model_dump_json(options)
+        result = await self._do_remote_function(
+            "PassedAllNewFriend", options_dumps
+        )
+        result_object: list[NewFriendBackItem] = json.loads(result)
+        if passed_callback and result_object:
+            await passed_callback(result_object, self)
+
+        return result_object
