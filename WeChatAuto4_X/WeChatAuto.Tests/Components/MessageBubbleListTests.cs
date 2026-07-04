@@ -106,7 +106,7 @@ public class MessageBubbleListTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var result = await client.ForwardMultipleMessage(new string[] { "AI.Net", "文件传输助手" }, rowCount: rowNo);
+        var result = await client.ForwardMultipleMessage("",new string[] { "AI.Net", "文件传输助手" }, rowCount: rowNo);
         Assert.True(result);
     }
 

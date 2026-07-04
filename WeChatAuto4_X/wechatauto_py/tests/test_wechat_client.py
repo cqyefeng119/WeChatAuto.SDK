@@ -7,6 +7,7 @@ from wechat_auto_sdk.enums.navigation_type import NavigationType
 from wechat_auto_sdk.models.friend_request_auto_accept_options import (
     FriendRequestAutoAcceptOptions,
 )
+from wechat_auto_sdk.models.moments_options import MomentsOptions
 from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
 from wechat_auto_sdk.wechat_client import WeChatClient
 
@@ -602,5 +603,42 @@ async def test_passed_all_new_friend(client: WeChatClient):
     ):
         print(passed_list)
         await wechat_client.send_message("DroidMirror官方技术支持", "你好！")
+
     result = await client.passed_all_new_friend(options, on_passed)
     assert len(result) > 0
+
+
+@pytest.mark.asyncio
+async def test_open_moments(client: WeChatClient):
+    """打开朋友圈,如果未打开，则打开朋友圈，如果已经打开了，则窗口提前到顶端"""
+    assert await client.open_moments()
+
+
+@pytest.mark.asyncio
+async def test_close_moments(client: WeChatClient):
+    """打开朋友圈,如果未打开，则打开朋友圈，如果已经打开了，则窗口提前到顶端"""
+    assert await client.close_moments()
+
+
+@pytest.mark.asyncio
+async def test_add_moments(client: WeChatClient):
+    """
+    发送朋友圈
+    """
+    options = MomentsOptions(
+        at_usrs=["AI.Net_test"], labels=["aaa"], is_close_moments=True
+    )
+    assert await client.add_moments(
+        [
+            "D:\\repo\\WeChatAuto.SDK\\WeChatAuto.SDK\\src\\WeChatAuto4_X\\WeChatAuto.Tests\\Assets\\1.png"
+        ],
+        "测试的朋友圈消息",
+        options,
+    )
+
+@pytest.mark.asyncio
+async def test_remove_moments(client: WeChatClient):
+    """
+    移除自己发送的朋友圈
+    """
+    assert await client.remove_moments("测试的朋友圈消息")

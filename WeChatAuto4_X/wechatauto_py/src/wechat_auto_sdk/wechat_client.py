@@ -16,6 +16,7 @@ from wechat_auto_sdk.models.friend_info import FriendInfo
 from wechat_auto_sdk.models.friend_request_auto_accept_options import (
     FriendRequestAutoAcceptOptions,
 )
+from wechat_auto_sdk.models.moments_options import MomentsOptions
 from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
 from wechat_auto_sdk.websocket_client import WebSocketClient
 from wechat_auto_sdk.models.owner_info import OwerInfo
@@ -23,7 +24,6 @@ from wechat_auto_sdk.models.message_package import MessagePackage
 from wechat_auto_sdk.enums.navigation_type import NavigationType
 from wechat_auto_sdk.models.simple_conversation import SimpleConversation
 from wechat_auto_sdk.models.header_info import HeaderInfo
-
 
 
 class WeChatClient:
@@ -862,11 +862,76 @@ class WeChatClient:
             list[NewFriendBackItem]: _description_
         """
         options_dumps = FriendRequestAutoAcceptOptions.model_dump_json(options)
-        result = await self._do_remote_function(
-            "PassedAllNewFriend", options_dumps
-        )
+        result = await self._do_remote_function("PassedAllNewFriend", options_dumps)
         result_object: list[NewFriendBackItem] = json.loads(result)
         if passed_callback and result_object:
             await passed_callback(result_object, self)
 
         return result_object
+
+    async def open_moments(self) -> bool:
+        """打开朋友圈,如果未打开，则打开朋友圈，如果已经打开了，则窗口提前到顶端
+
+        Returns:
+            bool: 是否打开
+        """
+        result = await self._do_remote_function("OpenMoments", "")
+        return result.lower() == "true"
+
+    async def close_moments(self) -> None:
+        """关闭朋友圈"""
+        await self._do_remote_function("CloseMoments", "")
+
+    async def add_moments(
+        self,
+        image_files: list[str],
+        content: str = "",
+        options: MomentsOptions | None = None,
+    ) -> bool:
+        """发送朋友圈
+
+        Args:
+            image_files (list[str]): 图片列表，可以一个，也可以多个,如果是多个文件，要求在同一个目录中
+            content (str): 朋友圈内容
+            options (MomentsOptions | None, optional): 发送选项，请参考<see cref="MomentsOptions"/></param>. Defaults to None.
+        """
+        if not image_files:
+            raise ValueError("错误：图片列表不能为空！")
+        # 检查文件是否都存在
+        missing_file = next(
+            (file for file in image_files if not Path(file).is_file()), None
+        )
+        if missing_file is not None:
+            raise ValueError("错误：参数 image_files 列表中有一些图片文件不存在！")
+        upload = {
+            file: base64.b64encode(Path(file).read_bytes()).decode("utf-8")
+            for file in image_files
+        }
+        result = await self._do_remote_function(
+            "AddMoments",
+            json.dumps(
+                {
+                    "image_files": json.dumps(image_files),
+                    "content": content,
+                    "options": options.model_dump_json()
+                    if options is not None
+                    else None,
+                    "upload": json.dumps(upload),
+                }
+            ),
+        )
+        return result.lower() == "true"
+
+    async def remove_moments(self, content: str) -> bool:
+        """移除自己发送的朋友圈
+
+        Args:
+            content (str): 朋友圈文字内容
+
+        Returns:
+            bool: 是否成功删除
+        """
+        if not content:
+            raise ValueError("错误：能数 content 内容不能为空！")
+        result = await self._do_remote_function("RemoveMoments", content)
+        return result.lower() == "true"

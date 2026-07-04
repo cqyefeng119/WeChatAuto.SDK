@@ -37,7 +37,7 @@ public class MomentsTests
         Path.Combine(AppContext.BaseDirectory,"Assets","pzllm.png") }, "应该可以的", new Options.MomentsOptions
         {
             AtUsrs = new List<string> { "软件作家涛哥_vip" },
-            Labels = "aaa",
+            Labels = new List<string>() {"aaa"},
         });
         Assert.True(result);
     }

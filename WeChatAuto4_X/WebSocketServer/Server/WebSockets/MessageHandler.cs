@@ -344,6 +344,42 @@ public class MessageHandler
                 var newFriends = await client.PassedAllNewFriend(passedOptions);
                 response.Data = JsonConvert.SerializeObject(newFriends);
                 break;
+            case "OpenMoments":
+                var win = await client.OpenMoments();
+                response.Data = (win != null).ToString();
+                break;
+            case "CloseMoments":
+                await client.CloseMoments();
+                break;
+            case "AddMoments":
+                payload = wrapper.Options!;
+                dicPayload = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload)!;
+                var image_files = JsonConvert.DeserializeObject<List<string>>(dicPayload["image_files"])!;
+                var content = dicPayload["content"]!;
+                var upload = JsonConvert.DeserializeObject<Dictionary<string, string>>(dicPayload["upload"])!;
+                var momentOptions = JsonConvert.DeserializeObject<MomentsOptions>(dicPayload["options"]);
+                //将base64转成本地图片
+                var imageList = new List<string>();
+                foreach (var file in image_files)
+                {
+                    fileName = Path.GetFileName(file);
+                    if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "temp")))
+                    {
+                        Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "temp"));
+                    }
+                    fileName = Path.Combine(AppContext.BaseDirectory, "temp", fileName);
+                    var base64Str = upload[file]!;
+                    await File.WriteAllBytesAsync(fileName, Convert.FromBase64String(base64Str));
+                    imageList.Add(fileName);
+                }
+                var mementsResult = await client.AddMoments(imageList, content, momentOptions);
+                response.Data = mementsResult!.ToString();
+                break;
+            case "RemoveMoments":
+                payload = wrapper.Options!;
+                var remove_result = await client.RemoveMoments(payload);
+                response.Data = remove_result.ToString();
+                break;
             default:
                 throw new Exception("不支持的函数名!");
         }

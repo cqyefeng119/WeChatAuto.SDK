@@ -182,7 +182,7 @@ namespace WeChatAuto.Components
 			var publishRootRetry = Retry.WhileNull(() => window.FindFirstByXPath("/Group/Group/Group/Group/Group[@AutomationId='SnsPublishPanel']"), TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(200));
 			if (publishRootRetry.Success)
 			{
-				System.Windows.Clipboard.SetText(content);
+				ClipboardHelper.SetText(content);
 				var pubishRoot = publishRootRetry.Result;
 				var buttonRoot = pubishRoot.FindFirstByXPath("/Group/Group[2]");
 				var contentRoot = pubishRoot.FindFirstByXPath("/Group/Group[1]/Group[@AutomationId='qt_scrollarea_viewport']");
@@ -215,12 +215,12 @@ namespace WeChatAuto.Components
 
 		private void __ProcessAnthoer(UIA3Automation automation, MomentsOptions options, Window window, AutomationElement root)
 		{
-			if (options.AtUsrs.Value != null)
+			if (options.AtUsrs != null)
 			{
 				//@好友处理
 				__ProcessAtUser(automation, options, window, root);
 			}
-			if (options.Labels.Value != null)
+			if (options.Labels != null)
 			{
 				__ProcessLabel(automation, options, window, root);
 			}
@@ -238,7 +238,7 @@ namespace WeChatAuto.Components
 			RandomWait.Wait(100, 900);
 			SupperMouseKey.LeftClick();
 			//处理@好友
-			var atList = options.AtUsrs.IsT0 ? new List<string> { options.AtUsrs.AsT0 } : options.AtUsrs.AsT1.ToHashSet().ToList();
+			var atList = options.AtUsrs.ToHashSet().ToList();
 			var winRetry = Retry.WhileNull(() => window.FindFirstChild(cf => cf.ByName("微信提醒谁看").And(cf.ByControlType(ControlType.Window))), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
 			if (winRetry.Success)
 			{
@@ -259,7 +259,7 @@ namespace WeChatAuto.Components
 					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
 					RandomWait.Wait(100, 900);
 					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
-					System.Windows.Clipboard.SetText(f);
+					ClipboardHelper.SetText(f);
 					RandomWait.Wait(100, 900);
 					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 					RandomWait.Wait(100, 900);
@@ -318,7 +318,7 @@ namespace WeChatAuto.Components
 
 		private void __ProcessLabel(UIA3Automation automation, MomentsOptions options, Window window, AutomationElement root)
 		{
-			var labels = options.Labels.IsT0 ? new List<string> { options.Labels.AsT0 } : options.Labels.AsT1;
+			var labels = options.Labels;
 			var selectNumber = 0;
 			if (labels.Count == 0)
 				return;
@@ -389,7 +389,7 @@ namespace WeChatAuto.Components
 							RandomWait.Wait(300, 900);
 							SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
 							RandomWait.Wait(300, 900);
-							System.Windows.Clipboard.SetText(item);
+							ClipboardHelper.SetText(item);
 							SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 							RandomWait.Wait(600, 1500);
 							path = "/Group/Group/List[@Name='请勾选需要添加的联系人'][@AutomationId='sp_to_select_contact_list']";
@@ -474,7 +474,7 @@ namespace WeChatAuto.Components
 					SupperMouseKey.MoveTo(point);
 					RandomWait.Wait(200, 600);
 					SupperMouseKey.LeftClick();
-					System.Windows.Clipboard.SetText(pathRoot);
+					ClipboardHelper.SetText(pathRoot);
 					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 					RandomWait.Wait(200, 900);
 					SupperMouseKey.Enter();
@@ -490,7 +490,7 @@ namespace WeChatAuto.Components
 					//组装字符串
 					var fileNameList = imageFiles.Select(x => Path.GetFileName(x)).ToHashSet().ToList().Select(x => $"\"{x}\"").ToList();
 					string fileStr = string.Join(" ", fileNameList);
-					System.Windows.Clipboard.SetText(fileStr);
+					ClipboardHelper.SetText(fileStr);
 					SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 					RandomWait.Wait(200, 900);
 					//点击打开
