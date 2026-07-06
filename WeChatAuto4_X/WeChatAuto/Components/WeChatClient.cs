@@ -722,7 +722,7 @@ namespace WeChatAuto.Components
         /// <summary>
         /// 监听过程中移除被监听中的好友/群聊
         /// </summary>
-        /// <param name="who"></param>
+        /// <param name="who">好友/群聊名称</param>
         /// <returns></returns>
         public async Task RemoveListeningFriend(string who) => await this.MessageMonitor.RemoveListeningFriend(who);
 

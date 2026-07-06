@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from datetime import date
 import uuid
 import base64
@@ -18,6 +19,7 @@ from wechat_auto_sdk.models.friend_request_auto_accept_options import (
 )
 from wechat_auto_sdk.models.moments_options import MomentsOptions
 from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
+from wechat_auto_sdk.models.system_message_context import SystemMessageContext
 from wechat_auto_sdk.websocket_client import WebSocketClient
 from wechat_auto_sdk.models.owner_info import OwerInfo
 from wechat_auto_sdk.models.message_package import MessagePackage
@@ -27,9 +29,12 @@ from wechat_auto_sdk.models.header_info import HeaderInfo
 
 
 class WeChatClient:
+    """微信客户端类，在多微信中，是对一个微信的抽象"""
+
     def __init__(self, from_wechat: str, socket: WebSocketClient) -> None:
         self.from_wechat = from_wechat
         self.socket = socket
+        self._group_system_monitor_started = False  # 是否启动系统群聊消息监控
 
     async def get_ower_info(self) -> OwerInfo:
         """
@@ -935,3 +940,70 @@ class WeChatClient:
             raise ValueError("错误：能数 content 内容不能为空！")
         result = await self._do_remote_function("RemoveMoments", content)
         return result.lower() == "true"
+
+    async def add_group_system_message_listener(
+        self,
+        nick_names: list[str],
+        callback: Callable[[SystemMessageContext], Awaitable[None]],
+    ) -> None:
+        """加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能
+        注意：仅适用于群聊，不适用个人,个人请使用下面的开放式/固定式监听，另外，不支持注册监听后再新增待监听的群聊
+
+
+        Args:
+            nick_names (list[str]): 群聊昵称，可以多个
+            callback (Callable): 回调函数,由用户提供,参数：消息上下文<see cref="SystemMessageContext"/>
+        """
+        if not nick_names:
+            raise ValueError("错误：参数nick_names不能为空！")
+        if self._group_system_monitor_started:
+            return
+        self._group_system_monitor_started = True
+        self._group_system_task = asyncio.create_task(
+            self._add_group_system_message_listener_core(nick_names, callback),
+            name="group_system_message_monitor",
+        )
+
+    async def _add_group_system_message_listener_core(
+        self,
+        nick_names: list[str],
+        callback: Callable[[SystemMessageContext], Awaitable[None]],
+    ) -> None:
+        request_id = uuid.uuid4().hex
+        request_package = MessagePackage(
+            request_id=uuid.uuid4().hex,
+            func_Name="AddGroupSystemMessageListener",
+            options=json.dumps(nick_names),
+            from_wechat=self.from_wechat,
+        )
+        await self.socket.send_group_system_monitor(
+            request_package, request_id, nick_names, callback, self
+        )
+
+    async def pause_message_listener(self) -> None:
+        """
+        暂停消息监听
+        """
+        await self._do_remote_action("PauseMessageListener", "")
+
+    async def resume_message_listener(self) -> None:
+        """
+        恢复消息监听
+        """
+        await self._do_remote_action("ResumeMessageListener", "")
+
+    async def add_listening_friend(self, who: str) -> None:
+        """监听过程中添加好友
+
+        Args:
+            who (str): 好友名称
+        """
+        await self._do_remote_action("AddListeningFriend", who)
+
+    async def remove_listening_friend(self, who: str) -> None:
+        """监听过程中移除被监听中的好友/群聊
+
+        Args:
+            who (str): 好友/群聊名称
+        """
+        await self._do_remote_action("RemoveListeningFriend", who)

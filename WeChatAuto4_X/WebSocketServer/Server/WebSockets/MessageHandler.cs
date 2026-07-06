@@ -13,10 +13,12 @@ using WeChatAuto.Components;
 using WeChatAuto.Models;
 using WeChatAuto.Options;
 
-public class MessageHandler
+public class MessageHandler : IDisposable
 {
     private readonly WeChatClientFactory factory;
     private readonly ILogger<MessageHandler> logger;
+    private readonly CancellationTokenSource cts = new CancellationTokenSource();
+    private Task? groupSysMessageMonitorTask;
 
     public MessageHandler(WeChatClientFactory factory, ILogger<MessageHandler> logger)
     {
@@ -380,6 +382,41 @@ public class MessageHandler
                 var remove_result = await client.RemoveMoments(payload);
                 response.Data = remove_result.ToString();
                 break;
+            case "AddGroupSystemMessageListener":
+                payload = wrapper.Options!;
+                var nickNameList = JsonConvert.DeserializeObject<List<string>>(payload);
+                TaskCompletionSource tcs = new TaskCompletionSource();
+                groupSysMessageMonitorTask = Task.Run(async () =>
+                {
+                    tcs.SetResult();
+                    Func<SystemMessageContext, Task> func = async (context) =>
+                    {
+                        var part_response = new RequestData
+                        {
+                            Type = "echo",
+                            RequestId = wrapper.RequestId,
+                            Data = JsonConvert.SerializeObject(context.NewMessages),
+                        };
+                        await wrapper!.handler!.SendAsync(part_response);
+                    };
+                    await client.AddGroupSystemMessageListener(nickNameList, func, cts.Token);
+                });
+                await tcs.Task;
+                break;
+            case "PauseMessageListener":
+                await client.PauseMessageListener();
+                break;
+            case "ResumeMessageListener":
+                await client.ResumeMessageListener();
+                break;
+            case "AddListeningFriend":
+                who = wrapper.Options!;
+                await client.AddListeningFriend(who);
+                break;
+            case "RemoveListeningFriend":
+                who = wrapper.Options!;
+                await client.RemoveListeningFriend(who);
+                break;
             default:
                 throw new Exception("不支持的函数名!");
         }
@@ -459,6 +496,12 @@ public class MessageHandler
         infoExt.upload = upload;
         response.Data = JsonConvert.SerializeObject(infoExt);
     }
+
+    public void Dispose()
+    {
+        cts.Cancel();
+    }
+
 
     private class OwerInfoExt : OwerInfo
     {

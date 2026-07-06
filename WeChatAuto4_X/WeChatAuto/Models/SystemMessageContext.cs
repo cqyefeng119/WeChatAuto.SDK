@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using OneOf;
 using WeChatAuto.Components;
 using WeAutoCommon.Enums;
+using Newtonsoft.Json;
 
 namespace WeChatAuto.Models
 {

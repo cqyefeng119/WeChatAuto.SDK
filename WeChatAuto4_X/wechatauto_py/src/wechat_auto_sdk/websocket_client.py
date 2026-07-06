@@ -1,10 +1,15 @@
 import asyncio
 import websockets
 import uuid
+import json
+
+from collections.abc import Awaitable, Callable
 
 from wechat_auto_sdk.cancellation_token_source import CancellationTokenSource
 from wechat_auto_sdk.models.request_data import RequestData
 from wechat_auto_sdk.models.message_package import MessagePackage
+from wechat_auto_sdk.models.system_message_context import SystemMessageContext
+from wechat_auto_sdk.wechat_client import WeChatClient
 
 
 class WebSocketClient:
@@ -17,6 +22,11 @@ class WebSocketClient:
         self.token_source: CancellationTokenSource = cts
         self._pending_requests: dict[str, asyncio.Future[str]] = {}
         self._rev_loop_task: asyncio.Task | None = None
+        # 群系统消息监控器
+        self._group_system_message_monitor: dict[
+            str, Callable[[SystemMessageContext], Awaitable[None]]
+        ] = {}
+        self._group_system_message_client: dict[str, WeChatClient] = {}
 
     async def recv_loop(self) -> None:
         """接收数据loop"""
@@ -36,7 +46,14 @@ class WebSocketClient:
                         global_future.set_result(result.data)
                 else:
                     # 业务代码处理
-                    business_future = self._pending_requests.pop(result.request_id, None)
+                    if self._group_system_message_monitor:
+                        if self._group_system_message_monitor.get(result.request_id):
+                            # 系统消息监听
+                            await self._process_system_message_monitor_callback(result)
+                            continue
+                    business_future = self._pending_requests.pop(
+                        result.request_id, None
+                    )
                     if business_future is None:
                         continue
                     if business_future.done():
@@ -51,7 +68,27 @@ class WebSocketClient:
         except Exception as ex:
             print(f"recv_loop error: {ex}")
 
+    async def _process_system_message_monitor_callback(self, result: RequestData):
+        # 系统消息监听
+        if not result.data:
+            return
+        callback = self._group_system_message_monitor[result.request_id]
+        system_monitor_result = json.loads(result.data)
+        client: WeChatClient = self._group_system_message_client[result.request_id]
+        from_who: str = client.from_wechat
+        new_messages: list[str] = json.loads(system_monitor_result["new_messages"])
+        await callback(
+            SystemMessageContext(
+                from_who=from_who,
+                new_messages=new_messages,
+                client=client,
+            )
+        )
+
     async def start(self) -> None:
+        """
+        启动 websocket 客户端
+        """
         if self._rev_loop_task is not None:
             return
         self._rev_loop_task = asyncio.create_task(
@@ -87,3 +124,21 @@ class WebSocketClient:
     async def send_obj(self, package: MessagePackage) -> str:
         """发送对象"""
         return await self.send(package.model_dump_json(), package.request_id)
+
+    async def send_group_system_monitor(
+        self,
+        package: MessagePackage,
+        request_id: str,
+        nick_names: list[str],
+        callback: Callable[[SystemMessageContext], Awaitable[None]],
+        client: WeChatClient,
+    ) -> None:
+        self._group_system_message_monitor[request_id] = callback
+        self._group_system_message_client[request_id] = client
+        await self.send(package.model_dump_json(), package.request_id)
+
+    async def keep_running(self) -> None:
+        """
+        保存运行状态，即异步阻塞状态
+        """
+        await asyncio.Future()
