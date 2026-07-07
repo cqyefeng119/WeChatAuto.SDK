@@ -133,8 +133,9 @@ public class WebSocketHandler
                 true,
                 CancellationToken.None);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError($"WebSocket 服务发送异常:{ex.ToString()}");
             throw;
         }
         finally

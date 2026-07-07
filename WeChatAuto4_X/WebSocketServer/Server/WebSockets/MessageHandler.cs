@@ -12,12 +12,13 @@ using WeAutoCommon.Enums;
 using WeChatAuto.Components;
 using WeChatAuto.Models;
 using WeChatAuto.Options;
+using WeChatAuto.Services;
 
 public class MessageHandler : IDisposable
 {
     private readonly WeChatClientFactory factory;
     private readonly ILogger<MessageHandler> logger;
-    private readonly CancellationTokenSource cts = new CancellationTokenSource();
+    private  CancellationTokenSource cts = new CancellationTokenSource();
     private Task? groupSysMessageMonitorTask;
 
     public MessageHandler(WeChatClientFactory factory, ILogger<MessageHandler> logger)
@@ -25,7 +26,7 @@ public class MessageHandler : IDisposable
         this.factory = factory;
         this.logger = logger;
     }
-    public async Task<RequestData> HandleAsync(MessagePackageWrapper wrapper)
+    public async Task<RequestData> HandleAsync(MessagePackageWrapper wrapper, CancellationToken token = default)
     {
         var client = factory.GetWeChatClient(wrapper.FromWechat);
         RequestData response = new RequestData
@@ -383,9 +384,24 @@ public class MessageHandler : IDisposable
                 response.Data = remove_result.ToString();
                 break;
             case "AddGroupSystemMessageListener":
+                //关闭掉以前的线程
+                if (groupSysMessageMonitorTask != null)
+                {
+                    cts.Cancel();
+                    if (groupSysMessageMonitorTask.Status == TaskStatus.Running)
+                    {
+                        await groupSysMessageMonitorTask.WaitAsync(TimeSpan.FromSeconds(WeAutomation.Config.MonitorGroupInterval));
+                    }
+                    cts = new CancellationTokenSource();
+                }
                 payload = wrapper.Options!;
                 var nickNameList = JsonConvert.DeserializeObject<List<string>>(payload);
                 TaskCompletionSource tcs = new TaskCompletionSource();
+                CancellationToken cancellationToken = cts.Token;
+                if (token != default)
+                {
+                    cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token).Token;
+                }
                 groupSysMessageMonitorTask = Task.Run(async () =>
                 {
                     tcs.SetResult();
@@ -399,7 +415,7 @@ public class MessageHandler : IDisposable
                         };
                         await wrapper!.handler!.SendAsync(part_response);
                     };
-                    await client.AddGroupSystemMessageListener(nickNameList, func, cts.Token);
+                    await client.AddGroupSystemMessageListener(nickNameList, func, cancellationToken);
                 });
                 await tcs.Task;
                 break;

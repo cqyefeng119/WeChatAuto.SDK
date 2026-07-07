@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import pytest
 import logging
 import asyncio
 from datetime import date
+from typing import TYPE_CHECKING
 
 from wechat_auto_sdk.enums.navigation_type import NavigationType
-from wechat_auto_sdk.models.friend_request_auto_accept_options import (
-    FriendRequestAutoAcceptOptions,
-)
+from wechat_auto_sdk.models.friend_request_auto_accept_options import FriendRequestAutoAcceptOptions
 from wechat_auto_sdk.models.moments_options import MomentsOptions
 from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
-from wechat_auto_sdk.wechat_client import WeChatClient
+if TYPE_CHECKING:
+    from wechat_auto_sdk.models.system_message_context import SystemMessageContext
+    from wechat_auto_sdk.wechat_client import WeChatClient
 
 logger = logging.getLogger(__name__)
 
@@ -636,9 +639,27 @@ async def test_add_moments(client: WeChatClient):
         options,
     )
 
+
 @pytest.mark.asyncio
 async def test_remove_moments(client: WeChatClient):
     """
     移除自己发送的朋友圈
     """
     assert await client.remove_moments("测试的朋友圈消息")
+
+@pytest.mark.asyncio
+async def test_add_group_system_message_listener(client: WeChatClient):
+    """
+    增加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能
+    """
+    async def system_group_monitor_callback(context: SystemMessageContext,client:WeChatClient) -> None:
+        print(f"{context.from_who = }")
+        print(f"{context.new_messages = }")
+        await client.send_message("DroidMirror官方技术支持",f"发生了动作 {context.new_messages}，呵呵")
+        i = 0
+        print(i)
+    
+    await client.add_group_system_message_listener(
+        ["DroidMirror官方技术支持"], system_group_monitor_callback
+    )
+    await client.keep_running()

@@ -39,7 +39,7 @@ public class SocketSessionChannel : IDisposable
                 await foreach (var message in this.channel.Reader.ReadAllAsync(cts.Token))
                 {
                     var handler = provider.GetRequiredService<MessageHandler>();
-                    var result = await handler.HandleAsync(message);  //处理请求，并且返回结果
+                    var result = await handler.HandleAsync(message,cts.Token);  //处理请求，并且返回结果
                     await message!.handler!.SendAsync(result);
                 }
             }

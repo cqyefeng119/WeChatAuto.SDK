@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import asyncio
 import websockets
 import uuid
 import json
 
 from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from wechat_auto_sdk.cancellation_token_source import CancellationTokenSource
 from wechat_auto_sdk.models.request_data import RequestData
 from wechat_auto_sdk.models.message_package import MessagePackage
+
 from wechat_auto_sdk.models.system_message_context import SystemMessageContext
-from wechat_auto_sdk.wechat_client import WeChatClient
+
+if TYPE_CHECKING:
+    from wechat_auto_sdk.wechat_client import WeChatClient
 
 
 class WebSocketClient:
@@ -24,7 +30,7 @@ class WebSocketClient:
         self._rev_loop_task: asyncio.Task | None = None
         # 群系统消息监控器
         self._group_system_message_monitor: dict[
-            str, Callable[[SystemMessageContext], Awaitable[None]]
+            str, Callable[[SystemMessageContext, WeChatClient], Awaitable[None]]
         ] = {}
         self._group_system_message_client: dict[str, WeChatClient] = {}
 
@@ -49,7 +55,8 @@ class WebSocketClient:
                     if self._group_system_message_monitor:
                         if self._group_system_message_monitor.get(result.request_id):
                             # 系统消息监听
-                            await self._process_system_message_monitor_callback(result)
+                            # await self._process_system_message_monitor_callback(result)
+                            asyncio.create_task(self._process_system_message_monitor_callback(result))
                             continue
                     business_future = self._pending_requests.pop(
                         result.request_id, None
@@ -73,17 +80,15 @@ class WebSocketClient:
         if not result.data:
             return
         callback = self._group_system_message_monitor[result.request_id]
-        system_monitor_result = json.loads(result.data)
+        new_messages = json.loads(result.data)
         client: WeChatClient = self._group_system_message_client[result.request_id]
         from_who: str = client.from_wechat
-        new_messages: list[str] = json.loads(system_monitor_result["new_messages"])
-        await callback(
-            SystemMessageContext(
-                from_who=from_who,
-                new_messages=new_messages,
-                client=client,
-            )
+
+        context = SystemMessageContext(
+            from_who=from_who,
+            new_messages=new_messages,
         )
+        await callback(context, client)
 
     async def start(self) -> None:
         """
@@ -113,6 +118,12 @@ class WebSocketClient:
         await self.ws.send(request.model_dump_json())
         return await future
 
+    async def send_withoud_wait(self, message: str, req_id: str | None = None) -> None:
+        """发送结构化数据,不待候返回值"""
+        request_id = uuid.uuid4().hex if req_id is None else req_id
+        request = RequestData(type="command", data=message, request_id=request_id)
+        await self.ws.send(request.model_dump_json())
+
     async def request(self, request: RequestData) -> str:
         """发送原始字符串"""
         loop = asyncio.get_running_loop()
@@ -130,15 +141,9 @@ class WebSocketClient:
         package: MessagePackage,
         request_id: str,
         nick_names: list[str],
-        callback: Callable[[SystemMessageContext], Awaitable[None]],
+        callback: Callable[[SystemMessageContext, WeChatClient], Awaitable[None]],
         client: WeChatClient,
     ) -> None:
         self._group_system_message_monitor[request_id] = callback
         self._group_system_message_client[request_id] = client
-        await self.send(package.model_dump_json(), package.request_id)
-
-    async def keep_running(self) -> None:
-        """
-        保存运行状态，即异步阻塞状态
-        """
-        await asyncio.Future()
+        await self.send_withoud_wait(package.model_dump_json(), package.request_id)

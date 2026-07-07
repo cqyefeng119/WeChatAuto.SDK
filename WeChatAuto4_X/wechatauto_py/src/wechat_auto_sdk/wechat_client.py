@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 from datetime import date
 import uuid
@@ -19,6 +20,7 @@ from wechat_auto_sdk.models.friend_request_auto_accept_options import (
 )
 from wechat_auto_sdk.models.moments_options import MomentsOptions
 from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
+
 from wechat_auto_sdk.models.system_message_context import SystemMessageContext
 from wechat_auto_sdk.websocket_client import WebSocketClient
 from wechat_auto_sdk.models.owner_info import OwerInfo
@@ -944,7 +946,7 @@ class WeChatClient:
     async def add_group_system_message_listener(
         self,
         nick_names: list[str],
-        callback: Callable[[SystemMessageContext], Awaitable[None]],
+        callback: Callable[[SystemMessageContext,WeChatClient], Awaitable[None]],
     ) -> None:
         """加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能
         注意：仅适用于群聊，不适用个人,个人请使用下面的开放式/固定式监听，另外，不支持注册监听后再新增待监听的群聊
@@ -967,11 +969,11 @@ class WeChatClient:
     async def _add_group_system_message_listener_core(
         self,
         nick_names: list[str],
-        callback: Callable[[SystemMessageContext], Awaitable[None]],
+        callback: Callable[[SystemMessageContext,WeChatClient], Awaitable[None]],
     ) -> None:
         request_id = uuid.uuid4().hex
         request_package = MessagePackage(
-            request_id=uuid.uuid4().hex,
+            request_id=request_id,
             func_Name="AddGroupSystemMessageListener",
             options=json.dumps(nick_names),
             from_wechat=self.from_wechat,
@@ -1007,3 +1009,9 @@ class WeChatClient:
             who (str): 好友/群聊名称
         """
         await self._do_remote_action("RemoveListeningFriend", who)
+
+    async def keep_running(self) -> None:
+        """
+        保存运行状态，即异步阻塞状态
+        """
+        await asyncio.Future(loop=asyncio.get_event_loop())
