@@ -1,8 +1,8 @@
 import pytest_asyncio
 
-from wechat_auto_sdk.models.wechat_config import WeChatConfig
-from wechat_auto_sdk.wechat_client import WeChatClient
-from wechat_auto_sdk.wechat_factory import WechatFactory
+from wechat_auto_sdk import WeChatConfig
+from wechat_auto_sdk import WeChatClient
+from wechat_auto_sdk import WechatFactory
 
 
 DEFAULT_URI = "ws://localhost:5177/ws"

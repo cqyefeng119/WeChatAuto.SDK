@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+
 namespace WeChatAuto.Models
 {
     /// <summary>
@@ -8,10 +10,12 @@ namespace WeChatAuto.Models
         /// <summary>
         /// 新增加好友昵称
         /// </summary>
+        [JsonProperty("who")]
         public string Who { get; set; }
         /// <summary>
         /// 新增加好友从哪个关键词过来
         /// </summary>
-        public string FromKeyword {get;set;}
+        [JsonProperty("from_keyword")]
+        public string FromKeyword { get; set; }
     }
 }

@@ -3,16 +3,19 @@ from __future__ import annotations
 import pytest
 import logging
 import asyncio
-from datetime import date
+from datetime import date, time
 from typing import TYPE_CHECKING
 
-from wechat_auto_sdk.enums.navigation_type import NavigationType
-from wechat_auto_sdk.models.friend_request_auto_accept_options import FriendRequestAutoAcceptOptions
-from wechat_auto_sdk.models.moments_options import MomentsOptions
-from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
+from wechat_auto_sdk import NavigationType
+from wechat_auto_sdk import FriendRequestAutoAcceptOptions
+from wechat_auto_sdk import MomentsOptions
+from wechat_auto_sdk import NewFriendBackItem
+from wechat_auto_sdk.models.message_context import MessageContext
+from wechat_auto_sdk.models.time_only_range import TimeOnlyRange
+
 if TYPE_CHECKING:
-    from wechat_auto_sdk.models.system_message_context import SystemMessageContext
-    from wechat_auto_sdk.wechat_client import WeChatClient
+    from wechat_auto_sdk import SystemMessageContext
+    from wechat_auto_sdk import WeChatClient
 
 logger = logging.getLogger(__name__)
 
@@ -598,7 +601,7 @@ async def test_get_all_friend_names(client: WeChatClient):
 async def test_passed_all_new_friend(client: WeChatClient):
     """通过加好友添加申请"""
     options = FriendRequestAutoAcceptOptions(
-        passed_delete=True, keyword="test", label="测试标签", suffix="test"
+        passed_delete=True, keyword=["test"], label="测试标签", suffix="test"
     )
 
     async def on_passed(
@@ -647,19 +650,118 @@ async def test_remove_moments(client: WeChatClient):
     """
     assert await client.remove_moments("测试的朋友圈消息")
 
+
 @pytest.mark.asyncio
 async def test_add_group_system_message_listener(client: WeChatClient):
     """
     增加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能
     """
-    async def system_group_monitor_callback(context: SystemMessageContext,client:WeChatClient) -> None:
+
+    async def system_group_monitor_callback(
+        context: SystemMessageContext, client: WeChatClient
+    ) -> None:
         print(f"{context.from_who = }")
         print(f"{context.new_messages = }")
-        await client.send_message("DroidMirror官方技术支持",f"发生了动作 {context.new_messages}，呵呵")
-        i = 0
-        print(i)
-    
+        await client.send_message(
+            "DroidMirror官方技术支持", f"发生了动作 {context.new_messages}，呵呵"
+        )
+
     await client.add_group_system_message_listener(
         ["DroidMirror官方技术支持"], system_group_monitor_callback
     )
     await client.keep_running()
+
+
+@pytest.mark.asyncio
+async def test_add_message_listener(client: WeChatClient):
+    """
+    消息监听
+    """
+
+    async def message_monitor_callback(
+        context: MessageContext, client: WeChatClient
+    ) -> None:
+        print(f"{context.owner_nick_name = }")
+        print(f"{context.new_messages = }")
+        print(f"{context.history_messages}")
+        await client.send_message(
+            "DroidMirror官方技术支持", f"发生了动作 {context.new_messages}，呵呵"
+        )
+
+    await client.add_message_listener(
+        ["DroidMirror官方技术支持"], message_monitor_callback
+    )
+    await client.keep_running()
+
+
+@pytest.mark.asyncio
+async def test_add_message_listener_with_time(client: WeChatClient):
+    """
+    一个从什么时候开始，什么时候结束的消息监听
+    """
+
+    async def message_monitor_callback(
+        context: MessageContext, client: WeChatClient
+    ) -> None:
+        print(f"{context.owner_nick_name = }")
+        print(f"{context.new_messages = }")
+        print(f"{context.history_messages}")
+        await client.send_message(
+            "DroidMirror官方技术支持", f"发生了动作 {context.new_messages}，呵呵"
+        )
+
+    await client.add_message_listener_with_time(
+        ["DroidMirror官方技术支持"],
+        message_monitor_callback,
+        time(11, 20),
+        time(12, 20),
+    )
+    await client.keep_running()
+
+
+@pytest.mark.asyncio
+async def test_add_message_listener_with_range(client: WeChatClient):
+    """
+    一天中多个时间段的消息监听
+    """
+
+    async def message_monitor_callback(
+        context: MessageContext, client: WeChatClient
+    ) -> None:
+        print(f"{context.owner_nick_name = }")
+        print(f"{context.new_messages = }")
+        print(f"{context.history_messages}")
+        await client.send_message("DroidMirror官方技术支持", "hello world!")
+
+    range_list = [
+        TimeOnlyRange(star_time=time(9, 20), end_time=time(9, 40)),
+        TimeOnlyRange(star_time=time(10, 20), end_time=time(11, 20)),
+    ]
+    await client.add_message_listener_with_range(
+        ["DroidMirror官方技术支持"], message_monitor_callback, range_list
+    )
+    await client.keep_running()
+
+
+@pytest.mark.asyncio
+async def test_add_friend_request_auto_accept_listener(client: WeChatClient):
+    """
+    新好友添加监听
+    """
+
+    async def new_friends_callback(
+        items: list[NewFriendBackItem], client: WeChatClient
+    ):
+        print(items)
+
+    options = FriendRequestAutoAcceptOptions(
+        passed_delete=True, keyword=["test"], label="测试标签", suffix="test"
+    )
+
+    await client.add_friend_request_auto_accept_listener(options, new_friends_callback)
+    await client.keep_running()
+
+@pytest.mark.asyncio
+async def test_remove_friend(client: WeChatClient):
+    result = await client.remove_friend("智影工坊")
+    assert result

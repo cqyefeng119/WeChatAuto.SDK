@@ -18,10 +18,9 @@ from wechat_auto_sdk.models.friend_info import FriendInfo
 from wechat_auto_sdk.models.friend_request_auto_accept_options import (
     FriendRequestAutoAcceptOptions,
 )
-from wechat_auto_sdk.models.moments_options import MomentsOptions
 from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
 
-from wechat_auto_sdk.models.system_message_context import SystemMessageContext
+from wechat_auto_sdk.vip_mixin import VipMixin
 from wechat_auto_sdk.websocket_client import WebSocketClient
 from wechat_auto_sdk.models.owner_info import OwerInfo
 from wechat_auto_sdk.models.message_package import MessagePackage
@@ -30,7 +29,7 @@ from wechat_auto_sdk.models.simple_conversation import SimpleConversation
 from wechat_auto_sdk.models.header_info import HeaderInfo
 
 
-class WeChatClient:
+class WeChatClient(VipMixin):
     """微信客户端类，在多微信中，是对一个微信的抽象"""
 
     def __init__(self, from_wechat: str, socket: WebSocketClient) -> None:
@@ -876,139 +875,19 @@ class WeChatClient:
 
         return result_object
 
-    async def open_moments(self) -> bool:
-        """打开朋友圈,如果未打开，则打开朋友圈，如果已经打开了，则窗口提前到顶端
+    async def remove_friend(self, nick_name: str) -> bool:
+        """移除好友
+        注意： 如果删除好友，从通讯录删除好友后，如果此好友处在监听中，同步的,应该将监听中的好友移除
+
+
+        Args:
+            nick_name (str): 好友昵称,可以为空，如果为空，则将焦点窗口的好友删除
 
         Returns:
-            bool: 是否打开
+            bool: 是否成功
         """
-        result = await self._do_remote_function("OpenMoments", "")
+        result = await self._do_remote_function("RemoveFriend", nick_name)
         return result.lower() == "true"
-
-    async def close_moments(self) -> None:
-        """关闭朋友圈"""
-        await self._do_remote_function("CloseMoments", "")
-
-    async def add_moments(
-        self,
-        image_files: list[str],
-        content: str = "",
-        options: MomentsOptions | None = None,
-    ) -> bool:
-        """发送朋友圈
-
-        Args:
-            image_files (list[str]): 图片列表，可以一个，也可以多个,如果是多个文件，要求在同一个目录中
-            content (str): 朋友圈内容
-            options (MomentsOptions | None, optional): 发送选项，请参考<see cref="MomentsOptions"/></param>. Defaults to None.
-        """
-        if not image_files:
-            raise ValueError("错误：图片列表不能为空！")
-        # 检查文件是否都存在
-        missing_file = next(
-            (file for file in image_files if not Path(file).is_file()), None
-        )
-        if missing_file is not None:
-            raise ValueError("错误：参数 image_files 列表中有一些图片文件不存在！")
-        upload = {
-            file: base64.b64encode(Path(file).read_bytes()).decode("utf-8")
-            for file in image_files
-        }
-        result = await self._do_remote_function(
-            "AddMoments",
-            json.dumps(
-                {
-                    "image_files": json.dumps(image_files),
-                    "content": content,
-                    "options": options.model_dump_json()
-                    if options is not None
-                    else None,
-                    "upload": json.dumps(upload),
-                }
-            ),
-        )
-        return result.lower() == "true"
-
-    async def remove_moments(self, content: str) -> bool:
-        """移除自己发送的朋友圈
-
-        Args:
-            content (str): 朋友圈文字内容
-
-        Returns:
-            bool: 是否成功删除
-        """
-        if not content:
-            raise ValueError("错误：能数 content 内容不能为空！")
-        result = await self._do_remote_function("RemoveMoments", content)
-        return result.lower() == "true"
-
-    async def add_group_system_message_listener(
-        self,
-        nick_names: list[str],
-        callback: Callable[[SystemMessageContext,WeChatClient], Awaitable[None]],
-    ) -> None:
-        """加系统消息监听，以实现如： 检测到群主邀请好友后发送欢迎消息等功能
-        注意：仅适用于群聊，不适用个人,个人请使用下面的开放式/固定式监听，另外，不支持注册监听后再新增待监听的群聊
-
-
-        Args:
-            nick_names (list[str]): 群聊昵称，可以多个
-            callback (Callable): 回调函数,由用户提供,参数：消息上下文<see cref="SystemMessageContext"/>
-        """
-        if not nick_names:
-            raise ValueError("错误：参数nick_names不能为空！")
-        if self._group_system_monitor_started:
-            return
-        self._group_system_monitor_started = True
-        self._group_system_task = asyncio.create_task(
-            self._add_group_system_message_listener_core(nick_names, callback),
-            name="group_system_message_monitor",
-        )
-
-    async def _add_group_system_message_listener_core(
-        self,
-        nick_names: list[str],
-        callback: Callable[[SystemMessageContext,WeChatClient], Awaitable[None]],
-    ) -> None:
-        request_id = uuid.uuid4().hex
-        request_package = MessagePackage(
-            request_id=request_id,
-            func_Name="AddGroupSystemMessageListener",
-            options=json.dumps(nick_names),
-            from_wechat=self.from_wechat,
-        )
-        await self.socket.send_group_system_monitor(
-            request_package, request_id, nick_names, callback, self
-        )
-
-    async def pause_message_listener(self) -> None:
-        """
-        暂停消息监听
-        """
-        await self._do_remote_action("PauseMessageListener", "")
-
-    async def resume_message_listener(self) -> None:
-        """
-        恢复消息监听
-        """
-        await self._do_remote_action("ResumeMessageListener", "")
-
-    async def add_listening_friend(self, who: str) -> None:
-        """监听过程中添加好友
-
-        Args:
-            who (str): 好友名称
-        """
-        await self._do_remote_action("AddListeningFriend", who)
-
-    async def remove_listening_friend(self, who: str) -> None:
-        """监听过程中移除被监听中的好友/群聊
-
-        Args:
-            who (str): 好友/群聊名称
-        """
-        await self._do_remote_action("RemoveListeningFriend", who)
 
     async def keep_running(self) -> None:
         """

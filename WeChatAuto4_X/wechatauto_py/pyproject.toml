@@ -10,3 +10,9 @@ dependencies = [
     "pytest-asyncio>=1.4.0",
     "websockets>=16.0",
 ]
+
+[tool.uv.workspace]
+members = [
+    "examples",
+    "tests",
+]

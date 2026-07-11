@@ -25,7 +25,7 @@ public class NewFriendMonitorTests
         var client = framework.GetWeChatClient(_wxClientName);
         await client.AddFriendRequestAutoAcceptListener(new Options.FriendRequestAutoAcceptOptions()
         {
-            KeyWord = "test",
+            KeyWord = new List<string>(){"test"},
             Label = "测试标签",
             Suffix = "test",
             PassedCallBack = async (list, _client, serviceProvider) =>

@@ -93,7 +93,7 @@ public class AddressBookListTests
                 _output.WriteLine(string.Join(",", whos));
                 count = whos.Count();
             },
-            KeyWord = "test"
+            KeyWord = new List<string>() { "test" }
         });
         Assert.True(list.Count > 0);
     }
@@ -117,11 +117,22 @@ public class AddressBookListTests
                 _output.WriteLine(string.Join(",", whos));
                 count = whos.Count();
             },
-            KeyWord = "test",
+            KeyWord = new List<string>() { "test" },
             Label = "测试标签",
             Suffix = "test"
         });
         Assert.True(list.Count > 0);
+    }
+
+    [Fact(DisplayName = "移除好友")]
+    public async Task Test_RemoveFriend()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var result = await client.RemoveFriend("xxxxxxxx");
+        Assert.False(result);
+        result = await client.RemoveFriend("智影工坊");
+        Assert.True(result);
     }
 
 

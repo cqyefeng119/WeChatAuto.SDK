@@ -17,7 +17,7 @@ public class WebSocketHandler
     private readonly ILogger<WebSocketHandler> logger;
     private readonly WeChatClientFactory _factory;
 
-    public WebSocketHandler(ConnectionManager manager, SocketSessionChannel channel, WeChatClientFactory factory,ILogger<WebSocketHandler> logger)
+    public WebSocketHandler(ConnectionManager manager, SocketSessionChannel channel, WeChatClientFactory factory, ILogger<WebSocketHandler> logger)
     {
         _manager = manager;
         this.channel = channel;
@@ -42,7 +42,7 @@ public class WebSocketHandler
         {
             var buffer = new byte[8192];
             await channel!.ConsumptionMessage();
-            logger.LogInformation("**********"+" 收到新的客户端连接，即将建立长连接 "+"**********");
+            logger.LogInformation("**********" + " 收到新的客户端连接，即将建立长连接 " + "**********");
             //保持长连接
             while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
             {
@@ -108,6 +108,10 @@ public class WebSocketHandler
                 }
             }
         }
+        catch (Exception ex)
+        {
+            logger.LogError($"web socket发生未知错误:{ex.ToString()}");
+        }
         finally
         {
             stopwatch.Stop();
@@ -154,7 +158,7 @@ public class WebSocketHandler
                 ws.Abort();
                 break;
             }
-            var ping = new RequestData { Type = "ping", Data="ping",RequestId=""};
+            var ping = new RequestData { Type = "ping", Data = "ping", RequestId = "" };
             await SendAsync(ping);
             await Task.Delay(heatBeatDelay);
         }

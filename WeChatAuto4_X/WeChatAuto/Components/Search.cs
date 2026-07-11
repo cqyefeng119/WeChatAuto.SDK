@@ -343,7 +343,7 @@ namespace WeChatAuto.Components
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.LeftClick();
                     RandomWait.Wait(300, 900);
-                    System.Windows.Clipboard.SetText(memoName);
+                    ClipboardHelper.SetText(memoName);
                     SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A);
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
@@ -385,7 +385,7 @@ namespace WeChatAuto.Components
                             searchEdit.Focus();
                             var point2 = searchEdit.BoundingRectangle.SafeRandomPoint();
                             Mouse.Click(point2);
-                            System.Windows.Clipboard.SetText(options.Label);
+                            ClipboardHelper.SetText(options.Label);
                             Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
                             RandomWait.Wait(300, 900);
                             list = addWin.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();

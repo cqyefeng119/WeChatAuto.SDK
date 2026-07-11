@@ -18,13 +18,13 @@ using System.Threading.Tasks;
 using FlaUI.UIA3;
 using WeAutoCommon.Extentions;
 using System.IO;
-using System.Windows;
 using FlaUI.Core;
 using MessagePack;
 using System.Net.Http;
 using System.Drawing;
 using WeChatAuto.Options;
 using WeChatAuto.Models;
+using System.Windows.Navigation;
 
 
 namespace WeChatAuto.Components
@@ -445,7 +445,7 @@ namespace WeChatAuto.Components
 			RandomWait.Wait(50, 200);
 			Keyboard.TypeSimultaneously(virtualKeys: VirtualKeyShort.BACK);
 			RandomWait.Wait(50, 300);
-			Clipboard.SetText(friendInfo.MemoName);
+			ClipboardHelper.SetText(friendInfo.MemoName);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 			RandomWait.Wait(50, 300);
 			Keyboard.Type(VirtualKeyShort.ENTER);
@@ -845,7 +845,7 @@ namespace WeChatAuto.Components
 
 		private static (bool flowControl, bool value, string keyword) __CheckKeyword__(FriendRequestAutoAcceptOptions options, AutomationElement root)
 		{
-			var kw = options.KeyWord.IsT0 ? new List<string> { options.KeyWord.AsT0 } : options.KeyWord.IsT1 ? options.KeyWord.AsT1.ToList() : options.KeyWord.AsT2;
+			var kw = options.KeyWord;
 			kw = kw.Where(item => !string.IsNullOrEmpty(item)).Select(item => item.Trim()).ToList();
 			var currentKeyword = "";
 			if (kw.Count() > 0)  //如果设定关键词，检查是否包含关键词
@@ -1115,7 +1115,7 @@ namespace WeChatAuto.Components
 						searchEdit.Focus();
 						var point2 = searchEdit.BoundingRectangle.SafeRandomPoint();
 						Mouse.Click(point2);
-						Clipboard.SetText(options.Label);
+						ClipboardHelper.SetText(options.Label);
 						Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 						RandomWait.Wait(300, 900);
 						list = window.FindFirstDescendant(cf => cf.ByControlType(ControlType.List).And(cf.ByClassName("mmui::XTableView")).And(cf.ByName("标签"))).AsListBox();
@@ -1187,7 +1187,7 @@ namespace WeChatAuto.Components
 			RandomWait.Wait(300, 800);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.BACK);
 			RandomWait.Wait(600, 1500);
-			Clipboard.SetText(oriName);
+			ClipboardHelper.SetText(oriName);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 			RandomWait.Wait(300, 800);
 			var randValue = Random.Shared.Next(1, 10);
@@ -1268,37 +1268,105 @@ namespace WeChatAuto.Components
 
 		/// <summary>
 		/// 移除好友
-		/// 注意： 如果删除好友，从通讯录删除好友后，同步的，应该将监听删除
+		/// 注意： 如果删除好友，从通讯录删除好友后，同步的，如果此好友处在监听中，应该将监听中的好友删除
 		/// </summary>
-		/// <param name="nickName">好友昵称</param>
+		/// <param name="nickName">好友昵称,可以为空，如果为空，则将焦点窗口的好友删除</param>
 		/// <returns>是否成功</returns>
-		public bool RemoveFriend(string nickName)
+		public async Task<bool> RemoveFriend(string nickName)
 		{
-			return false;
+			if (!string.IsNullOrWhiteSpace(nickName))
+			{
+				var result = await _Client.SearchFriend(nickName);
+				if (!result)
+					return false;
+			}
+			var title = await _Client.GetTitle();
+			if (!title.CanTalk())
+				return false;
+			if (title.HeaderType != ChatType.好友 && title.HeaderType != ChatType.企业微信)
+			{
+				return false;
+			}
+			return await WeChatInvoker.Call(RemoveFriendCore);
 		}
 
-
-
-		/// <summary>
-		/// 添加好友
-		/// </summary>
-		/// <param name="friendNames">微信号/手机号列表</param>
-		/// <param name="label">好友标签</param>
-		/// <returns>好友昵称列表和是否成功</returns>
-		public List<(string friendName, bool isSuccess, string errMessage)> AddFriends(List<string> friendNames, string label = "")
+		internal bool RemoveFriendCore(UIA3Automation automation)
 		{
-			return null;
+			_Client.OuterGroup.ClickChatInfoButton();
+			var result = ClickPersion(automation);
+			if (!result.Success) return result.Success;
+			result = ClickMoreButton(automation);
+			if (!result.Success) return result.Success;
+			result = ClickDeleteButton(automation);
+			if (!result.Success) return result.Success;
+			result = ClickConfirmButton(automation);
+			if (!result.Success) return result.Success;
+
+			// 关闭聊天信息窗口
+			_Client.OuterGroup.ClickChatInfoButton();
+
+			//由于删除后显示一片空白，
+
+			return result.Success;
 		}
-		/// <summary>
-		/// 通过微信号，手机号添加好友
-		/// 注意：不能添加太频繁，否则可能会触发微信的风控机制，导致加好友失败
-		/// </summary>
-		/// <param name="friendName">微信号/手机号</param>
-		/// <param name="label">好友标签</param>
-		/// <returns>是否成功</returns>
-		public bool AddFriend(string friendName, string label = "")
+
+		private Result ClickConfirmButton(UIA3Automation automation)
 		{
-			return true;
+			var path = "/Window[@Name='Weixin']/Window[@Name='Weixin']/Group/Group/Group/Button[@Name='删除']";
+			var confirmRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			if (!confirmRetry.Success)
+				return Result.Fail("错误： 没有发现 删除 按钮");
+			var confirmButton = confirmRetry.Result;
+			confirmButton.Click();
+			RandomWait.Wait(300, 1200);
+			return Result.Ok();
+		}
+
+		private Result ClickDeleteButton(UIA3Automation automation)
+		{
+			var path = "/Window[@Name='Weixin']/Window[@Name='Weixin']/MenuItem[@Name='删除联系人']";
+			var menuItemRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			if (!menuItemRetry.Success)
+				return Result.Fail("错误：没有发现 删除联系人 菜单");
+			var menuItem = menuItemRetry.Result;
+			menuItem.Click();
+			return Result.Ok();
+		}
+
+		private Result ClickMoreButton(UIA3Automation automation)
+		{
+			var path = "/Window[@Name='Weixin']/Group/Group/Group/Group/Group/Group/Group/Button[@Name='更多']";
+			var buttonRetry = Retry.WhileNull(() => automation.GetDesktop().FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+			if (!buttonRetry.Success) return Result.Fail("错误：没有找到 更多 按钮");
+			var button = buttonRetry.Result;
+			button.Click();
+			RandomWait.Wait(300, 1200);
+			return Result.Ok();
+		}
+
+		private Result ClickPersion(UIA3Automation automation)
+		{
+			var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Group/Group[@AutomationId='single_chat_info_view']/Group/Group[@AutomationId='qt_scrollarea_viewport']";
+			var paneRootRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(100));
+			if (!paneRootRetry.Success)
+				return Result.Fail("没有找到根路径!");
+			var paneRoot = paneRootRetry.Result;
+			var point = this._Client.OcrEngee.OCRVerticalDetect(paneRoot, 0.5f, "添加");
+			if (point.IsEmpty)
+				return Result.Fail("错误: OCR 添加 按钮失败!");
+			this._Client.MainWindow.Focus();
+			Mouse.Position = paneRoot.BoundingRectangle.Center();
+			RandomWait.Wait(600, 1200);
+			var point2 = new Point(point.X, point.Y - 30).Confusion(10, 5);
+			SupperMouseKey.MoveTo(point2);
+			RandomWait.Wait(300, 1200);
+			point2 = new Point(point2.X - 65, point2.Y);
+			RandomWait.Wait(300, 600);
+			SupperMouseKey.MoveTo(point2);
+			RandomWait.Wait(300, 1200);
+			SupperMouseKey.LeftClick();
+			RandomWait.Wait(800, 1500);
+			return Result.Ok();
 		}
 	}
 

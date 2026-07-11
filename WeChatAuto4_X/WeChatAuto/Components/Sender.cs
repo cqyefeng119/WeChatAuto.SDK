@@ -701,7 +701,7 @@ namespace WeChatAuto.Components
 				SupperMouseKey.TypeSimultaneously(VirtualKeyShort.BACK);
 				RandomWait.Wait(200, 900);
 				string[] contents = refer.Message.Message.Split('\n');
-				System.Windows.Clipboard.SetText(contents[0]);
+				ClipboardHelper.SetText(contents[0]);
 				SupperMouseKey.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 				RandomWait.Wait(200, 1500);
 
@@ -862,13 +862,13 @@ namespace WeChatAuto.Components
 		private void __AtUserInputText(List<string> atUsers, TextBox textBox, string message)
 		{
 			textBox.Focus();
-			System.Windows.Clipboard.SetText(message);
+			ClipboardHelper.SetText(message);
 			var point = textBox.BoundingRectangle.SafeRandomPoint();
 			Mouse.Position = point;
 			Mouse.Click();
 			__AtUserList(atUsers, textBox);
 			textBox.Focus();
-			System.Windows.Clipboard.SetText(message);
+			ClipboardHelper.SetText(message);
 			RandomWait.Wait(50, 300);
 			Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_V);
 			RandomWait.Wait(50, 800);
@@ -948,7 +948,7 @@ namespace WeChatAuto.Components
 		private void __InputText(TextBox textBox, string message)
 		{
 			textBox.Focus();
-			System.Windows.Clipboard.SetText(message);
+			ClipboardHelper.SetText(message);
 			var point = textBox.BoundingRectangle.SafeRandomPoint();
 			Mouse.Position = point;
 			Mouse.Click();

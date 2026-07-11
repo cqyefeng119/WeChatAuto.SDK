@@ -39,8 +39,35 @@ public class SocketSessionChannel : IDisposable
                 await foreach (var message in this.channel.Reader.ReadAllAsync(cts.Token))
                 {
                     var handler = provider.GetRequiredService<MessageHandler>();
-                    var result = await handler.HandleAsync(message,cts.Token);  //处理请求，并且返回结果
-                    await message!.handler!.SendAsync(result);
+                    try
+                    {
+                        var result = await handler.HandleAsync(message, cts.Token);  //处理请求，并且返回结果
+                        await message!.handler!.SendAsync(result);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // do nothing.
+                    }
+                    catch (WeChatAutoWebSocketServerExcpetion ex)
+                    {
+                        RequestData businessError = new RequestData()
+                        {
+                            Type = "error",
+                            RequestId = ex.Request_Id,
+                            Data = ex.ToString(),
+                        };
+                        await message!.handler!.SendAsync(businessError);
+                    }
+                    catch (Exception ex)
+                    {
+                        RequestData businessError = new RequestData()
+                        {
+                            Type = "error",
+                            RequestId = message.RequestId,
+                            Data = ex.ToString(),
+                        };
+                        await message!.handler!.SendAsync(businessError);
+                    }
                 }
             }
             catch (OperationCanceledException)

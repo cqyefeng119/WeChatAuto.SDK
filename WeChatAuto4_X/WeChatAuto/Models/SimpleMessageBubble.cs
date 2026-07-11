@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using MessagePack;
+using Newtonsoft.Json;
 using WeAutoCommon.Enums;
 
 namespace WeChatAuto.Models
@@ -16,16 +17,19 @@ namespace WeChatAuto.Models
         /// 如果是系统发送，则值为"系统"
         /// </summary>
         [Key(1)]
+        [JsonProperty("who")]
         public string Who { get; set; }
         /// <summary>
         /// 消息
         /// </summary>
         [Key(2)]
+        [JsonProperty("message")]
         public string Message { get; set; }
         /// <summary>
         /// 发送日期,仅精确到分钟
         /// </summary>
         [Key(3)]
+        [JsonProperty("send_date")]
         public DateTime SendDate { get; set; }
         /// <summary>
         /// 如果消息中有图片，此处为图片的Bitmap对象，否则为null
@@ -40,6 +44,7 @@ namespace WeChatAuto.Models
         /// 消息类型
         /// </summary>
         [Key(5)]
+        [JsonProperty("message_type")]
         public MessageType MessageType { get; set; } = MessageType.None;
 
         /// <summary>
@@ -51,6 +56,9 @@ namespace WeChatAuto.Models
         /// </summary>
         [Key(6)]
         public string ImageFile { get; set; }
+        [IgnoreMember]
+        [JsonProperty("image_base64_str")]
+        public string ImageBase64Str { get; set; }
 
         public override string ToString()
         {

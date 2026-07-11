@@ -43,7 +43,7 @@ var client = clientFactory.GetWeChatClient(wxName);
 // 注册拉好友监听
 await client.AddFriendRequestAutoAcceptListener(new WeChatAuto.Options.FriendRequestAutoAcceptOptions
 {
-    KeyWord = new string[] { "test", "wechatauto" },
+    KeyWord = new List<string> { "test", "wechatauto" },
     Suffix = "test",
     Label = "wechatauto",
     PassedDelete = true,
@@ -133,7 +133,7 @@ await client.AddGroupSystemMessageListener(groupName, async context =>
 
                 }
                 RandomWait.Wait(800, 1200);
-                await client.SendMessage(groupName,$"菜鸟,有新大佬来了，请以非常热情、夸张、有感染力的语气来欢迎他，要让新人感受到全群都在欢迎他，可以适当使用大量感叹号、表情符号、拟声词、庆祝语气;可以把新人描述成“贵宾”、“大神”、“重量级嘉宾”、“天降紫微星”等夸张称呼;内容要积极、友善、幽默。输出仅包含欢迎词正文，不要附加解释,另外，虽然我@了你，你无须回复，直接向新人按上面的要求打招呼","菜鸟");
+                await client.SendMessage(groupName, $"菜鸟,有新大佬来了，请以非常热情、夸张、有感染力的语气来欢迎他，要让新人感受到全群都在欢迎他，可以适当使用大量感叹号、表情符号、拟声词、庆祝语气;可以把新人描述成“贵宾”、“大神”、“重量级嘉宾”、“天降紫微星”等夸张称呼;内容要积极、友善、幽默。输出仅包含欢迎词正文，不要附加解释,另外，虽然我@了你，你无须回复，直接向新人按上面的要求打招呼", "菜鸟");
                 RandomWait.Wait(1500, 4000);
             }
         }

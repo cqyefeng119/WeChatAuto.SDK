@@ -9,7 +9,7 @@ using WeChatAuto.Models;
 
 namespace WeChatAuto.Options
 {
-    public class FriendRequestAutoAcceptOptions
+    public class FriendRequestAutoAcceptOptions: FriendRequestAutoAcceptOptionsPrefix
     {
         /// <summary>
         /// 通过后的回调,返回给调用者三个信息:
@@ -18,6 +18,20 @@ namespace WeChatAuto.Options
         /// - 依赖注入 - 调用者可以通过依赖注入容器取出自己注入的对象，执行自己的业务逻辑;
         /// </summary>    
         public Func<List<NewFriendBackItem>, WeChatClient, IServiceProvider, Task> PassedCallBack { get; set; }
+
+        public static FriendRequestAutoAcceptOptions CreateFriendRequestAutoAcceptOptions(FriendRequestAutoAcceptOptionsPrefix oriObject)
+        {
+            var result = new FriendRequestAutoAcceptOptions();
+            result.PassedDelete = oriObject.PassedDelete;
+            result.KeyWord = oriObject.KeyWord;
+            result.Suffix = oriObject.Suffix;
+            result.Label = oriObject.Label;
+            return result;
+        }
+    }
+
+    public class FriendRequestAutoAcceptOptionsPrefix
+    {
         /// <summary>
         /// 通过后是否删除申请记录
         /// </summary>
@@ -28,7 +42,7 @@ namespace WeChatAuto.Options
         /// 打招呼关键词过滤,可以设置多个，回调的时候会携带此KeyWord的信息返回给调用者，调用者应该根据关键词做相应的处理.
         /// </summary>
         [JsonProperty("keyword")]
-        public OneOf<string, string[], List<string>> KeyWord { get; set; }
+        public List<string> KeyWord { get; set; }
 
         /// <summary>
         /// 好友备注后缀

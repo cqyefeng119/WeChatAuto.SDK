@@ -63,14 +63,16 @@ namespace WeChatAuto.Components
                 var button = RootBotton;
                 if (button != null)
                 {
-                    var point = button.GetClickablePoint();
-                    Mouse.Position = point.Confusion(5, 0);
-                    RandomWait.Wait(100, 300);
-                    SupperMouseKey.MoveTo(point.Confusion(5, 0));
-                    RandomWait.Wait(300, 900);
-                    SupperMouseKey.LeftClick();
-                    RandomWait.Wait(1000, 1500);
-                    groupRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                    button.Click();
+                    // 下面是稳定版本
+                    // var point = button.GetClickablePoint();
+                    // Mouse.Position = point.Confusion(5, 0);
+                    // RandomWait.Wait(100, 300);
+                    // SupperMouseKey.MoveTo(point.Confusion(5, 0));
+                    // RandomWait.Wait(300, 900);
+                    // SupperMouseKey.LeftClick();
+                    // RandomWait.Wait(1000, 1500);
+                    // groupRetry = Retry.WhileNull(() => this._Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
                 }
             }
         }
@@ -101,6 +103,22 @@ namespace WeChatAuto.Components
                     return groupRetry.Success ? groupRetry.Result : null;
                 }
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// 点击聊天信息按钮
+        /// 注意：
+        /// 让保证 聊天信息 按钮是可点击状态
+        /// </summary>
+        internal void ClickChatInfoButton()
+        {
+            var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Custom/Group/Custom/Custom/Group/Group/Group/Group/Group/Group/Group/Group/Group/Group/Button[@AutomationId='content_view.top_content_view.title_h_view.right_v_view.right_content_h_view.right_content_v_view.right_ui_.more_button'][@Name='聊天信息']";
+            var buttonRetry = Retry.WhileNull(()=>_Client.MainWindow.FindFirstByXPath(path),TimeSpan.FromSeconds(2),TimeSpan.FromMilliseconds(200));
+            if (buttonRetry.Success)
+            {
+                var button = buttonRetry.Result;
+                button.Click();
             }
         }
 

@@ -9,6 +9,8 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 from wechat_auto_sdk.cancellation_token_source import CancellationTokenSource
+from wechat_auto_sdk.models.message_context import MessageContext
+from wechat_auto_sdk.models.new_friend_back_item import NewFriendBackItem
 from wechat_auto_sdk.models.request_data import RequestData
 from wechat_auto_sdk.models.message_package import MessagePackage
 
@@ -29,10 +31,20 @@ class WebSocketClient:
         self._pending_requests: dict[str, asyncio.Future[str]] = {}
         self._rev_loop_task: asyncio.Task | None = None
         # 群系统消息监控器
-        self._group_system_message_monitor: dict[
+        self._group_system_message_monitor_callback: dict[
             str, Callable[[SystemMessageContext, WeChatClient], Awaitable[None]]
         ] = {}
         self._group_system_message_client: dict[str, WeChatClient] = {}
+        # 消息监听
+        self._message_monitor_callback: dict[
+            str, Callable[[MessageContext, WeChatClient], Awaitable[None]]
+        ] = {}
+        self._message_monitor_client: dict[str, WeChatClient] = {}
+        # 好友申请监听
+        self._friend_request_auto_accept_callback: dict[
+            str, Callable[[list[NewFriendBackItem], WeChatClient], Awaitable[None]]
+        ] = {}
+        self._friend_request_auto_accept_client: dict[str, WeChatClient] = {}
 
     async def recv_loop(self) -> None:
         """接收数据loop"""
@@ -50,13 +62,46 @@ class WebSocketClient:
                     global_future = self._pending_requests.pop(result.request_id, None)
                     if global_future is not None:
                         global_future.set_result(result.data)
+                elif result.type == "error":
+                    business_future = self._pending_requests.pop(
+                        result.request_id, None
+                    )
+                    if business_future is None:
+                        continue
+                    if business_future.done():
+                        continue
+                    business_future.set_exception(Exception(result.data))
                 else:
+                    if result.type != "echo":
+                        continue
                     # 业务代码处理
-                    if self._group_system_message_monitor:
-                        if self._group_system_message_monitor.get(result.request_id):
+                    if self._group_system_message_monitor_callback:
+                        if self._group_system_message_monitor_callback.get(
+                            result.request_id
+                        ):
                             # 系统消息监听
                             # await self._process_system_message_monitor_callback(result)
-                            asyncio.create_task(self._process_system_message_monitor_callback(result))
+                            asyncio.create_task(
+                                self._process_system_message_monitor_callback(result)
+                            )
+                            continue
+                    if self._message_monitor_callback:
+                        if self._message_monitor_callback.get(result.request_id):
+                            # 消息监听
+                            asyncio.create_task(
+                                self._process_message_monitor_callback(result)
+                            )
+                            continue
+                    if self._friend_request_auto_accept_callback:
+                        if self._friend_request_auto_accept_callback.get(
+                            result.request_id
+                        ):
+                            # 好友监听
+                            asyncio.create_task(
+                                self._process_friend_request_auto_accept_callback(
+                                    result
+                                )
+                            )
                             continue
                     business_future = self._pending_requests.pop(
                         result.request_id, None
@@ -75,11 +120,38 @@ class WebSocketClient:
         except Exception as ex:
             print(f"recv_loop error: {ex}")
 
+    async def _process_friend_request_auto_accept_callback(self, result: RequestData):
+        if not result.data:
+            return
+        callback = self._friend_request_auto_accept_callback[result.request_id]
+        new_friends = json.loads(result.data)
+        client: WeChatClient = self._friend_request_auto_accept_client[
+            result.request_id
+        ]
+        await callback(new_friends, client)
+
+    async def _process_message_monitor_callback(self, result: RequestData):
+        if not result.data:
+            return
+        callback = self._message_monitor_callback[result.request_id]
+        result_dict = json.loads(result.data)
+        new_messages = json.loads(result_dict["new_message"])
+        client: WeChatClient = self._message_monitor_client[result.request_id]
+        from_who: str = client.from_wechat
+        history_messages = json.loads(result_dict["history_messages"])
+
+        context = MessageContext(
+            owner_nick_name=from_who,
+            new_messages=new_messages,
+            history_messages=history_messages,
+        )
+        await callback(context, client)
+
     async def _process_system_message_monitor_callback(self, result: RequestData):
         # 系统消息监听
         if not result.data:
             return
-        callback = self._group_system_message_monitor[result.request_id]
+        callback = self._group_system_message_monitor_callback[result.request_id]
         new_messages = json.loads(result.data)
         client: WeChatClient = self._group_system_message_client[result.request_id]
         from_who: str = client.from_wechat
@@ -144,6 +216,29 @@ class WebSocketClient:
         callback: Callable[[SystemMessageContext, WeChatClient], Awaitable[None]],
         client: WeChatClient,
     ) -> None:
-        self._group_system_message_monitor[request_id] = callback
+        self._group_system_message_monitor_callback[request_id] = callback
         self._group_system_message_client[request_id] = client
+        await self.send_withoud_wait(package.model_dump_json(), package.request_id)
+
+    async def send_message_listener(
+        self,
+        package: MessagePackage,
+        request_id: str,
+        nick_names: list[str],
+        callback: Callable[[MessageContext, WeChatClient], Awaitable[None]],
+        client: WeChatClient,
+    ) -> None:
+        self._message_monitor_callback[request_id] = callback
+        self._message_monitor_client[request_id] = client
+        await self.send_withoud_wait(package.model_dump_json(), package.request_id)
+
+    async def send_friend_request_auto_accept(
+        self,
+        package: MessagePackage,
+        request_id: str,
+        callback: Callable[[list[NewFriendBackItem], WeChatClient], Awaitable[None]],
+        client: WeChatClient,
+    ) -> None:
+        self._friend_request_auto_accept_callback[request_id] = callback
+        self._friend_request_auto_accept_client[request_id] = client
         await self.send_withoud_wait(package.model_dump_json(), package.request_id)

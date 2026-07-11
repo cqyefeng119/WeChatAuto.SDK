@@ -391,7 +391,6 @@ namespace WeChatAuto.Components
             var edit = _Client.MainWindow.FindFirstByXPath(path);
             edit.Focus();
             edit.DrawHighlightExt();
-            //System.Windows.Clipboard.SetText(who);
             edit.AsTextBox().Text = who;
             RandomWait.Wait(300, 1200);
             //等候浮动菜单出来
