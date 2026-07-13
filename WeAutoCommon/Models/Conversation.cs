@@ -74,20 +74,24 @@ namespace WeAutoCommon.Models
         /// <summary>
         /// 会话标题
         /// </summary>
+        [JsonProperty("conversation_title")]
         public string ConversationTitle { get; set; }
 
         /// <summary>
         /// 是否免打扰
         /// </summary>
+        [JsonProperty("is_do_not_disturb")]
         public bool IsDoNotDisturb { get; set; } = false;  //是否免打扰
 
         /// <summary>
         /// 是否置顶
         /// </summary>
+        [JsonProperty("is_top")]
         public bool IsTop { get; set; } = false;
         /// <summary>
         /// 未读消息数
         /// </summary>
+        [JsonProperty("not_read_numbr")]
         public int NotReadNumbr { get; set; } = 0;
 
         public override string ToString()

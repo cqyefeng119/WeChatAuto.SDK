@@ -61,4 +61,4 @@ Videos
 !Examples/demo01/Videos
 ffmpeg
 pack.cmd
-WeChatAuto4_X/
+__pycache__/

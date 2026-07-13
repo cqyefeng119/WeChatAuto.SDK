@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: wechat_auto_sdk
+Version: 0.1.0
+Summary: wechatauto.sdk的python封装库
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic>=2.13.4
+Requires-Dist: pytest>=9.1.1
+Requires-Dist: pytest-asyncio>=1.4.0
+Requires-Dist: websockets>=16.0
