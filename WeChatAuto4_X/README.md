@@ -1,22 +1,20 @@
 # WECHATAUTO.SDK - 面向AI的现代化微信RPA自动化框架
 
-[![.NET](https://img.shields.io/badge/.NET-4.8%20%7C%206.0%2B-blue)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-6.0%2B-blue)](https://dotnet.microsoft.com/)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI 自动化技术开发。它支持消息收发、转发、群聊与好友管理、朋友圈操作等多种功能，并专为集成人工智能（如 LLM 上下文交互）场景设计。SDK 提供丰富直观的 API，支持 .NET 现代化特性，比如依赖注入，让你轻松将自定义对象集成进自动化流程。
 
 ## ✨ 特性
 
-- 💬 **消息操作** - 发送文字、表情、文件，支持 @ 提醒,转发消息等
-- 👥 **群聊管理** - 创建群聊、添加/移除成员、更新群公告等
-- 📱 **朋友圈操作** - 点赞、评论、监听朋友圈动态
-- 📋 **通讯录管理** - 自动添加好友、管理联系人、处理新好友请求
-- 👂 **事件监听** - 消息监听(提供LLM上下文)、朋友圈监听、新好友监听等
-- 🛡️ **降低风控** - 同时支持纯软件自动化以及结合硬件键鼠模拟器的自动化操作，满足不同业务需求和安全等级场景下的使用选择。
-- 🔧 **易于集成** - 支持依赖注入，可轻松集成到现有项目
-- 🚀 **多微信实例支持** - 同时管理多个微信客户端实例
-- 🚀 **现有应用集成** - 由于是SDK库，所以方便在现有系统集成
-- 🚀 **Web Support** - 提供Rest API 供Python、js/ts等非.net的家人们调用。 👉[点击了解Web Support](./MD/WebSupport.md)
+- 💬 **丰富API** - 提供发送文字、表情、文件，支持 @ 提醒,转发消息、群聊管理、朋友圈操作、通讯操作，消息监听等丰富API,每个API都提供单元测试源码;
+- 🛡️ **降低风控** - 同时支持纯软件自动化以及结合硬件键鼠模拟器的自动化操作，满足不同业务需求和安全等级场景下的使用选择;
+- 🔧 **易于集成** - 支持依赖注入，可轻松集成到现有项目;
+- 🚀 **多微信实例支持** - 同时管理多个微信客户端实例,即可以以Sdk的方式单机使用，也支持以Web Socket Server长连接的方式支持一个应用控制多台电脑的微信，或者多个应用同时自动化一台电脑的微信;
+- 🚀 **现有应用集成** - 由于是SDK库，所以方便在现有系统集成,UI Automation以工业化级别的单独STA线程，不存在卡死等情况;
+- 🔧 **微信版本支持** - 即支持3.9.12.xx，也支持微信最新版本4.1.11.xx版本,最新版本的微信会一直追踪修改;
+- 🔧 **支持语言** - 原生以.net开发，但支持python,提供python SDK;
 - 😊 **AI 友好集成** - 原生支持 LLM 上下文对接并提供 MCP Server，便于对接主流智能体与平台（如 MEAI、SK、MAF），助力智能应用高效闭环与创新集成
 
 **👉 如需体验**，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
@@ -26,7 +24,6 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 ## 📋 系统要求
 
 - Windows 操作系统
-- .NET Framework 4.8+ 或 .NET 6.0+ (Windows)，支持.NET的框架有:net48;net481;net6.0-windows; net7.0-windows;net8.0-windows;net9.0-windows;net10.0-windows;
 - 微信 PC 客户端已安装并运行,本 SDK 基于微信 PC 客户端(版本号:3.9.12.55)的 UI 结构开发，基于Win11（Microsoft Windows [版本 10.0.22000.3260]）开发，如发现UI结构不符，请联系作者修改;
 - 安装不了微信PC客户端3.9.12.xx? 请查看 👉 [微信3.9.12.xx安装器 - 微信低版本安装](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
 
