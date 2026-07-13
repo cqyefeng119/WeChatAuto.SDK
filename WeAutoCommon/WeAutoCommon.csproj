@@ -15,7 +15,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>WeAutoCommon</PackageId>
-    <PackageVersion>1.2.99</PackageVersion>
+    <PackageVersion>2.0.0</PackageVersion>
     <Authors>Alex Zhao</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <Product>WeChatAuto.SDK</Product>
@@ -23,7 +23,7 @@
     <Copyright>Copyright 2025 Alex Zhao</Copyright>
     <RepositoryUrl>https://github.com/scottfly189/WeChatAuto.SDK</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReleaseNotes>update the package icon.</PackageReleaseNotes>
+    <PackageReleaseNotes>only support .net core/.net5/6/7/8/9</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>WeChat, Automation, AI, MCP</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
