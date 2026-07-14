@@ -4,17 +4,23 @@
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI 自动化技术开发。它专为集成人工智能（如 LLM 上下文交互）场景设计。SDK 提供丰富直观的 API，支持 .NET 现代化特性，比如依赖注入，也提供官方Python SDK，让你轻松在现有系统中集成进自动化流程。
+WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI 自动化技术开发。它专为集成人工智能（如 LLM 上下文交互）场景设计。SDK 提供丰富直观的 API，支持 .NET 现代化特性，比如依赖注入，也提供官方Python SDK，让你轻松在现有系统中集成进微信自动化流程。
 
 ## ✨ 特性
 
 - 💬 **完善的消息与社交能力** - 支持发送文字、表情、文件、@提醒、转发消息、群管理、朋友圈操作与通讯录管理，并提供消息监听等常用能力；所有重要接口均覆盖单元测试。
+  
 - 🛡️ **降低风控风险** - 支持纯软件自动化与结合硬件键鼠模拟器的方案，可根据业务需求与安全等级选择更稳健的执行方式。
+
 - 🚀 **多实例与分布式支持** - 可同时管理多个微信客户端，既可作为本机 SDK 使用，也可通过 WebSocket 长连接实现一台应用控制多台机器的多个微信或多应用控制同一个微信。
+
 - 🔧 **微信版本兼容** - 兼容旧版（如 3.9.12.xx）与新版（如 4.1.11.xx）微信，并持续更新以适配新版客户端。
+
 - 🧩 **多语言支持** - 原生使用 .NET 开发，同时提供官方 Python SDK，方便不同语言生态集成。
+
 - 🔌 **易于集成与高可靠性** - 支持依赖注入，轻量SDK，易嵌入现有系统；采用工业级线程管理与稳定性设计，降低 UI 自动化卡死风险。
-- 🤖 **AI 友好** - 原生支持 LLM 上下文对接并内置 MCP Server，便于接入主流智能体与平台（如 MEAI、SK、MAF），助力智能应用闭环与扩展。
+
+- 🤖 **AI 友好** - 原生支持 LLM 上下文对接并内置 MCP Server，便于接入主流智能体与平台，助力智能应用微信自动化/RPA闭环与扩展。
 
 **👉 如需体验**，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
@@ -25,7 +31,7 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 - Windows 操作系统
 - .NET 6.0 或更高版本 (注：python SDK 不依赖 .NET)
 
-## 🎉 微信客户端版本说明及开源说明(重要！！)
+## 🎉 重要说明!!
 
 
 **WeChatAuto.SDK** 提供两个版本的SDK:
@@ -52,7 +58,7 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 #### ⚡ 微信 4.1.xx（最新版本）
 
 - 基于微信 4.1.xx 最新微信客户端的持续演进版本，支持 .NET 与 Python 双平台;
-- 微信4.1.xx版本为UI Tree + OCR 自动化解决方案，OCR使用的是本地onnx-runtime模型[RapidOCRCSharp]([RapidOCRCSharp，有需要的也请给RapidOCRSharp点一个赞👍](https://github.com/RapidAI/RapidOCRCSharp)  ;
+- 微信4.1.xx版本为**UI Tree + OCR** 混合自动化解决方案，OCR使用的是本地onnx-runtime模型[RapidOCRCSharp，有需要的也请给RapidOCRSharp点一个赞👍](https://github.com/RapidAI/RapidOCRCSharp)  ;
 - 开源情况：核心代码 - 100%开源，文档、视频 - 100%开源,业务代码 - 80%开源 (20%的api属于vip独有);
 
 ** 使用指南 **
