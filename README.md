@@ -4,18 +4,17 @@
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI 自动化技术开发。它支持消息收发、转发、群聊与好友管理、朋友圈操作等多种功能，并专为集成人工智能（如 LLM 上下文交互）场景设计。SDK 提供丰富直观的 API，支持 .NET 现代化特性，比如依赖注入，让你轻松将自定义对象集成进自动化流程。
+WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI 自动化技术开发。它专为集成人工智能（如 LLM 上下文交互）场景设计。SDK 提供丰富直观的 API，支持 .NET 现代化特性，比如依赖注入，也提供官方Python SDK，让你轻松在现有系统中集成进自动化流程。
 
 ## ✨ 特性
 
-- 💬 **丰富API** - 提供发送文字、表情、文件，支持 @ 提醒,转发消息、群聊管理、朋友圈操作、通讯操作，消息监听等丰富API,每个API都提供单元测试源码;
-- 🛡️ **降低风控** - 同时支持纯软件自动化以及结合硬件键鼠模拟器的自动化操作，满足不同业务需求和安全等级场景下的使用选择;
-- 🔧 **易于集成** - 支持依赖注入，可轻松集成到现有项目;
-- 🚀 **多微信实例支持** - 同时管理多个微信客户端实例,即可以以Sdk的方式单机使用，也支持以Web Socket Server长连接的方式支持一个应用控制多台电脑的微信，或者多个应用同时自动化一台电脑的微信;
-- 🚀 **现有应用集成** - 由于是SDK库，所以方便在现有系统集成,UI Automation以工业化级别的单独STA线程，不存在卡死等情况;
-- 🔧 **微信版本支持** - 即支持3.9.12.xx，也支持微信最新版本4.1.11.xx版本,并且最新版本的微信会持续提供适配;
-- 🔧 **支持开发语言** - 原生以.net开发，但支持python,提供python SDK;
-- 😊 **AI 友好集成** - 原生支持 LLM 上下文对接并提供 MCP Server，便于对接主流智能体与平台（如 MEAI、SK、MAF），助力智能应用高效闭环与创新集成
+- 💬 **完善的消息与社交能力** - 支持发送文字、表情、文件、@提醒、转发消息、群管理、朋友圈操作与通讯录管理，并提供消息监听等常用能力；所有重要接口均覆盖单元测试。
+- 🛡️ **降低风控风险** - 支持纯软件自动化与结合硬件键鼠模拟器的方案，可根据业务需求与安全等级选择更稳健的执行方式。
+- 🚀 **多实例与分布式支持** - 可同时管理多个微信客户端，既可作为本机 SDK 使用，也可通过 WebSocket 长连接实现一台应用控制多台机器的多个微信或多应用控制同一个微信。
+- 🔧 **微信版本兼容** - 兼容旧版（如 3.9.12.xx）与新版（如 4.1.11.xx）微信，并持续更新以适配新版客户端。
+- 🧩 **多语言支持** - 原生使用 .NET 开发，同时提供官方 Python SDK，方便不同语言生态集成。
+- 🔌 **易于集成与高可靠性** - 支持依赖注入，轻量SDK，易嵌入现有系统；采用工业级线程管理与稳定性设计，降低 UI 自动化卡死风险。
+- 🤖 **AI 友好** - 原生支持 LLM 上下文对接并内置 MCP Server，便于接入主流智能体与平台（如 MEAI、SK、MAF），助力智能应用闭环与扩展。
 
 **👉 如需体验**，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
@@ -24,12 +23,10 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 ## 📋 系统要求
 
 - Windows 操作系统
-
-> 如果觉得有帮助，欢迎点赞、Star和Fork本项目，以免失联，感谢支持！
+- .NET 6.0 或更高版本 (注：python SDK 不依赖 .NET)
 
 ## 🎉 微信客户端版本说明及开源说明(重要！！)
 
-在进行微信自动化开发时，客户端版本是一个必须重点关注的因素。不同版本的微信在 UI 结构、控件树以及安全策略上存在差异，会直接影响自动化的稳定性与兼容性。
 
 **WeChatAuto.SDK** 提供两个版本的SDK:
 
@@ -38,14 +35,15 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 #### 🧱 微信 3.9.12.xx
 
 - 纯UI Tree自动化解决方案;
-- 源码100%开源;
-- 文档100%开源;
+- 仅支持 .NET 平台;
+- 源码 100% 开源;
+- 文档 100% 开源;
 
 **使用指南**
 
 👉 完整的文档请参考: [WeChatAuto.SDK 3.9.12.xx文档](https://scottfly189.github.io/WeChatAuto.SDK/)
 
-👉 安装安装不上微信客户端3.9.12.xx？ 请参考: [如何安装3.9.12.xx等微信低版本客户端](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
+👉 安装不上微信客户端3.9.12.xx？ 请参考: [如何安装3.9.12.xx等微信低版本客户端](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
 
 👉 SDK源码与DEMO项目演示，请参考: [3.9.12.xx源码及DEMO项目](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto3_9_12_xx)
 
@@ -53,8 +51,18 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 #### ⚡ 微信 4.1.xx（最新版本）
 
-- 基于微信 4.1.xx 最新微信客户端的持续演进版本
-- 微信4.1.xx版本为UI Tree + OCR 自动化解决方案，OCR使用的是本地onnx-runtime模型[RapidOCRCSharp]([RapidOCRCSharp](https://github.com/RapidAI/RapidOCRCSharp)) 
+- 基于微信 4.1.xx 最新微信客户端的持续演进版本，支持 .NET 与 Python 双平台;
+- 微信4.1.xx版本为UI Tree + OCR 自动化解决方案，OCR使用的是本地onnx-runtime模型[RapidOCRCSharp]([RapidOCRCSharp，有需要的也请给RapidOCRSharp点一个赞👍](https://github.com/RapidAI/RapidOCRCSharp)  ;
+- 开源情况：核心代码 - 100%开源，文档、视频 - 100%开源,业务代码 - 80%开源 (20%的api属于vip独有);
+
+** 使用指南 **
+
+👉 完整的文档请参考: [WeChatAuto.SDK 4.x文档](https://scottfly189.github.io/WeChatAuto.SDK/)
+
+👉 自动化不了微信？ 请参考: [最新版微信自动化不了](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
+
+👉 SDK源码与DEMO项目演示，请参考: [3.9.12.xx源码及DEMO项目](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto3_9_12_xx)
+
 
 ## ⚠️ 注意事项
 
@@ -97,27 +105,11 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 ---
 
-## 🎁 WechatAuto.SDK功能介绍视频
+## 🎁 WechatAuto.SDK入门视频
 
-[【微信轻松接入人工智能（一） - WeChatAuto.SDK功能介绍】](https://www.bilibili.com/video/BV1PHFZzsEkf?vd_source=bfba6dfea0475f14a68ac5bc4ec2e165
-)
+下面的视频以wechatauto.sdk4.x微信最新版来讲解
 
-[【微信轻松接入人工智能（二）- WeChatAuto.SDK发送消息】](https://www.bilibili.com/video/BV17qFZzVEix?vd_source=bfba6dfea0475f14a68ac5bc4ec2e165
-)
-
-[【微信轻松接入人工智能（三）- WeChatAuto.SDK发送消息2】](https://www.bilibili.com/video/BV1LrFZz6EGa?vd_source=bfba6dfea0475f14a68ac5bc4ec2e165
-)
-
-[【微信轻松接入人工智能（四）- WeChatAuto.SDK消息监听】](https://www.bilibili.com/video/BV1vrFZz6Ezf?vd_source=bfba6dfea0475f14a68ac5bc4ec2e165
-)
-
-[【微信轻松接入人工智能（五）- WeChatAuto.SDK群聊中@好友】](https://www.bilibili.com/video/BV1i6FZz3Exc?vd_source=bfba6dfea0475f14a68ac5bc4ec2e165
-)
-
-[【微信轻松接入人工智能（六）- WeChatAuto.SDK的MCP-Server的使用介绍】](https://www.bilibili.com/video/BV1j6FZz3EGu?vd_source=bfba6dfea0475f14a68ac5bc4ec2e165
-)
-
-更多入门视频，或想深度学习，请加入VIP
+... 正在完成中
 
 
 ---
