@@ -61,13 +61,13 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 - 微信4.1.xx版本为**UI Tree + OCR** 混合自动化解决方案，OCR使用的是本地onnx-runtime模型[RapidOCRCSharp，有需要的也请给RapidOCRSharp点一个赞👍](https://github.com/RapidAI/RapidOCRCSharp)  ;
 - 开源情况：核心代码 - 100%开源，文档、视频 - 100%开源,业务代码 - 80%开源 (20%的api属于vip独有);
 
-** 使用指南 **
+**使用指南**
 
 👉 完整的文档请参考: [WeChatAuto.SDK 4.x文档](https://scottfly189.github.io/WeChatAuto.SDK/)
 
 👉 自动化不了微信？ 请参考: [最新版微信自动化不了](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
 
-👉 SDK源码与DEMO项目演示，请参考: [3.9.12.xx源码及DEMO项目](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto3_9_12_xx)
+👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
 
 ## ⚠️ 注意事项
