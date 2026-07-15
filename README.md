@@ -132,7 +132,70 @@ await client.SendMessage("AI.Net_test","hello world!!");
 ```
 
 #### 🚀 Python 自动化微信最新版本演示
+1. 首先下载WeChatAuto4x.SDK的WebSocket Server端，并打开，具体方法如下：
+   - 下载地址：[WeChatAuto4x.SDK WebSocket Server](https://github.com/scottfly189/WeChatAuto.SDK/releases/download/1.2.9/Server_Community.rar)
+   - 解压后，双击运行 Server.exe
+   - 显示在```Now listening on: http://localhost:5000```监听,如下所示：
+   ```
+      keys Size = 18385
+      info: Program[0]
+            总共打开微信 1 个：Alex
+      info: Microsoft.Hosting.Lifetime[14]
+            Now listening on: http://localhost:5000
+      info: Microsoft.Hosting.Lifetime[0]
+            Application started. Press Ctrl+C to shut down.
+      info: Microsoft.Hosting.Lifetime[0]
+            Hosting environment: Production
+      info: Microsoft.Hosting.Lifetime[0]
+            Content root path: C:\Users\Administrator\Downloads\Server_Community\Server
+   ```
 
+2. 新建一个python项目
+```
+uv init demo-python
+cd demo-python
+```
+3. 安装wechatauto4x.sdk依赖
+```
+uv add wechat-auto4x-sdk
+```
+4. 在项目根目录下创建或编辑 main.py 文件，编写如下代码：
+
+```python
+import asyncio
+
+from wechat_auto_sdk import WeChatClient
+from wechat_auto_sdk import WeChatConfig
+from wechat_auto_sdk import WechatFactory
+
+DEFAULT_URI = "ws://localhost:5000/ws"
+
+async def wechat_automation():
+    async with WechatFactory.create_factory(DEFAULT_URI,WeChatConfig(
+        # 这里可以设置一些配置信息
+    )) as factory:
+        await factory.initialize()
+        wechat_list = factory.client_list
+        print(
+            f"连接服务器({DEFAULT_URI})共有微信客户端{len(wechat_list)}个:{list(wechat_list.keys())}"
+        )
+        client: WeChatClient = wechat_list["Alex"] # 得到某个微信客户端，支持多微信
+        # 给群 DroidMirror官方技术支持 发送文本消息，并@两个好友
+        await client.send_message("DroidMirror官方技术支持","hello world!",at_user=["AI.Net_test","智影工坊"])
+
+def main():
+    asyncio.run(wechat_automation())
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+5. 运行 main.py 文件
+```
+uv run .\main.py
+```
 
 ## 📋 系统要求
 

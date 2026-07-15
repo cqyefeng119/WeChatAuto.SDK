@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: wechat-auto4x-sdk
+Version: 1.0.0
+Summary: wechatauto.sdk的python封装库-社区版
+Author: Alex
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic>=2.13.4
+Requires-Dist: pytest>=9.1.1
+Requires-Dist: pytest-asyncio>=1.4.0
+Requires-Dist: websockets>=16.0
+
+## WeChatAuto.SDK的python SDK 社区版
+
+
+**支持最新的微信版本**,如4.1.10.xx及4.1.11.xx等微信自动化
+
+详细信息：请参考[WeChatAuto.SDK](https://github.com/scottfly189/WeChatAuto.SDK)

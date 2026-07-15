@@ -1,9 +1,19 @@
+[build-system]
+requires = [
+    "setuptools>=61",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "wechat_auto_sdk"
-version = "0.1.0"
-description = "wechatauto.sdk的python封装库"
+name = "wechat-auto4x-sdk"
+version = "1.0.0"
+description = "wechatauto.sdk的python封装库-社区版"
 readme = "README.md"
 requires-python = ">=3.13"
+authors = [
+    {name = "Alex"}
+]
 dependencies = [
     "pydantic>=2.13.4",
     "pytest>=9.1.1",
@@ -16,3 +26,6 @@ members = [
     "examples",
     "tests",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]

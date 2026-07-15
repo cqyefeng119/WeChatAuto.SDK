@@ -5,7 +5,7 @@ from wechat_auto_sdk import WeChatClient
 from wechat_auto_sdk import WechatFactory
 
 
-DEFAULT_URI = "ws://localhost:5177/ws"
+DEFAULT_URI = "ws://localhost:5000/ws"
 
 @pytest_asyncio.fixture(scope="function")
 async def client():
