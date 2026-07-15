@@ -27,10 +27,6 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 > 👉 如果需要体验WeChatAuto.SDK的通力，我架设了一个测试导航机器人，欢迎添加微信好友体验，👉 [我要体验](./MD/Experience.md)
 
-## 📋 系统要求
-
-- Windows 操作系统
-- .NET 6.0 或更高版本 (注：python SDK 不依赖 .NET)
 
 ## 🎉 重要说明!!
 
@@ -72,16 +68,14 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
+## 📋 系统要求
 
-## ⚠️ 注意事项
-
-1. **风控风险**：频繁操作可能触发微信风控机制，建议：
+- Windows 操作系统,不支持Linux和MacOS;
+- .NET 6.0 或更高版本 (注：python SDK 不依赖 .NET)
+- **风控风险**：频繁操作可能触发微信风控机制，建议：
    - 使用键鼠模拟器降低风险
    - 控制操作频率
    - 避免短时间内大量操作
-
-2. **微信版本**：做微信RPA一定要注意微信的版本，请确认微信版本正确的对应了WeChatAuto.SDK的版本;
-
 
 ## 🎈 关于键鼠模拟器
 
