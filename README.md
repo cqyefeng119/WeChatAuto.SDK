@@ -22,9 +22,10 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 - 🤖 **AI 友好** - 原生支持 LLM 上下文对接并内置 MCP Server，便于接入主流智能体与平台，助力智能应用集成微信自动化/RPA闭环与扩展。
 
-**👉 如需体验**，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
-> 如果觉得有帮助，欢迎点赞、Star和Fork本项目，以免失联，感谢支持！
+> 👉 如果觉得有帮助，欢迎点赞、Star和Fork本项目，以免失联，感谢支持！
+
+> 👉 如果需要体验WeChatAuto.SDK的通力，我架设了一个测试导航机器人，欢迎添加微信好友体验，👉 [我要体验](./MD/Experience.md)
 
 ## 📋 系统要求
 
