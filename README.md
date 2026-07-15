@@ -132,6 +132,9 @@ await client.SendMessage("AI.Net_test","hello world!!");
 ```
 
 #### 🚀 Python 自动化微信最新版本演示
+
+>注：python SDK 不依赖 .NET，直接使用python即可。
+
 1. 首先下载WeChatAuto4x.SDK的WebSocket Server端，并打开，具体方法如下：
    - 下载地址：[WeChatAuto4x.SDK WebSocket Server](https://github.com/scottfly189/WeChatAuto.SDK/releases/download/1.2.9/Server_Community.rar)
    - 解压后，双击运行 Server.exe
