@@ -19,7 +19,7 @@
 
   <PropertyGroup>
     <PackageId>WeChatAuto4x.SDK</PackageId>
-    <PackageVersion>1.0.1</PackageVersion>
+    <PackageVersion>2.0.1</PackageVersion>
     <Authors>Alex Zhao</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <Product>WeChatAuto.SDK</Product>

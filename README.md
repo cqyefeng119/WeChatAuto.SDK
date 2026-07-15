@@ -68,6 +68,13 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
+## 简单入门
+> 下面基于Wechatauto4x.SDK的.NET示例代码，演示如何发送消息、文件、表情、视频等，并将好友拉入群聊。
+
+```csharp
+
+```
+
 ## 📋 系统要求
 
 - Windows 操作系统,不支持Linux和MacOS;
