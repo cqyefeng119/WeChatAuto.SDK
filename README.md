@@ -70,7 +70,7 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 ## 代码演示
 
-下面的示例代码都基于**WechatAuto.SDK 4.x 最新微信**版本，演示了如何使用SDK进行微信自动化操作。
+下面的示例代码都基于**WechatAuto.SDK 4.x 最新微信**版本，分.net与python两个版本演示了如何使用SDK进行微信自动化操作。
 
 #### 🚀 .NET 自动化微信最新版本演示
 
@@ -128,6 +128,7 @@ Console.WriteLine($"电脑上打开微信{wechat_list.Count()}个: {string.Join(
 var client = clientFactory.GetWeChatClient(wechat_list.First());
 // 给好友 AI.Net_test 发送文本消息
 await client.SendMessage("AI.Net_test","hello world!!");
+... 更多功能请参考文档
 ```
 
 #### 🚀 Python 自动化微信最新版本演示
