@@ -68,6 +68,70 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
+## 代码演示
+
+下面的示例代码都基于**WechatAuto.SDK 4.x 最新微信**版本，演示了如何使用SDK进行微信自动化操作。
+
+#### 🚀 .NET 自动化微信最新版本演示
+
+- 新建一个.net10控制台项目
+
+```csharp
+dotnet new console -n demo
+```
+
+- 修改项目属性，打开 demo.csproj 文件，把```TargetFramework```修改为```net10.0-windows```,如果你使用的是.net6.0或.net7.0，请把```TargetFramework```修改为```net6.0-windows```或```net7.0-windows```，如下所示:
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
+
+```
+
+- 安装依赖包
+  
+```bash
+dotnet add package Microsoft.Extensions.DependencyInjection
+dotnet add package WeChatAuto4x.SDK
+```
+
+- 把OCR模型文件放到项目根目录下(我这里是:```D:\repo\WeChatAuto.SDK\test\demo\bin\Debug\net10.0-windows\models```)，OCR模型文件下载地址：[模型文件下载](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/Tools)
+
+> 注：直接拷贝models文件夹到项目根目录下即可，或者在代码中指定模型文件路径。
+
+- 在 Program.cs 中编写如下代码：
+
+```csharp
+using WeChatAuto.Services;
+using WeChatAuto.Components;
+using Microsoft.Extensions.DependencyInjection;
+
+var serviceProvider = WeAutomation.Initialize(options =>
+{
+    options.DebugMode = false;   // 可选，在生产环境建议关闭
+    options.EnableOCR = true;    // 必须打开
+});
+
+using var clientFactory = serviceProvider.GetRequiredService<WeChatClientFactory>();
+//检查打开有几个微信
+var wechat_list = clientFactory.GetWeChatClientNames();
+Console.WriteLine($"电脑上打开微信{wechat_list.Count()}个: {string.Join(',',wechat_list)}");
+
+// 打开第一个微信，发送消息
+var client = clientFactory.GetWeChatClient(wechat_list.First());
+// 给好友 AI.Net_test 发送文本消息
+await client.SendMessage("AI.Net_test","hello world!!");
+```
+
+#### 🚀 Python 自动化微信最新版本演示
+
 ## 📋 系统要求
 
 - Windows 操作系统,不支持Linux和MacOS;
@@ -90,9 +154,8 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 ## 😊 关于VIP
 
-由于时间和精力有限，为了更好地投入研发和持续改进产品，本人目前仅为**已购买VIP服务的客户**提供优先和深入的技术支持。这样做，是希望通过区分服务对象，专注为VIP客户带来更高品质、更有保障的体验。当然，广大普通用户依然欢迎通过 Issue 反馈和交流，提交Issue，我必会及时处理。
-
-本SdK的核心价值在于为企业和开发者提供稳定、可扩展的微信自动化能力。VIP服务不仅是对开发者的支持，也是为了确保我们能够持续投入资源，优化SDK功能和性能。
+Wechatauto.SDK分为社区版和VIP版，社区版是完全开源的，VIP版则提供更多的功能和更深入的技术支持。
+社区版与VIP版本在代码层面，主要区别在于：VIP版本比社区版本多了20%的API接口，这些接口主要是一些高级功能和扩展能力，旨在为VIP客户提供更强大的微信自动化能力。
 
 **🎉 VIP 客户可享受以下专属服务保障：**
 - 💡 **BUG 优先响应**：出现 Bug 或有新的 Enhancement ，第一时间响应、定位和解决，保障 VIP 项目的稳定运行;
@@ -101,7 +164,7 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 如需升级成为 VIP，或了解 VIP 具体权益和支持方案，👉[请与我联系](https://github.com/scottfly189/scottfly189/blob/main/vip.md)。
 
-感谢理解与支持，成为vip是对社区健康发展的有力保障，也是对您项目的有力支持！
+> 我这么考虑的：社区版其实可以完成大部分的微信自动化需求，适合大多数用户使用，而如果用到VIP版本，干嘛不请我吃一顿饭以获取更及时更好的技术服务呢？毕竟您对微信自动化开发已经深入到这种程度了，我相信你一顿饭的价值获取一个技术partner是很值得的😊
 
 ---
 
