@@ -63,11 +63,11 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 **使用指南**
 
-👉 完整的文档请参考: [WeChatAuto.SDK 4.x文档](https://scottfly189.github.io/WeChatAuto.SDK/)
+👉 完整的文档请参考: ... 完成中 ...
 
-👉 自动化不了微信？ 请参考: [最新版微信自动化不了](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
+👉 我的最新版微信没有UI Tree,这个怎么办？ 请参考: [我的最新版微信没有UI Tree,这个怎么办？](https://github.com/scottfly189/WeChatAuto.SDK/issues/3)
 
-👉 [WechatAuto4x.SDK源码](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto4_X)
+👉 WechatAuto4x.SDK源码请考：[WechatAuto4x.SDK源码](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto4_X)
 
 👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
@@ -95,21 +95,18 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 ## 😊 关于VIP
 
-由于时间和精力有限，为了更好地投入研发和持续改进产品，本人目前仅为**已购买VIP服务的客户**提供优先和深入的技术支持。这样做，是希望通过区分服务对象，专注为VIP客户带来更高品质、更有保障的体验。当然，广大普通用户依然欢迎通过 Issue 反馈和交流，只是服务响应的优先级和深度会有所不同。
+由于时间和精力有限，为了更好地投入研发和持续改进产品，本人目前仅为**已购买VIP服务的客户**提供优先和深入的技术支持。这样做，是希望通过区分服务对象，专注为VIP客户带来更高品质、更有保障的体验。当然，广大普通用户依然欢迎通过 Issue 反馈和交流，提交Issue，我必会及时处理。
+
+本SdK的核心价值在于为企业和开发者提供稳定、可扩展的微信自动化能力。VIP服务不仅是对开发者的支持，也是为了确保我们能够持续投入资源，优化SDK功能和性能。
 
 **🎉 VIP 客户可享受以下专属服务保障：**
 - 💡 **BUG 优先响应**：出现 Bug 或有新的 Enhancement ，第一时间响应、定位和解决，保障 VIP 项目的稳定运行;
-- 👥 **VIP 技术交流群**：专属 VIP 交流群，优先、及时解答问题，实时高效支持;
 - 🚀 **专属 VIP 私有仓库**：VIP 客户将获专属私有仓库，会不定期提供丰富的应用层扩展与独享内容;
 - 🚀 **一对一的专属vip服务**: 这是你加入 VIP 的核心理由,微信自动化能力由 WeChatAuto.SDK 提供深度支持，业务系统由你自由扩展，实现技术与业务的高效分工;
 
-**😊 非 VIP 客户：**  
+如需升级成为 VIP，或了解 VIP 具体权益和支持方案，👉[请与我联系](https://github.com/scottfly189/scottfly189/blob/main/vip.md)。
 
-同样欢迎非VIP通过 Issue 提问或反馈问题;
-
-非 VIP 会员私下找我，我会在时间允许情况下进行处理，但响应和解决可能会有延迟，敬请谅解。
-
-如需升级成为 VIP，或了解 VIP 具体权益和支持方案，👉[请与我联系](https://github.com/scottfly189/scottfly189/blob/main/vip.md)。感谢理解与支持，让我有更多精力专注于技术创新与完善！
+感谢理解与支持，成为vip是对社区健康发展的有力保障，也是对您项目的有力支持！
 
 ---
 
