@@ -11,7 +11,7 @@
 
 **添加好友：** 扫描下方二维码添加好友
 
-![AI.Net 微信二维码](./AI.Net.jpg)
+<img src="./AI.Net.jpg" alt="AI.Net 微信二维码" width="450" />
 
 ## 体验程序的源码
 
