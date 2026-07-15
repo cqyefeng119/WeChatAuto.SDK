@@ -20,7 +20,7 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 - 🔌 **易于集成与高可靠性** - 支持依赖注入，轻量SDK，易嵌入现有系统；采用工业级线程管理与稳定性设计，降低 UI 自动化卡死风险。
 
-- 🤖 **AI 友好** - 原生支持 LLM 上下文对接并内置 MCP Server，便于接入主流智能体与平台，助力智能应用微信自动化/RPA闭环与扩展。
+- 🤖 **AI 友好** - 原生支持 LLM 上下文对接并内置 MCP Server，便于接入主流智能体与平台，助力智能应用集成微信自动化/RPA闭环与扩展。
 
 **👉 如需体验**，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
@@ -55,7 +55,7 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 ---
 
-#### ⚡ 微信 4.1.xx（最新版本）
+#### ⚡ 微信 4.1.xx（微信最新版本）
 
 - 基于微信 4.1.xx 最新微信客户端的持续演进版本，支持 .NET 与 Python 双平台;
 - 微信4.1.xx版本为**UI Tree + OCR** 混合自动化解决方案，OCR使用的是本地onnx-runtime模型[RapidOCRCSharp，有需要的也请给RapidOCRSharp点一个赞👍](https://github.com/RapidAI/RapidOCRCSharp)  ;
@@ -66,6 +66,8 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 👉 完整的文档请参考: [WeChatAuto.SDK 4.x文档](https://scottfly189.github.io/WeChatAuto.SDK/)
 
 👉 自动化不了微信？ 请参考: [最新版微信自动化不了](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
+
+👉 [WechatAuto4x.SDK源码](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto4_X)
 
 👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
 
