@@ -16,6 +16,14 @@
 2. 你可以在你的项目中集成WechatAuto.sdk,然后运行你的项目;
 3. 可以向作者索要示例代码;
 
+## ❓我运行的时候提示:```Unhandled exception. System.Exception: 错误：Det模型文件不存在！```怎么办？
+
+回答：请检查你的项目运行目录下是否有Det模型文件，如果没有，请下载OCR模型文件，步骤如下：
+
+1. ```git clone https://github.com/scottfly189/WeChatAuto.SDK``` 或者 直接在[这里](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/Tools)拷贝```models```文件夹到你的项目运行目录下;
+2. 把```models```文件夹拷贝到你的项目运行目录下，注意：如果你是使用vs运行的，请把```models```文件夹拷贝到```bin\Debug\netx.x-windows```目录下;
+3. 再运行你的项目，就不会报错了;
+
 
 ## ❓ 请问WeChatAuto.SDK支持最新版的微信吗？
 回答：支持最新版本的微信，并且会随着微信的版本更新而更新;
