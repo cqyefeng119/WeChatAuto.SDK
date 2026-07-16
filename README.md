@@ -35,23 +35,6 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 
 ---
 
-#### 🧱 微信 3.9.12.xx
-
-- 纯UI Tree自动化解决方案;
-- 仅支持 .NET 平台;
-- 源码 100% 开源;
-- 文档 100% 开源;
-
-**使用指南**
-
-👉 完整的文档请参考: [WeChatAuto.SDK 3.9.12.xx文档](https://scottfly189.github.io/WeChatAuto.SDK/)
-
-👉 安装不上微信客户端3.9.12.xx？ 请参考: [如何安装3.9.12.xx等微信低版本客户端](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
-
-👉 SDK源码与DEMO项目演示，请参考: [3.9.12.xx源码及DEMO项目](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto3_9_12_xx)
-
----
-
 #### ⚡ 微信 4.1.xx（微信最新版本）
 
 - 基于微信 4.1.xx 最新微信客户端的持续演进版本，支持 .NET 与 Python 双平台;
@@ -67,6 +50,24 @@ WeChatAuto.SDK 是一款面向 AI 的微信RPA自动化 SDK，基于 .NET 与 UI
 👉 WechatAuto4x.SDK源码请考：[WechatAuto4x.SDK源码](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto4_X)
 
 👉 如需体验最新版的微信自动化RAP，请点击链接进入: [WeChatAuto.SDK体验指引](./MD/Experience.md)
+
+---
+
+#### 🧱 微信 3.9.12.xx
+
+- 纯UI Tree自动化解决方案;
+- 仅支持 .NET 平台;
+- 源码 100% 开源;
+- 文档 100% 开源;
+
+**使用指南**
+
+👉 完整的文档请参考: [WeChatAuto.SDK 3.9.12.xx文档](https://scottfly189.github.io/WeChatAuto.SDK/)
+
+👉 安装不上微信客户端3.9.12.xx？ 请参考: [如何安装3.9.12.xx等微信低版本客户端](https://github.com/scottfly189/WeChatAuto.SDK/issues/2)
+
+👉 SDK源码与DEMO项目演示，请参考: [3.9.12.xx源码及DEMO项目](https://github.com/scottfly189/WeChatAuto.SDK/tree/master/WeChatAuto3_9_12_xx)
+
 
 ## ✨ 代码演示
 
@@ -199,6 +200,10 @@ if __name__ == "__main__":
 ```
 uv run .\main.py
 ```
+
+## 🙈 FAQ(问题解答)
+
+我收集了一些常见问题和解答，方便大家快速上手和解决问题，具体请参考：[FAQ](./MD/FAQ.md)
 
 ## 📋 系统要求
 
