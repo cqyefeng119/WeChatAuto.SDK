@@ -25,7 +25,6 @@ using System.IO;
 using WeChatAuto.Options;
 using RapidOCRLib;
 using System.Threading.Channels;
-using WeChatAuto.TTS;
 
 
 namespace WeChatAuto.Components

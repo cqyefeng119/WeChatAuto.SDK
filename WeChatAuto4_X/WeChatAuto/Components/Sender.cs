@@ -33,7 +33,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Windows.Media.Imaging;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using WeChatAuto.TTS;
+using WeChatAuto.Options;
 
 namespace WeChatAuto.Components
 {

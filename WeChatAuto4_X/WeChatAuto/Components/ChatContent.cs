@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 using WeChatAuto.Models;
 using FlaUI.UIA3;
 using FlaUI.Core.WindowsAPI;
-using WeChatAuto.TTS;
+using WeChatAuto.Options;
 
 namespace WeChatAuto.Components
 {
