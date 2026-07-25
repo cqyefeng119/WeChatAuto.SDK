@@ -28,7 +28,7 @@ namespace WeChatAuto.Options
         public List<string> Labels { get; set; } = default;
 
         /// <summary>
-        /// 是否执行操作后关闭朋友圈,默认关闭，也可以设置为False,然后使用者可以手动关闭<see cref="WeChatClient.CloseMoments"/>
+        /// 是否执行操作后关闭朋友圈,默认关闭，也可以设置为False,然后使用者可以手动关闭
         /// </summary>
         [JsonProperty("is_close_moments")]
         public bool IsCloseMoments { get; set; } = true;

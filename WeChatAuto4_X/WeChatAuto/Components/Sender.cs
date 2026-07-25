@@ -33,6 +33,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Windows.Media.Imaging;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using WeChatAuto.TTS;
 
 namespace WeChatAuto.Components
 {
@@ -321,6 +322,64 @@ namespace WeChatAuto.Components
 		public async Task SendVoiceMessage(string filePath)
 		{
 			await WeChatInvoker.Call(SendVoiceMessageCore, filePath);
+		}
+		/// <summary>
+		/// 文字转语音发送
+		/// 工作原理： 通过音频大模型从文字转成语音后，再通过微信发送指定的好友/群聊
+        /// 注：系统默认支持: 阿里千问 Qwen3-TTS系列 模型
+		/// 为什么选择阿里千问 Qwen3-TTS系列 模型？
+		/// 1. 阿里千问 Qwen3-TTS系列 在国际上的语音合成领域也是第一T队;
+		/// 2. 完美支持：声音克隆、声音设计、可以通过指令方便控制语速、情感和语言风格、聊天自然，可以停顿、笑等、为未来的AI 电话/语音 聊天做准备
+		/// </summary>
+		/// <param name="who">好友或者群聊，可以为空，如果为空，则为当前焦点聊天窗口</param>
+		/// <param name="message">文本消息</param>
+		/// <param name="options">声音选项，用于指定模型、音色等</param>
+		/// <param name="customProcess">如果系统提供的大模型不满足使用，可以自定义文字转语音方法</param>
+		/// <returns></returns>
+		public async Task SendVoiceMessageWithTTS(string who, string message, VoiceOptions options, Func<string, byte[]> customProcess = null)
+		{
+			if (string.IsNullOrWhiteSpace(who))
+			{
+				var chatInfo = await _Client.ChatContent.ChatHeader.GetTitle();
+				if (!chatInfo.CanTalk())
+				{
+					return;
+				}
+			}
+			else
+			{
+				var result = await _Client.Conversations.Search(who);
+				if (!result)
+					return;
+			}
+			RandomWait.Wait(300, 1200);
+			await WeChatInvoker.Call(SendVoiceMessageFromTTSCore, message, options, customProcess);
+		}
+
+		private void SendVoiceMessageFromTTSCore(UIA3Automation automation, string message, VoiceOptions options, Func<string, byte[]> customProcess)
+		{
+			byte[] voices = new byte[0];
+			if (customProcess != null)
+			{
+				//使用自定义的TTS方法
+				voices = customProcess(message);
+			}
+			else
+			{
+				//使用系统提供的TTS方法
+				voices = _SystemVoiceProvider(message, options);
+			}
+			SendVoiceWithBytes(automation, voices);
+		}
+
+		private void SendVoiceWithBytes(UIA3Automation automation, byte[] voices)
+		{
+			throw new NotImplementedException();
+		}
+
+		private byte[] _SystemVoiceProvider(string message, VoiceOptions options)
+		{
+			throw new NotImplementedException();
 		}
 
 		private void SendVoiceMessageCore(UIA3Automation automation, string filePath)

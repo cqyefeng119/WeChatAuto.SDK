@@ -95,6 +95,12 @@ namespace WeChatAuto.Services
                 return new WeChatRecordVideo(_config.TargetVideoPath);
             });
             services.AddSingleton<OCRService>();
+            services.AddHttpClient<QwenClientService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+                client.DefaultRequestHeaders.Add("User-Agent", "WeChatAuto.SDK");
+                client.BaseAddress = new Uri("https://dashscope.aliyuncs.com/api/v1");
+            });
         }
 
         /// <summary>

@@ -25,6 +25,7 @@ using System.IO;
 using WeChatAuto.Options;
 using RapidOCRLib;
 using System.Threading.Channels;
+using WeChatAuto.TTS;
 
 
 namespace WeChatAuto.Components
@@ -534,6 +535,22 @@ namespace WeChatAuto.Components
         /// <param name="filePath">语音文件路径</param>
         /// <returns></returns>
         public async Task SendVoiceMessage(string filePath) => await ChatContent.SendVoiceMessage(filePath);
+        /// <summary>
+        /// 文字转语音发送
+        /// 工作原理： 通过音频大模型从文字转成语音后，再通过微信发送指定的好友/群聊
+        /// 注：系统默认支持: 阿里千问 Qwen3-TTS系列 模型
+        /// 为什么选择阿里千问 Qwen3-TTS系列 模型？
+        /// 1. 阿里千问 Qwen3-TTS系列 在国际上的语音合成领域也是第一T队;
+        /// 2. 完美支持：声音克隆、声音设计、可以通过指令方便控制语速、情感和语言风格、聊天自然，可以停顿、笑等;
+        /// 3. 支持流式输出，为未来的AI 电话/语音 聊天做准备;
+        /// 4. 价格不贵;
+        /// </summary>
+        /// <param name="who">好友或者群聊，可以为空，如果为空，则为当前焦点聊天窗口</param>
+        /// <param name="message">文本消息</param>
+        /// <param name="options">声音选项，用于指定模型、音色等</param>
+        /// <param name="customProcess">如果系统提供的大模型不满足使用，可以自定义文字转语音方法</param>
+        /// <returns></returns>
+        public async Task SendVoiceMessageWithTTS(string who, string message, VoiceOptions options, Func<string, byte[]> customProcess = null) => await this.ChatContent.SendVoiceMessageWithTTS(who, message, options, customProcess);
         /// <summary>
         /// 根据日期获取当前聊天窗口的聊天历史
         /// </summary>
