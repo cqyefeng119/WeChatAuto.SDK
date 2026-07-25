@@ -13,7 +13,7 @@ public class RequestBody
     /// 语音合成的输入参数。
     /// </summary>
     [JsonProperty("input")]
-    public RequestInput Input {get;set;}
+    public RequestInput Input { get; set; }
 
 }
 

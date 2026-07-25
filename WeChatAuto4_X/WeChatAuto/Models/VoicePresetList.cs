@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using NAudio.Wave;
 using WeChatAuto.Models;
 
-namespace WeChatAuto.TTS;
+namespace WeChatAuto.Models;
 
 /// <summary>
 /// 预设音色列表

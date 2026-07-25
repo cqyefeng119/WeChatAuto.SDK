@@ -1,4 +1,4 @@
-namespace WeChatAuto.TTS
+namespace WeChatAuto.Options
 {
     public class VoiceOptions
     {
