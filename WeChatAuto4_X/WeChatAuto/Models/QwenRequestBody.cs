@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace WeChatAuto.Models;
 
-public class RequestBody
+public class QwenRequestBody
 {
     /// <summary>
     /// 模型名称

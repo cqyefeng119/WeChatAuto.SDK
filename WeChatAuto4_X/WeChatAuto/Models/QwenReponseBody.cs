@@ -7,7 +7,7 @@ namespace WeChatAuto.Models;
 /// <summary>
 /// 千问 TTS 响应结果
 /// </summary>
-public sealed class ResponseBody
+public sealed class QwenResponseBody
 {
     [JsonPropertyName("status_code")]
     public int StatusCode { get; set; }

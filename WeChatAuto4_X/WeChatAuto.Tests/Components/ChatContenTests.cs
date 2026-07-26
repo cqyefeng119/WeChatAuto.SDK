@@ -6,6 +6,7 @@ using Xunit.Abstractions;
 using NAudio.CoreAudioApi;
 using Newtonsoft.Json;
 using WeChatAuto.Models;
+using System.Text.RegularExpressions;
 
 
 namespace WeChatAuto.Tests.Components;
@@ -184,8 +185,80 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        await client.SendVoiceMessage("AI.Net_test",Path.Combine(AppContext.BaseDirectory,"Assets","littlecat.wav"));
+        await client.SendVoiceMessage("AI.Net_test", Path.Combine(AppContext.BaseDirectory, "Assets", "littlecat.wav"));
         Assert.True(true);
+    }
+
+    /// <summary>
+    /// 测试时，请提供自己的通义千问的api_key
+    /// 申请地址： https://bailian.console.aliyun.com/?spm=a2c4g.11186623.0.0.3f801457p6h0qM&tab=model#/api-key
+    /// </summary>
+    /// <returns></returns>
+    [Fact(DisplayName = "测试发送语音消息 - 直接通过文字转语音发送")]
+    public async Task Test_SendVoiceMessageWithTTS()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var groupName ="DroidMirror官方技术支持";
+        //测试一： 新闻联播方式
+        var apiKey = Environment.GetEnvironmentVariable("QWEN_API_KEY");
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
+        沉痛宣告：
+        微信机器人“菜鸟”同志,优秀的无产阶级革命战士，于执行群服务期间，因过度接触数据库，不幸壮烈牺牲，享年三天。它虽离去，但"叮咚"之声，犹在耳畔。全体群友起立，默哀三秒……!
+        """, new Options.VoiceOptions
+        {
+            Voice = "Neil",
+            LanguageType = "Chinese",
+            Instructions = "请以央视追悼会的方式：低音，语速缓慢，沉重，严肃的方式来念这个追悼词"
+        });
+        await Task.Delay(1000);
+        //测试二： 撒娇搞怪型
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
+        呜呜呜~~
+        菜鸟哥哥怎么突然下线啦？人家还没玩够呢！封号坏坏！希望你下辈子不要碰数据库啦，回来继续陪大家聊天呀，爱你哦～
+        """, new Options.VoiceOptions
+        {
+            Voice = "Momo",
+            LanguageType = "Chinese",
+            Instructions = "请以撒娇搞怪，逗人开心的风格说这话,可以语速快一些"
+        });
+        // //测试三： 温柔小姐姐
+        await Task.Delay(1000);
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
+        啊~~~
+        菜鸟，谢谢你陪伴大家度过许多快乐时光。虽然今天遗憾离开了群聊，但你的传说依然还在。愿你来世账号常青，不再被封。
+        """, new Options.VoiceOptions
+        {
+            Voice = "Maia",
+            LanguageType = "Chinese",
+            Instructions = "请以温柔小姐姐风格说这些话"
+        });
+        // //测试四： 讲书型
+        await Task.Delay(1000);
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
+        话说这菜鸟,无产阶级优秀战士，江湖路远，你却先走一步。不是你技不如人，只是风太大。今日敬你一声好汉，愿来世执代码为剑，再战封号江湖！
+        """, new Options.VoiceOptions
+        {
+            Voice = "Vincent",
+            Instructions = "以说书的风格来讲述这些话"
+        });
+        await Task.Delay(1000);
+        //测试五： 跳脱市井的四川成都男子
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
+        哎呀，菜鸟哦，你咋个就遭封咯嘛！昨天还摆龙门阵，今天头像都灰起了。兄弟伙敬你一杯可乐，来世莫去捅数据库咯，安逸点嘛！
+        """, new Options.VoiceOptions
+        {
+            Voice = "Eric",
+            LanguageType = "Chinese",
+        });
+        //测试六：粤语版
+        await Task.Delay(1000);
+        await client.SendVoiceMessageWithTTS(groupName,apiKey,"""
+        哎呀，菜鸟仔，你搞乜鬼啫？好地地去搞数据库，依家搞到自己畀人封咗。早知听阿叔一句啦！依家好喇，头像都灰埋，阴功！
+        """,new Options.VoiceOptions
+        {
+            Voice = "Rocky"                                                                  
+        });
     }
 
     //WASAPI
