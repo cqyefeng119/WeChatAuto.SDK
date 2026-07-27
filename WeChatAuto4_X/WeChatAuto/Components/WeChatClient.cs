@@ -52,6 +52,7 @@ namespace WeChatAuto.Components
         public readonly string AvatorPath;
         public readonly int WechatIndex;
         public UIThreadInvoker MainThreadInvoker => _MainThreadInvoker;
+        public IServiceProvider Provider => serviceProvider;
         #endregion
 
         #region 系统消息监听Channel
@@ -542,13 +543,14 @@ namespace WeChatAuto.Components
         /// 1. 阿里千问 Qwen3-TTS系列 在国际上的语音合成领域也是第一T队;
         /// 2. 完美支持：声音克隆、声音设计、可以通过指令方便控制语速、情感和语言风格、聊天自然，可以停顿、笑等、为未来的AI 电话/语音 聊天做准备
         /// </summary>
-        /// <param name="apiKey">千问的api key</param>
+        /// <param name="apiKey">千问的api key,申请地址： https://bailian.console.aliyun.com/?spm=a2c4g.11186623.0.0.3f801457p6h0qM&tab=model#/api-key</param>
         /// <param name="who">好友或者群聊，可以为空，如果为空，则为当前焦点聊天窗口</param>
         /// <param name="message">文本消息</param>
         /// <param name="options">声音选项，用于指定模型、音色等</param>
+        /// <param name="optimizeWithLlm">待发送消息是否需要LLM优化,因为文字有时候与实际的口语场景有较大出入，所以让LLM优化一下，更适合口语化</param>
         /// <param name="customProcess">如果系统提供的大模型不满足使用，可以自定义文字转语音方法,要求返回的是本地目录的磁盘语音文件</param>
         /// <returns></returns>
-        public async Task SendVoiceMessageWithTTS(string who, string apiKey, string message, VoiceOptions options, Func<string, string> customProcess = null) => await this.ChatContent.SendVoiceMessageWithTTS(who, apiKey, message, options, customProcess);
+        public async Task SendVoiceMessageWithTTS(string who, string apiKey, string message, VoiceOptions options, bool optimizeWithLlm = false, Func<string, string> customProcess = null) => await this.ChatContent.SendVoiceMessageWithTTS(who, apiKey, message, options, optimizeWithLlm, customProcess);
         /// <summary>
         /// 根据日期获取当前聊天窗口的聊天历史
         /// </summary>

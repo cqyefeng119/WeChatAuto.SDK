@@ -176,9 +176,10 @@ namespace WeChatAuto.Components
         /// <param name="who">好友或者群聊，可以为空，如果为空，则为当前焦点聊天窗口</param>
         /// <param name="message">文本消息</param>
         /// <param name="options">声音选项，用于指定模型、音色等</param>
+        /// <param name="optimizeWithLlm">待发送消息是否需要LLM优化</param>
         /// <param name="customProcess">如果系统提供的大模型不满足使用，可以自定义文字转语音方法</param>
         /// <returns></returns>
-        public async Task SendVoiceMessageWithTTS(string who, string apiKey, string message, VoiceOptions options, Func<string, string> customProcess = null) => await Sender.SendVoiceMessageWithTTS(who, apiKey, message, options, customProcess);
+        public async Task SendVoiceMessageWithTTS(string who, string apiKey, string message, VoiceOptions options, bool optimizeWithLlm = false, Func<string, string> customProcess = null) => await Sender.SendVoiceMessageWithTTS(who, apiKey, message, options,optimizeWithLlm, customProcess);
 
         /// <summary>
         /// 给本聊天窗口发送语音消息，请确保本聊天窗口可用.

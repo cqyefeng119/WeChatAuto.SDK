@@ -199,7 +199,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var groupName ="DroidMirror官方技术支持";
+        var groupName = "DroidMirror官方技术支持";
         //测试一： 新闻联播方式
         var apiKey = Environment.GetEnvironmentVariable("QWEN_API_KEY");
         await client.SendVoiceMessageWithTTS(groupName, apiKey, """
@@ -253,12 +253,36 @@ public class ChatContenTests
         });
         //测试六：粤语版
         await Task.Delay(1000);
-        await client.SendVoiceMessageWithTTS(groupName,apiKey,"""
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
         哎呀，菜鸟仔，你搞乜鬼啫？好地地去搞数据库，依家搞到自己畀人封咗。早知听阿叔一句啦！依家好喇，头像都灰埋，阴功！
-        """,new Options.VoiceOptions
+        """, new Options.VoiceOptions
         {
-            Voice = "Rocky"                                                                  
+            Voice = "Rocky"
         });
+    }
+
+    [Fact(DisplayName = "测试发送语音消息 - 直接通过文字转语音发送 - 并优化成人类可听形式")]
+    public async Task Test_SendVoiceMessageWithTTS_Humen()
+    {
+        var framework = _globalFixture.clientFactory;
+        var client = framework.GetWeChatClient(_wxClientName);
+        var groupName = "DroidMirror官方技术支持";
+        var apiKey = Environment.GetEnvironmentVariable("QWEN_API_KEY");
+        await client.SendVoiceMessageWithTTS(groupName, apiKey, """
+        老张~，今天真是累坏了。
+        下午两点半开会一直开到五点多，期间老板又改了三次需求，我都快崩溃了。
+        后来下楼买了杯咖啡，花了19.9元，又顺便买了个面包，一共27.5元。
+        回家的时候已经晚上8:40了，路上还堵了半个小时。
+        对了，下周三，也就是2026年8月5日上午10点，我们还要去客户那边演示系统。
+        到时候你记得提前半小时到，别迟到了。
+        如果有什么问题，直接打我手机13800138000，或者微信发我也行。
+        哈哈哈，不过今天虽然累，事情总算做完了，晚上终于可以好好休息一下啦！
+        """, new Options.VoiceOptions
+        {
+            Voice = "Maia",
+            LanguageType = "Chinese",
+            Instructions = "请以轻松、放松,如负释重的心情说这些"
+        },true);
     }
 
     //WASAPI

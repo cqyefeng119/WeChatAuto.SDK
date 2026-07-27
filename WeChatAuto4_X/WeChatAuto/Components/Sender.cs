@@ -337,9 +337,10 @@ namespace WeChatAuto.Components
 		/// <param name="who">好友或者群聊，可以为空，如果为空，则为当前焦点聊天窗口</param>
 		/// <param name="message">文本消息</param>
 		/// <param name="options">声音选项，用于指定模型、音色等</param>
+		/// <param name="optimizeWithLlm">待发送消息是否需要LLM优化,因为文字有时候与实际的口语场景有较大出入，所以让LLM优化一下，更适合口语化</param>
 		/// <param name="customProcess">如果系统提供的大模型不满足使用，可以自定义文字转语音方法</param>
 		/// <returns></returns>
-		public async Task SendVoiceMessageWithTTS(string who, string apiKey, string message, VoiceOptions options = null, Func<string, string> customProcess = null)
+		public async Task SendVoiceMessageWithTTS(string who, string apiKey, string message, VoiceOptions options = null, bool optimizeWithLlm = false, Func<string, string> customProcess = null)
 		{
 			if (string.IsNullOrWhiteSpace(who))
 			{
@@ -356,10 +357,10 @@ namespace WeChatAuto.Components
 					return;
 			}
 			RandomWait.Wait(300, 1200);
-			await WeChatInvoker.Call(SendVoiceMessageFromTTSCore, apiKey, message, options, customProcess);
+			await WeChatInvoker.Call(SendVoiceMessageFromTTSCore, apiKey, message, options, optimizeWithLlm, customProcess);
 		}
 
-		internal void SendVoiceMessageFromTTSCore(UIA3Automation automation, string apiKey, string message, VoiceOptions options, Func<string, string> customProcess)
+		internal void SendVoiceMessageFromTTSCore(UIA3Automation automation, string apiKey, string message, VoiceOptions options, bool optimizeWithLlm, Func<string, string> customProcess)
 		{
 			var filePath = "";
 			if (customProcess != null)
@@ -370,15 +371,19 @@ namespace WeChatAuto.Components
 			else
 			{
 				//使用系统提供的TTS方法
-				filePath = _SystemVoiceProvider(apiKey, message, options);
+				filePath = _SystemVoiceProvider(apiKey, message, optimizeWithLlm, options);
 			}
 			SendVoiceMessageCore(automation, filePath);
 		}
 
 
-		private string _SystemVoiceProvider(string apiKey, string message, VoiceOptions options)
+		private string _SystemVoiceProvider(string apiKey, string message, bool optimizeWithLlm, VoiceOptions options)
 		{
 			var service = _serviceProvider.GetRequiredService<QwenClientService>();
+			if (optimizeWithLlm)
+			{
+				message = service.HumenText(apiKey,message).GetAwaiter().GetResult();
+			}
 			var result = service.MultiModalConversationCall(apiKey, message, options).GetAwaiter().GetResult();
 			return result;
 		}
@@ -446,18 +451,6 @@ namespace WeChatAuto.Components
 			if (captureDevices.Where(x => x.FriendlyName.Contains("CABLE Output")).Count() == 0)
 				throw new Exception("请先安装Cable input/Cable output,可以在：https://github.com/alexzhao189/wechatautosdk/blob/main/Resources/VBCABLE_Driver_Pack45.zip 下载安装");
 			return device;
-		}
-
-		/// <summary>
-		/// 通过文本发送语音消息，需要下载模型并配置好环境，文本转语音后发送
-		/// </summary>
-		/// <param name="who">好友昵称或群聊名称</param>
-		/// <param name="message">要转换为语音的文本消息</param>
-		/// <param name="textToVoiceFunc">文本转语音的函数，参数为要转换的文本，返回值为生成的语音文件路径,如果不提供，则使用默认的文本转语音功能(默认使用whisper)，当然你也可以提供自己的实现（如连接到外部平台的API）</param>
-		/// <returns></returns>
-		public async Task SendVoiceMessage(string who, string message, Func<string, Task<string>> textToVoiceFunc = default)
-		{
-
 		}
 
 
