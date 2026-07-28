@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeChatAuto.Tests", "WeChatA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeAutoCommon", "..\WeAutoCommon\WeAutoCommon.csproj", "{3E46BC12-B73B-4A05-A3A5-FE11EAB67E0E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebSocketServer", "WebSocketServer", "{0D9B7155-D455-31DD-2508-5BF38DC0B144}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "WebSocketServer\Server\Server.csproj", "{49CFFA2A-B24B-4AAD-A73F-9ECA5DF903B7}"

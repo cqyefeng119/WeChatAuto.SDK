@@ -185,11 +185,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-<<<<<<< Updated upstream
         await client.SendVoiceMessage("AI.Net_test", Path.Combine(AppContext.BaseDirectory, "Assets", "littlecat.wav"));
-=======
-        await client.SendVoiceMessage("人工智能自动化技术讨论群", Path.Combine(AppContext.BaseDirectory, "Assets", "littlecat.wav"));
->>>>>>> Stashed changes
         Assert.True(true);
     }
 
