@@ -266,7 +266,7 @@ public class ChatContenTests
     {
         var framework = _globalFixture.clientFactory;
         var client = framework.GetWeChatClient(_wxClientName);
-        var groupName = "DroidMirror官方技术支持";
+        var groupName = "人工智能自动化技术讨论群";
         var apiKey = Environment.GetEnvironmentVariable("QWEN_API_KEY");
         await client.SendVoiceMessageWithTTS(groupName, apiKey, """
         老张~，今天真是累坏了。
@@ -279,9 +279,9 @@ public class ChatContenTests
         哈哈哈，不过今天虽然累，事情总算做完了，晚上终于可以好好休息一下啦！
         """, new Options.VoiceOptions
         {
-            Voice = "Maia",
+            Voice = "Bella",
             LanguageType = "Chinese",
-            Instructions = "请以轻松、放松,如负释重的心情说这些"
+            Instructions = "请以轻松、放松,如负释重的心情说这些,显得如负释重,有些地方可以笑着说"
         },true);
     }
 
