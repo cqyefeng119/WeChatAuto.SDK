@@ -21,6 +21,8 @@ public sealed class QwenChatRequestBody
     /// </summary>
     [JsonProperty("messages")]
     public List<QwenChatMessage> Messages { get; set; } = new List<QwenChatMessage>();
+    [JsonProperty("enable_thinking")]
+    public bool EnableThinking { get; set; } = false;
 }
 
 /// <summary>
