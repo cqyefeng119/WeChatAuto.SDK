@@ -52,6 +52,8 @@ public class GroupTests
         Assert.True((groupOwner == client.NickName) == result);
     }
 
+
+
     [Theory(DisplayName = "测试拉好友加群")]
     [InlineData("DroidMirror官方技术支持")]
     [InlineData("WeChatAuto.SDK官方技术支持")]
@@ -141,6 +143,9 @@ public class GroupTests
         Assert.True(result.Success);
     }
 
+
+
+    //测试获取指定群的所有群成员
     [Theory(DisplayName = "获取群聊的成员列表")]
     [InlineData("DroidMirror官方技术支持")]
     [InlineData("歪脖子的模版交流群")]

@@ -193,7 +193,7 @@ namespace WeChatAuto.Components
                     RandomWait.Wait(300, 900);
                     SupperMouseKey.Type(f);
                     RandomWait.Wait(300, 900);
-                    path = "/Group/Group/Button[@Name='搜索'][@ClassName='mmui::XOutlineButton']";
+                    path = "/Group/Group/Button[@Name='搜索']";
                     var button = win.FindFirstByXPath(path).AsButton();
                     token.ThrowIfCancellationRequested();
                     if (button != null)
@@ -325,7 +325,7 @@ namespace WeChatAuto.Components
                 }
                 if (options != null && !string.IsNullOrWhiteSpace(options.Suffix))
                 {
-                    var path = "/Group/Group/Group/Group/Group/Group/Text/Edit[@Name='修改备注'][@ClassName='mmui::XLineEdit']";
+                    var path = "/Group/Group/Group/Group/Group/Group/Text/Edit[@Name='修改备注'][@ClassName='mmui::XLineEdit'] | /Group/Group/Group/Group/Group/Group/Group/Group/Text/Edit[@Name='修改备注'][@ClassName='mmui::XLineEdit']";
                     var edit = addWin.FindFirstByXPath(path);
                     var memoName = edit.GetParent().Name;  //得到名字，但是名字可能是空格等异常情况.
                     if (string.IsNullOrWhiteSpace(memoName))
@@ -355,7 +355,7 @@ namespace WeChatAuto.Components
                 }
                 if (options != null && !string.IsNullOrWhiteSpace(options.Label))
                 {
-                    var lableItem = addWin.FindFirstByXPath("/Group/Group/Group/Group/Group/Group/Button[@Name='修改标签'][@AutomationId='button']");
+                    var lableItem = addWin.FindFirstByXPath("/Group/Group/Group/Group/Group/Group/Group/Group/Button[@Name='修改标签'][@AutomationId='button'] | /Group/Group/Group/Group/Group/Group/Button[@Name='修改标签'][@AutomationId='button']");
                     var point = lableItem.BoundingRectangle.SafeRandomPoint();
                     Mouse.MoveTo(point);
                     RandomWait.Wait(100, 600);
