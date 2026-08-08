@@ -752,6 +752,10 @@ namespace WeChatAuto.Components
 				if (newFriendRootItem == null)
 					return (false, null);
 				var items = Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem)));
+				if (items.Length == 0)
+				{
+					items = Root.FindAllChildren(cf => cf.ByClassName("mmui::ContactsCellNewFriendView").And(cf.ByControlType(ControlType.ListItem)));
+				}
 				foreach (var item in items)
 				{
 					token.ThrowIfCancellationRequested();
@@ -764,12 +768,12 @@ namespace WeChatAuto.Components
 					}
 					#region 退出策略
 					var retryItem = item.GetSibling(1);
-					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell"))
+					if (retryItem != null && !retryItem.ClassName.Equals("mmui::ContactsCellNewFriendView"))
 					{
 						return (false, null);
 					}
 					retryItem = item.GetSibling(-1);
-					if (retryItem != null && !retryItem.ClassName.Equals("mmui::XTableCell") && !retryItem.Name.Equals("新的朋友"))
+					if (retryItem != null && !retryItem.ClassName.Equals("mmui::ContactsCellNewFriendView") && !retryItem.Name.Equals("新的朋友"))
 					{
 						return (false, null);
 					}
@@ -781,7 +785,7 @@ namespace WeChatAuto.Components
 					break;
 				}
 			}
-			return (true, Root.FindAllChildren(cf => cf.ByClassName("mmui::XTableCell").And(cf.ByControlType(ControlType.ListItem))).Select(u => u.Name).ToList());
+			return (true, Root.FindAllChildren(cf => (cf.ByClassName("mmui::XTableCell").Or(cf.ByClassName("mmui::ContactsCellNewFriendView"))).And(cf.ByControlType(ControlType.ListItem))).Select(u => u.Name).ToList());
 		}
 
 		private bool _ProcessThisItem(AutomationElement item, FriendRequestAutoAcceptOptions options, CancellationToken token, UIA3Automation automation, List<NewFriendBackItem> resultList)
@@ -816,7 +820,7 @@ namespace WeChatAuto.Components
 					win.Move(this._Client.MainWindow.BoundingRectangle.X + (this._Client.MainWindow.BoundingRectangle.Width - win.BoundingRectangle.Width) / 2, this._Client.MainWindow.BoundingRectangle.Y + (this._Client.MainWindow.BoundingRectangle.Height - win.BoundingRectangle.Height) / 2);
 					try
 					{
-						var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").And(cf.ByControlType(ControlType.Group))));
+						var passedFriendRoot = win.FindFirstDescendant(cf => cf.ByClassName("QWidget").And(cf.ByAutomationId("qt_scrollarea_viewport").Or(cf.ByAutomationId("GradientMaskScrollView.gradient_mask_stacked_view.default_scroll_area.qt_scrollarea_viewport"))).And(cf.ByControlType(ControlType.Group)));
 						if (passedFriendRoot == null)
 							return false;
 						var memoItem = passedFriendRoot.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit).And(cf.ByName("修改备注").And(cf.ByClassName("mmui::XLineEdit"))));
