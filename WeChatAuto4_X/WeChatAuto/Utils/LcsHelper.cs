@@ -86,9 +86,9 @@ namespace WeChatAuto.Utils
         /// 两序列求diff
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="oldList"></param>
-        /// <param name="newList"></param>
-        /// <param name="comparer"></param>
+        /// <param name="oldList">求列表</param>
+        /// <param name="newList">新列表</param>
+        /// <param name="comparer">比较器</param>
         /// <returns></returns>
         public static List<DiffItem<T>> Diff<T>(
             IReadOnlyList<T> oldList,
@@ -167,8 +167,17 @@ namespace WeChatAuto.Utils
 
     public enum DiffType
     {
+        /// <summary>
+        /// 相同
+        /// </summary>
         Equal,
+        /// <summary>
+        /// 新增
+        /// </summary>
         Insert,
+        /// <summary>
+        /// 删除
+        /// </summary>
         Delete
     }
 
