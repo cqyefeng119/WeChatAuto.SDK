@@ -226,9 +226,9 @@ namespace WeChatAuto.Components
             try
             {
                 var desktop = automation.GetDesktop();
-                var windowRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByProcessId(handle)).And((cf.ByName("微信").Or(cf.ByName("微信 "))))),
-                    timeout: TimeSpan.FromSeconds(5),
-                    interval: TimeSpan.FromMilliseconds(200));
+                var windowRetry = Retry.WhileNull(() => desktop.FindFirstChild(cf => cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::MainWindow")).And(cf.ByProcessId(handle)).And((cf.ByName("微信").Or(cf.ByName("微信 "))))),
+                                     timeout: TimeSpan.FromSeconds(5),
+                                     interval: TimeSpan.FromMilliseconds(200));
                 if (windowRetry.Success)
                 {
                     var wxTempwindow = windowRetry.Result.AsWindow();
