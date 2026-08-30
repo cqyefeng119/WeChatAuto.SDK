@@ -38,7 +38,7 @@ namespace WeChatAuto.Models
         /// <summary>
         /// 消息类型
         /// </summary>
-        [SugarColumn(Length = 50, IsNullable = false)]
+        [SugarColumn(Length = 50, IsNullable = true)]
         public string MessageType { get; set; } = string.Empty;
 
         /// <summary>
@@ -52,6 +52,11 @@ namespace WeChatAuto.Models
         /// </summary>
         [SugarColumn(Length = 50, IsNullable = true)]
         public string MessageTime { get; set; }
+        /// <summary>
+        /// 当消息为图片时，图片保存在磁盘位置.
+        /// </summary>
+        [SugarColumn(Length = 500,IsNullable = true)]
+        public string ImageFilePath {get;set;}
 
         /// <summary>
         /// 消息是否由自己发送
@@ -66,6 +71,7 @@ namespace WeChatAuto.Models
         /// <summary>
         /// 消息被 SDK 写入时间.
         /// </summary>
+        [SugarColumn(InsertServerTime = true,IsOnlyIgnoreInsert = true,IsOnlyIgnoreUpdate = true)]
         public DateTime CreateTime { get; set; } = DateTime.Now;
     }
 }
