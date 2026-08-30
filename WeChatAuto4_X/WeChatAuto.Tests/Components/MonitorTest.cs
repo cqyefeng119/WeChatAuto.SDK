@@ -19,6 +19,8 @@ public class MonitorTest
         _globalFixture = globalFixture;
     }
 
+    // 下面的单元测试为 vip 版本 所有.
+
     // [Fact(DisplayName = "开放式监听 - vip功能")]
     // public async Task Test_Message_Monitor_open()
     // {
@@ -170,17 +172,17 @@ public class MonitorTest
 
 
 
-    [Theory(DisplayName = "测试获取好友信息选项")]
-    [InlineData("AI.Net_test")]
-    [InlineData("秋歌")]
-    public async Task Test_Fetch_Friend_Info(string who)
-    {
-        var framework = _globalFixture.clientFactory;
-        var client = framework.GetWeChatClient(_wxClientName);
-        await client.MessageMonitor.FetchFriendInfo(who);
-        FriendInfo friendInfo = client.GetFriendFromCache(who);
-        _output.WriteLine(friendInfo.ToString());
-        Debug.Assert(friendInfo != null);
-    }
+    // [Theory(DisplayName = "测试获取好友信息选项")]
+    // [InlineData("AI.Net_test")]
+    // [InlineData("秋歌")]
+    // public async Task Test_Fetch_Friend_Info(string who)
+    // {
+    //     var framework = _globalFixture.clientFactory;
+    //     var client = framework.GetWeChatClient(_wxClientName);
+    //     await client.MessageMonitor.FetchFriendInfo(who);
+    //     FriendInfo friendInfo = client.GetFriendFromCache(who);
+    //     _output.WriteLine(friendInfo.ToString());
+    //     Debug.Assert(friendInfo != null);
+    // }
 
 }
