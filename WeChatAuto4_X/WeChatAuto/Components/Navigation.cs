@@ -21,6 +21,7 @@ using FlaUI.Core.Conditions;
 using System.IO;
 using FlaUI.UIA3;
 using WeAutoCommon.Extentions;
+using Dm.util;
 
 namespace WeChatAuto.Components
 {
@@ -109,11 +110,13 @@ namespace WeChatAuto.Components
 
         internal void SwitchNavigationCore(UIA3Automation automation, NavigationType navigationType)
         {
+            _Client.MainWindow.Focus();
             var name = navigationType.ToString();
             var button = rootElement.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(name))).AsButton();
 
             if (button != null)
             {
+                //4.1.13.12以下版本
                 var subButton = button.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button)).AsButton();
                 if (subButton != null)
                 {
@@ -121,10 +124,31 @@ namespace WeChatAuto.Components
                 }
                 button.HightLight();
                 var point = button.BoundingRectangle.SafeRandomPoint();
-                _Client.MainWindow.Focus();
                 Mouse.Position = point;
                 Mouse.Click();
                 RandomWait.Wait(600, 1500);
+            }
+            else
+            {
+                //4.1.13.12 + 
+                button = rootElement.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("发现"))).AsButton();
+                button.Click();
+                RandomWait.Wait(300, 1200);
+                var path = "/Group/Custom/Group/Group/Group/Custom/Custom/Group/Group/Group/List[@Name='发现'][@ClassName='mmui::XTableView']";
+                var listRetry = Retry.WhileNull(() => _Client.MainWindow.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                if (listRetry.Success)
+                {
+                    var list = listRetry.Result;
+                    if (name.equals("游戏中心"))
+                        name = "游戏";
+                    if (name.equals("小程序面板"))
+                        name = "小程序";
+                    button = list.FindFirstChild(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(name))).AsButton();
+                    if (button != null)
+                    {
+                        button.DoubleClick();
+                    }
+                }
             }
         }
 
@@ -155,6 +179,21 @@ namespace WeChatAuto.Components
                         buttonResult.Result.DrawHighlightExt();
                         buttonResult.Result.Invoke();
                     }
+                    else
+                    {
+                        buttonResult = Retry.WhileNull<Button>(() => _Client.MainWindow.Parent.FindFirstByXPath("/Window/Pane/Pane/Pane/Pane/Pane/Pane/Button[@Name='关闭'][@ClassName='ImageButton']").AsButton(), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                        if (buttonResult.Success)
+                        {
+                            var path = "/Window/Pane/Pane/Pane/Pane/Pane/Pane/Pane/Document[@Name='视频号']";
+                            var videoRetry = Retry.WhileNull(() => _Client.MainWindow.Parent.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                            if (videoRetry.Success)
+                            {
+                                buttonResult.Result.DrawHighlightExt();
+                                buttonResult.Result.Click();
+                                RandomWait.Wait(300, 1200);
+                            }
+                        }
+                    }
                     break;
                 case NavigationType.搜一搜:
                     buttonResult = Retry.WhileNull<Button>(() => _Client.MainWindow.Parent.FindFirstByXPath("/Pane[@Name='微信']/Pane[@Name='微信']/Pane/Pane/Button[@Name='关闭']").AsButton(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
@@ -162,6 +201,21 @@ namespace WeChatAuto.Components
                     {
                         buttonResult.Result.DrawHighlightExt();
                         buttonResult.Result.Invoke();
+                    }
+                    else
+                    {
+                        buttonResult = Retry.WhileNull<Button>(() => _Client.MainWindow.Parent.FindFirstByXPath("/Window/Pane/Pane/Pane/Pane/Pane/Pane/Button[@Name='关闭'][@ClassName='ImageButton']").AsButton(), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                        if (buttonResult.Success)
+                        {
+                            var path = "/Window/Pane/Pane/Pane/Pane/Pane/Pane/Pane/Document[@Name='搜一搜']";
+                            var searchRetry = Retry.WhileNull(() => _Client.MainWindow.Parent.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                            if (searchRetry.Success)
+                            {
+                                buttonResult.Result.DrawHighlight();
+                                buttonResult.Result.Click();
+                                RandomWait.Wait(300, 1200);
+                            }
+                        }
                     }
                     break;
                 case NavigationType.小程序面板:
@@ -171,6 +225,19 @@ namespace WeChatAuto.Components
                         buttonResult.Result.DrawHighlightExt();
                         buttonResult.Result.Invoke();
                     }
+                    else
+                    {
+                        var path = "/Window/Pane/Pane/Pane/Pane/Pane/Pane/Pane/Document[@Name='小程序']";
+                        var miniRetry = Retry.WhileNull(() => _Client.MainWindow.Parent.FindFirstByXPath(path), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                        if (miniRetry.Success)
+                        {
+                            var mini = miniRetry.Result;
+                            path = $"/Window[@Name='微信'][@ProcessId={mini.Properties.ProcessId}]";
+                            var win = _Client.MainWindow.Parent.FindFirstByXPath(path).AsWindow();
+                            win.Close();
+                            RandomWait.Wait(300, 1000);
+                        }
+                    }
                     break;
                 case NavigationType.游戏中心:
                     buttonResult = Retry.WhileNull<Button>(() => _Client.MainWindow.Parent.FindFirstByXPath("/Pane[@Name='微信游戏']/Pane/Pane/Pane/Pane/Pane/Button[@Name='关闭']").AsButton(), timeout: TimeSpan.FromSeconds(2), interval: TimeSpan.FromMilliseconds(200));
@@ -178,6 +245,15 @@ namespace WeChatAuto.Components
                     {
                         buttonResult.Result.DrawHighlightExt();
                         buttonResult.Result.Invoke();
+                    }
+                    else
+                    {
+                        var winRetry = Retry.WhileNull(() => _Client.MainWindow.Parent.FindFirstByXPath("/Window[@Name='微信游戏']"), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(200));
+                        if (winRetry.Success)
+                        {
+                            winRetry.Result.AsWindow().Close();
+                            RandomWait.Wait(300, 1000);
+                        }
                     }
                     break;
                 case NavigationType.手机:
