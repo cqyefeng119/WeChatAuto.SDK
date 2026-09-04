@@ -27,6 +27,11 @@ namespace WeAutoCommon.Models
         public int ChatNumber { get; set; } = 1;
 
         /// <summary>
+        /// 如果HeaderType为企微，这里显示企业微信的公司名,如果非企业微信，这里恒为空.
+        /// </summary>
+        public string Company {get;set;} = "";
+
+        /// <summary>
         /// 是否是可以聊天类型
         /// </summary>
         /// <returns></returns>

@@ -10,7 +10,7 @@ namespace WeChatAuto.Models
 {
     public sealed class MessageContext
     {
-        public MessageContext(List<SimpleMessageBubble> newMessages, List<SimpleMessageBubble> historyMessages, Sender sender, WeChatClient ownerClient, WeChatClientFactory systemClientFactory, IServiceProvider serviceProvider, string ownerNickName)
+        public MessageContext(List<SimpleMessageBubble> newMessages, List<SimpleMessageBubble> historyMessages, Sender sender, WeChatClient ownerClient, WeChatClientFactory systemClientFactory, IServiceProvider serviceProvider, string ownerNickName,string who)
         {
             NewMessages = newMessages;
             HistoryMessages = historyMessages;
@@ -19,7 +19,12 @@ namespace WeChatAuto.Models
             SystemClientFactory = systemClientFactory;
             ServiceProvider = serviceProvider;
             OwnerNickName = ownerNickName;
+            this.Who = who;
         }
+        /// <summary>
+        /// 本次监听的对象 - 微信号
+        /// </summary>
+        public string Who {get;set;}
         /// <summary>
         /// 当前我的微信昵称
         /// </summary>
