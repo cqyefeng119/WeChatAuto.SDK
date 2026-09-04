@@ -147,14 +147,22 @@ namespace WeChatAuto.Components
                 return;
             }
             _wxClientList.Clear();
-            _logger.Trace("开始重新获取微信窗口");
             try
             {
                 MainActionThreadInvoker.Run(automation =>
                 {
-                    _GetTaskBarRoot(automation)
-                    .Bind(taskBar => _GetNotifyIcons(taskBar))
-                    .Bind(buttons => _ProcessNotifyButtons(automation, buttons));
+                    // Taskbar discovery is optional: it is unavailable in some desktop sessions
+                    // and must not prevent the main-window/process fallback below.
+                    try
+                    {
+                        _GetTaskBarRoot(automation)
+                        .Bind(taskBar => _GetNotifyIcons(taskBar))
+                        .Bind(buttons => _ProcessNotifyButtons(automation, buttons));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"WeChat taskbar discovery skipped: {ex.Message}");
+                    }
 
                     // Modern Windows can hide or virtualize notification-area icons. Fall back to
                     // the main WeChat windows visible in the current desktop session.
@@ -171,8 +179,9 @@ namespace WeChatAuto.Components
             }
             catch (Exception ex)
             {
-                _logger.Error($"获取微信窗口失败: {ex.Message}");
-                throw new Exception($"获取微信窗口失败: {ex.Message}");
+                // Startup must remain available even when UI automation cannot enumerate
+                // this desktop session. `global` will then correctly report no clients.
+                Console.Error.WriteLine($"WeChat client discovery failed: {ex.Message}");
             }
             finally
             {
