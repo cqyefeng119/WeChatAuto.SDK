@@ -14,6 +14,7 @@ using WeAutoCommon.Models;
 using WeChatAuto.Extentions;
 using FlaUI.Core.Input;
 using System.Drawing;
+using System.Diagnostics;
 using WeChatAuto.Models;
 using System.IO;
 using WeAutoCommon.Extentions;
@@ -154,6 +155,18 @@ namespace WeChatAuto.Components
                     _GetTaskBarRoot(automation)
                     .Bind(taskBar => _GetNotifyIcons(taskBar))
                     .Bind(buttons => _ProcessNotifyButtons(automation, buttons));
+
+                    // Modern Windows can hide or virtualize notification-area icons. Fall back to
+                    // the main WeChat windows visible in the current desktop session.
+                    if (_wxClientList.Count == 0)
+                    {
+                        _ProcessMainWindows(automation);
+                    }
+
+                    if (_wxClientList.Count == 0)
+                    {
+                        _ProcessWeChatProcesses(automation);
+                    }
                 }).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
@@ -175,8 +188,9 @@ namespace WeChatAuto.Components
         /// <returns></returns>
         private Maybe<AutomationElement> _GetTaskBarRoot(UIA3Automation automation)
         {
+            // Shell_TrayWnd is stable across Windows display languages; the taskbar name is not.
             var result = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf =>
-                          cf.ByName(WeChatConstant.WECHAT_SYSTEM_TASKBAR).And(cf.ByClassName("Shell_TrayWnd"))),
+                          cf.ByClassName("Shell_TrayWnd")),
                           timeout: TimeSpan.FromSeconds(5),
                           interval: TimeSpan.FromMilliseconds(200)).Result;
             if (result == null)
@@ -199,6 +213,61 @@ namespace WeChatAuto.Components
             this._IsInit = true;
             _logger.Trace($"当前微信客户端数量: 共{_wxClientList.Count}个");
             return _IsInit.ToMaybe();
+        }
+
+        private void _ProcessMainWindows(UIA3Automation automation)
+        {
+            var windows = automation.GetDesktop().FindAllChildren(cf =>
+                cf.ByControlType(ControlType.Window).And(cf.ByClassName("mmui::MainWindow")));
+
+            foreach (var element in windows)
+            {
+                var window = element.AsWindow();
+                var processId = window.Properties.ProcessId;
+                var name = string.IsNullOrWhiteSpace(window.Name) ? $"WeChat-{processId}" : window.Name.Trim();
+                if (_wxClientList.ContainsKey(name))
+                {
+                    name = $"{name}-{processId}";
+                }
+
+                var info = new OwerInfo
+                {
+                    NickName = name,
+                    WxId = $"process-{processId}"
+                };
+                var client = new WeChatClient(processId, _serviceProvider, this, window,
+                    MainActionThreadInvoker, info, _wxClientList.Count + 1, monitorEvent);
+                _wxClientList.Add(name, client);
+            }
+        }
+
+        private void _ProcessWeChatProcesses(UIA3Automation automation)
+        {
+            var processNames = new[] { "WeChat", "Weixin", "WeChatAppEx" };
+            foreach (var process in processNames.SelectMany(Process.GetProcessesByName))
+            {
+                process.Refresh();
+                if (process.MainWindowHandle == IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                var window = automation.FromHandle(process.MainWindowHandle).AsWindow();
+                var name = string.IsNullOrWhiteSpace(window.Name) ? $"WeChat-{process.Id}" : window.Name.Trim();
+                if (_wxClientList.ContainsKey(name))
+                {
+                    name = $"{name}-{process.Id}";
+                }
+
+                var info = new OwerInfo
+                {
+                    NickName = name,
+                    WxId = $"process-{process.Id}"
+                };
+                var client = new WeChatClient(process.Id, _serviceProvider, this, window,
+                    MainActionThreadInvoker, info, _wxClientList.Count + 1, monitorEvent);
+                _wxClientList.Add(name, client);
+            }
         }
         /// <summary>
         /// 初始化微信自动化整个框架

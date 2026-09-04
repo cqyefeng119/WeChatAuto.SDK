@@ -79,8 +79,9 @@ namespace WeChatAuto.Components
 
         private AutomationElement _GetTaskBarRoot(UIA3Automation automation)
         {
+            // Shell_TrayWnd is stable across Windows display languages; the taskbar name is not.
             var result = Retry.WhileNull(() => automation.GetDesktop().FindFirstChild(cf =>
-                          cf.ByName(WeChatConstant.WECHAT_SYSTEM_TASKBAR).And(cf.ByClassName("Shell_TrayWnd"))),
+                          cf.ByClassName("Shell_TrayWnd")),
                           timeout: TimeSpan.FromSeconds(5),
                           interval: TimeSpan.FromMilliseconds(200)).Result;
             if (result == null)

@@ -99,7 +99,15 @@ namespace WeChatAuto.Components
 
         private void _Initialize()
         {
-            this.Navigation.SwitchNavigationCore(null, NavigationType.微信);
+            // Navigation labels are localized. Do not prevent client discovery when they are unavailable.
+            if (this.Navigation.rootElement != null)
+            {
+                this.Navigation.SwitchNavigationCore(null, NavigationType.微信);
+            }
+            else
+            {
+                _logger.Error("微信导航栏未找到，已跳过初始导航切换。");
+            }
             this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
             this.ChatContent = new ChatContent(this, this._MainThreadInvoker, serviceProvider);
