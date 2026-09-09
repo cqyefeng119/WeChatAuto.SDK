@@ -106,7 +106,7 @@ namespace WeChatAuto.Components
             }
             else
             {
-                _logger.Error("微信导航栏未找到，已跳过初始导航切换。");
+                _logger.Warn("微信导航栏未找到，已跳过初始导航切换。");
             }
             this.ToolBar = new ToolBar(this.MainWindow, this.MainThreadInvoker, serviceProvider);
             this.Conversations = new ConversationList(this, this._MainThreadInvoker, serviceProvider);
